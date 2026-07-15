@@ -77,6 +77,57 @@ def benchmark_form_data(request):
     })
 
 
+_BENCHMARK_EXTRA_KEYS = ["repository", "hash", "script_dir", "vnnlib_version",
+                         "onnx_dir", "vnnlib_dir", "csv_file"]
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def benchmark_submit(request):
+    """A benchmark submission = create a Benchmark (config in ``extra``) and run a
+    task that generates its instances from the git repo and exports them. Returns
+    the task id the UI redirects to. Re-submitting the same name regenerates it."""
+    from comp_eval_platform.competitions import get_competition
+
+    from .models import Benchmark, Category, RuntimeSettings, Task
+
+    s = RuntimeSettings.get()
+    if not (s.users_can_submit_benchmarks or getattr(request.user, "is_admin", False)):
+        return Response({"error": "Submission is currently closed"}, status=403)
+    if not s.scheduler_enabled:
+        return Response({"error": "Submissions are paused: the scheduler is disabled."}, status=400)
+
+    d = request.data
+    name = (d.get("name") or "").strip()
+    if not name or not (d.get("repository") or "").strip():
+        return Response({"errors": {"name/repository": ["required"]}}, status=400)
+
+    comp = get_competition()
+    cat_id = d.get("category")
+    if cat_id and comp.uses_categories:
+        category = Category.objects.filter(id=cat_id).first()
+        if category is None:
+            return Response({"errors": {"category": ["unknown category"]}}, status=400)
+    else:
+        category, _ = Category.objects.get_or_create(name="default")
+
+    extra = {k: d.get(k) for k in _BENCHMARK_EXTRA_KEYS if k in d}
+    # Re-submitting a benchmark regenerates it: reuse the owner's existing row.
+    bench = Benchmark.objects.filter(category=category, name=name).first()
+    if bench is not None and bench.owner_id != request.user.id:
+        return Response({"errors": {"name": ["already taken in this category"]}}, status=400)
+    if bench is None:
+        bench = Benchmark.objects.create(owner=request.user, category=category, name=name, extra=extra)
+    else:
+        bench.extra = extra
+        bench.save(update_fields=["extra"])
+
+    task = Task.objects.create(owner=request.user, benchmark=bench)
+    task.start()
+    task.refresh_from_db()
+    return Response({"redirect_to": str(task.id)}, status=201)
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def toolkit_submit(request):

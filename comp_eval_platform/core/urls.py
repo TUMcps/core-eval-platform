@@ -26,6 +26,7 @@ urlpatterns = [
     path("api/toolkit/form_data/", forms_api.toolkit_form_data),
     path("api/toolkit/submit/", forms_api.toolkit_submit),
     path("api/benchmark/form_data/", forms_api.benchmark_form_data),
+    path("api/benchmark/submit/", forms_api.benchmark_submit),
     path("api/", include(router.urls)),
     path("update/<uuid:task_id>/success", views.update_success, name="update_success"),
     path("update/<uuid:task_id>/failure", views.update_failure, name="update_failure"),
