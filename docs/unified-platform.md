@@ -101,6 +101,49 @@ Core ships the app shell (auth, nav, submission list, live logs, generic results
 plugin contributes variant-specific pieces (submission form fields, results columns, scoring view)
 via config/components — mirrors the backend plugin model.
 
+## Implementation status (initial build)
+
+Built in this repo (`comp-eval-platform`) + the sibling `vnn-comp` plugin repo:
+
+```
+comp_eval_platform/
+  competitions/base.py     Competition ABC (6 seams) + self-registering registry + get_competition()
+  compute/                 ComputeBackend ABC + get_backend(); aws.py, local_docker.py; shell.py (_get/_ping)
+  results.py               ResultRecord / Scoreboard / Presentation value types
+  settings.py              base Django settings + engine knobs (ACTIVE_COMPETITION, EXECUTION_BACKEND,
+                           MAX_PARALLEL_NODES, AUTOMATIC_UPDATE_INTERVAL, SCHEDULER_AUTOSTART)
+  urls.py / wsgi / asgi    project glue; manage.py (dev)
+  core/
+    models/  users, catalog (Category/Tool/Benchmark/Instance/Track), compute (Node),
+             execution (Task/TaskStep/Log + Outcome/StepStatus), results (Result), settings (RuntimeSettings)
+    steps.py               StepHandler base + registry + generic kinds: assign, shutdown
+    jobs.py / scheduler.py  single-worker APScheduler poller + node timeout backstops
+    views.py / urls.py     node callbacks (/update/<id>/success|failure) + DRF router (/api/)
+    api.py / serializers.py Tool/Benchmark/Track/Task/Result/Category viewsets; tools/{id}/run,
+                            benchmarks/{id}/publish, tracks/{id}/scoreboard
+    admin.py               Django admin; management/commands/init_settings.py
+
+vnn-comp (sibling repo): vnn_comp/{competition.py (6 seams), steps.py (handlers),
+  apps.py (registers), kinds.py, scripts/}, deploy/{settings.py, manage.py}
+```
+
+Flow: `POST /api/tools/{id}/run` → validate via competition → `Task.start()` builds the step graph
+(`build_steps`) → executes steps → each handler fires a node script and the node curls back
+`/update/<task_id>/success|failure` → the machine advances → `run_benchmark.on_marked_done` parses +
+persists `Result`s → `tracks/{id}/scoreboard` calls `Competition.score`.
+
+### Known follow-ups (need the Docker/DB env to verify)
+- **No migrations yet** — run `manage.py makemigrations` + `migrate` in a container (no Django on the
+  dev host). Then wire real node scripts into `vnn_comp/scripts/` (vendored from the current VNN repo).
+- **Node image matching**: `Node.get_next_available` filters on `image`; when a tool's `base_image` is
+  empty/an AMI id, the local_docker backend resolves it to a default image, so the stored `image` won't
+  equal the requested one. Match on `node_type` only when `image` is empty, or store the requested image.
+- **Artifact collection**: `RunBenchmarkHandler._fetch_artifacts` is a stub (returns None) — wire the
+  SCP-from-node results.csv retrieval so scoring gets rows.
+- **Frontend shell + plugin-contributed views** not built yet (backend `Presentation` seam is ready).
+- **Prod ETL** (`_db_` VNN schema → clean schema) not written.
+- **arch-comp plugin** not built (validates the second variant; ARCH professionalized onto this rung).
+
 ## Open items to design next
 - Exact `Competition` base-class Python signature + registry wiring (mirror `compute/base.py`).
 - Clean-schema models module + the cutover ETL from the current `_db_` schema.
