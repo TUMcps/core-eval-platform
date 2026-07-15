@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
-import { benchmarksApi } from '../api';
-import type { Benchmark } from '../api';
+import { tasksApi } from '../api';
+import type { Task } from '../api';
+import { statusChip } from '../constants/status';
 import { formatDateTime } from '../utils/datetime';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -22,13 +23,14 @@ import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 
 export default function BenchmarkSubmissionsPage() {
-  const [items, setItems] = useState<Benchmark[]>([]);
+  const [items, setItems] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
 
   useEffect(() => {
-    benchmarksApi.list().then((d) => setItems([...d].reverse())).catch((e) => console.error(e)).finally(() => setLoading(false));
+    // Benchmark submissions are generate/export tasks (one per submission/regeneration).
+    tasksApi.list().then((d) => setItems(d.filter((t) => t.benchmark))).catch((e) => console.error(e)).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}><CircularProgress /></Box>;
@@ -58,24 +60,23 @@ export default function BenchmarkSubmissionsPage() {
               <TableRow>
                 <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Category</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Instances</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600 }}>Status</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600 }}>Action</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {items.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((b) => (
-                <TableRow key={b.id} hover>
-                  <TableCell>{formatDateTime(b.created_at)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{b.name}</TableCell>
-                  <TableCell sx={{ color: 'text.secondary' }}>{b.category}</TableCell>
-                  <TableCell>{b.instances.length}</TableCell>
-                  <TableCell align="center"><Chip label={b.published ? 'Published' : 'Draft'} color={b.published ? 'success' : 'default'} size="small" /></TableCell>
-                  <TableCell align="center"><Button component={Link} to={`/benchmark/submission/${b.id}`} variant="outlined" size="small" sx={{ fontSize: '0.9rem', px: 4, py: 1 }}>View</Button></TableCell>
-                </TableRow>
-              ))}
-              {items.length === 0 && <TableRow><TableCell colSpan={6}><Typography color="text.secondary" sx={{ py: 2 }}>No benchmarks yet.</Typography></TableCell></TableRow>}
+              {items.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((t) => {
+                const chip = statusChip(t.status || 'Running');
+                return (
+                  <TableRow key={t.id} hover>
+                    <TableCell>{formatDateTime(t.created_at)}</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{t.name}</TableCell>
+                    <TableCell align="center"><Chip label={chip.label} color={chip.color} variant={chip.variant} size="small" /></TableCell>
+                    <TableCell align="center"><Button component={Link} to={`/benchmark/submission/${t.id}`} variant="outlined" size="small" sx={{ fontSize: '0.9rem', px: 4, py: 1 }}>View</Button></TableCell>
+                  </TableRow>
+                );
+              })}
+              {items.length === 0 && <TableRow><TableCell colSpan={4}><Typography color="text.secondary" sx={{ py: 2 }}>No benchmark submissions yet.</Typography></TableCell></TableRow>}
             </TableBody>
           </Table>
         </TableContainer>

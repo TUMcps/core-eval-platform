@@ -40,10 +40,11 @@ export default function BenchmarkSubmissionPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const payload: any = { name, extra: { repository, ...fields } };
+      // Flat fields: the submit endpoint runs a generate+export task and returns its id.
+      const payload: any = { name, repository, ...fields };
       if (usesCategories) payload.category = category;  // else the backend files it under 'default'
-      const b = await benchmarksApi.create(payload);
-      navigate(`/benchmark/submission/${b.id}`);
+      const { redirect_to } = await benchmarksApi.submit(payload);
+      navigate(`/benchmark/submission/${redirect_to}`);
     } catch (error: any) {
       setMessage(typeof error.response?.data === 'string' ? error.response.data : JSON.stringify(error.response?.data ?? 'Submission failed'));
     }

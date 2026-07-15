@@ -86,6 +86,7 @@ export const benchmarksApi = {
   list: () => results<Benchmark>('/api/benchmarks/'),
   get: (id: string) => apiClient.get<Benchmark>(`/api/benchmarks/${id}/`).then((r) => r.data),
   create: (data: Partial<Benchmark>) => apiClient.post<Benchmark>('/api/benchmarks/', data).then((r) => r.data),
+  submit: (data: Record<string, unknown>) => apiClient.post<{ redirect_to: string }>('/api/benchmark/submit/', data).then((r) => r.data),
   getFormData: () => apiClient.get<BenchmarkFormData>('/api/benchmark/form_data/').then((r) => r.data),
   addInstances: (id: string, names: string[]) =>
     apiClient.post(`/api/benchmarks/${id}/add_instances/`, names.map((name, order) => ({ name, order }))).then((r) => r.data),
@@ -100,6 +101,8 @@ export const usersApi = {
 export const tasksApi = {
   list: () => results<Task>('/api/tasks/'),
   get: (id: string) => apiClient.get<Task>(`/api/tasks/${id}/`).then((r) => r.data),
+  abort: (id: string) => apiClient.post<Task>(`/api/tasks/${id}/abort/`).then((r) => r.data),
+  resume: (id: string) => apiClient.post<Task>(`/api/tasks/${id}/resume/`).then((r) => r.data),
 };
 
 export const toolkitApi = {
