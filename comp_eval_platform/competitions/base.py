@@ -45,6 +45,9 @@ class Competition(ABC):
     name: str
     #: Human-facing name for the UI.
     display_name: str = ""
+    #: Whether benchmarks are grouped into user-chosen categories (ARCH: AFF/NLN/…)
+    #: or a single implicit ``default`` one (VNN). Drives the submission form.
+    uses_categories: bool = True
 
     # (1) Submission spec + validation ------------------------------------
     @abstractmethod

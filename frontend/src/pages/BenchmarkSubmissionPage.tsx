@@ -14,22 +14,35 @@ import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 
+// Turn a field name (e.g. vnnlib_version) into a readable label.
+const labelFor = (name: string) => name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
 export default function BenchmarkSubmissionPage() {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [repository, setRepository] = useState('');
-  const [vnnlibVersion, setVnnlibVersion] = useState('1.0');
+  const [fields, setFields] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   const [data, setData] = useState<BenchmarkFormData | null>(null);
 
-  useEffect(() => { benchmarksApi.getFormData().then(setData).catch(() => {}); }, []);
+  useEffect(() => {
+    benchmarksApi.getFormData().then((d) => {
+      setData(d);
+      // Seed each variant benchmark field with its first option / empty.
+      setFields(Object.fromEntries(d.benchmark_fields.map((f) => [f.name, f.options?.[0] ?? ''])));
+    }).catch(() => {});
+  }, []);
+
   const schedulerEnabled = data?.scheduler_enabled ?? true;
+  const usesCategories = data?.uses_categories ?? true;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const b = await benchmarksApi.create({ name, category, extra: { repository, vnnlib_version: vnnlibVersion } } as any);
+      const payload: any = { name, extra: { repository, ...fields } };
+      if (usesCategories) payload.category = category;  // else the backend files it under 'default'
+      const b = await benchmarksApi.create(payload);
       navigate(`/benchmark/submission/${b.id}`);
     } catch (error: any) {
       setMessage(typeof error.response?.data === 'string' ? error.response.data : JSON.stringify(error.response?.data ?? 'Submission failed'));
@@ -52,16 +65,30 @@ export default function BenchmarkSubmissionPage() {
         {!schedulerEnabled && <Alert severity="warning" sx={{ mb: 3 }}>Submissions are paused because the scheduler is currently disabled.</Alert>}
         <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 720 }}>
           <TextField fullWidth label="Benchmark name" value={name} onChange={(e) => setName(e.target.value)} required sx={{ mb: 3 }} />
-          <TextField fullWidth select label="Category" value={category} onChange={(e) => setCategory(e.target.value)} required sx={{ mb: 3 }}
-            helperText="Benchmarks belong to a category. Create categories on the Toolkit page.">
-            {(data?.categories ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
-            {(data?.categories ?? []).length === 0 && <MenuItem disabled value="">No categories yet</MenuItem>}
-          </TextField>
-          <TextField fullWidth label="Repository URL (optional)" value={repository} onChange={(e) => setRepository(e.target.value)} sx={{ mb: 3 }} />
-          <TextField fullWidth select label="Generated VNNLIB version" value={vnnlibVersion} onChange={(e) => setVnnlibVersion(e.target.value)} required sx={{ mb: 3 }}
-            helperText="Choose 1.0 if the generator emits VNNLIB1 and should be converted to 2.0. Choose 2.0 if it already emits VNNLIB2.">
-            <MenuItem value="1.0">1.0</MenuItem><MenuItem value="2.0">2.0</MenuItem>
-          </TextField>
+
+          {usesCategories && (
+            <TextField fullWidth select label="Category" value={category} onChange={(e) => setCategory(e.target.value)} required sx={{ mb: 3 }}
+              helperText="Benchmarks belong to a category. Create categories on the Toolkit page.">
+              {(data?.categories ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
+              {(data?.categories ?? []).length === 0 && <MenuItem disabled value="">No categories yet</MenuItem>}
+            </TextField>
+          )}
+
+          <TextField fullWidth label="Git repository URL" value={repository} onChange={(e) => setRepository(e.target.value)} required sx={{ mb: 3 }}
+            helperText="Any git URL. The benchmark's generator script is run from this repo to produce instances.csv and the instance files." />
+
+          {(data?.benchmark_fields ?? []).map((f) => (
+            f.type === 'select' ? (
+              <TextField key={f.name} fullWidth select label={labelFor(f.name)} value={fields[f.name] ?? ''}
+                onChange={(e) => setFields((s) => ({ ...s, [f.name]: e.target.value }))} required sx={{ mb: 3 }}>
+                {(f.options ?? []).map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}
+              </TextField>
+            ) : (
+              <TextField key={f.name} fullWidth label={labelFor(f.name)} value={fields[f.name] ?? ''}
+                onChange={(e) => setFields((s) => ({ ...s, [f.name]: e.target.value }))} sx={{ mb: 3 }} />
+            )
+          ))}
+
           <Button fullWidth type="submit" variant="contained" size="large">Submit benchmark</Button>
         </Box>
       </PageSection>

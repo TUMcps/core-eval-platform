@@ -63,8 +63,10 @@ class Presentation:
 
     #: Columns to show in the per-instance results table (beyond instance/result/time).
     result_columns: list[str] = field(default_factory=list)
-    #: Submission-form field specs the shell renders for this variant's uploads.
+    #: Tool submission-form field specs the shell renders for this variant.
     submission_fields: list[dict] = field(default_factory=list)
+    #: Benchmark submission-form field specs (e.g. VNN's vnnlib_version; ARCH: none).
+    benchmark_fields: list[dict] = field(default_factory=list)
     #: Columns to show on the scoreboard.
     score_columns: list[str] = field(default_factory=list)
     #: Variant look (theme color, hero image, favicon).

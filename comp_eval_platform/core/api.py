@@ -73,6 +73,19 @@ class BenchmarkViewSet(viewsets.ModelViewSet):
     serializer_class = BenchmarkSerializer
     permission_classes = [IsEnabled]
 
+    def create(self, request, *args, **kwargs):
+        # Variants without user-chosen categories (VNN) file every benchmark under a
+        # single implicit 'default' category. Inject it before validation so the
+        # category/name uniqueness check still runs.
+        data = request.data
+        if not data.get("category") and not get_competition().uses_categories:
+            category, _ = Category.objects.get_or_create(name="default")
+            data = {**data, "category": str(category.id)}
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=201)
+
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 

@@ -56,13 +56,24 @@ def toolkit_form_data(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def benchmark_form_data(request):
+    from comp_eval_platform.competitions import get_competition
+
     from .models import Category, RuntimeSettings
 
     s = RuntimeSettings.get()
+    comp = get_competition()
+    try:
+        benchmark_fields = comp.presentation().benchmark_fields
+    except NotImplementedError:
+        benchmark_fields = []
     return Response({
         "scheduler_enabled": s.scheduler_enabled,
         "can_submit": s.users_can_submit_benchmarks or getattr(request.user, "is_admin", False),
+        # Categories are only user-chosen for variants that use them (ARCH); VNN
+        # files every benchmark under a single implicit 'default' category.
+        "uses_categories": comp.uses_categories,
         "categories": [{"id": str(c.id), "name": c.name} for c in Category.objects.order_by("name")],
+        "benchmark_fields": benchmark_fields,
     })
 
 

@@ -76,7 +76,11 @@ export const toolsApi = {
   run: (id: string) => apiClient.post<Task>(`/api/tools/${id}/run/`).then((r) => r.data),
 };
 
-export interface BenchmarkFormData { scheduler_enabled: boolean; can_submit: boolean; categories: { id: string; name: string }[]; }
+export interface BenchmarkFormData {
+  scheduler_enabled: boolean; can_submit: boolean;
+  uses_categories: boolean; categories: { id: string; name: string }[];
+  benchmark_fields: FieldSpec[];
+}
 
 export const benchmarksApi = {
   list: () => results<Benchmark>('/api/benchmarks/'),
