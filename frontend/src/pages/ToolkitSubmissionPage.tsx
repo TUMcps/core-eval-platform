@@ -102,7 +102,7 @@ export default function ToolkitSubmissionPage() {
             helperText="Any https Git URL, e.g. https://github.com/ABC/DEF. The commit hash below selects the exact revision to clone." />
           <TextField fullWidth label="Commit hash (optional)" margin="normal" value={form.hash} onChange={(e) => set({ hash: e.target.value })}
             helperText="Leave empty to use the latest commit on the repository's default branch." />
-          <TextField fullWidth label="Post installation script (e.g. for licenses)" margin="normal" multiline rows={4}
+          <TextField fullWidth label="Post installation script (e.g. for licenses)" margin="normal" multiline minRows={4}
             value={form.post_install_tool} onChange={(e) => set({ post_install_tool: e.target.value })}
             helperText="Runs after install_tool.sh — the right place for license activation or final machine-specific setup." />
 
