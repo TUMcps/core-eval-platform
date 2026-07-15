@@ -58,19 +58,26 @@ export default function AccountPage() {
           <Box sx={{ mt: 0.5 }}><Chip label={user?.enabled ? 'Enabled' : 'Awaiting approval'} color={user?.enabled ? 'success' : 'warning'} /></Box>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Enabled accounts may submit.</Typography>
         </Box>
-        {(user?.aws_mac || user?.aws_eni) && (
-          <>
-            <Divider sx={{ my: 2 }} />
-            <Box>
-              <Typography variant="subtitle2" color="text.secondary">Licensing (MAC{user?.aws_eni ? ' / ENI' : ''})</Typography>
-              {user?.aws_mac && <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: 'Monaco, Menlo, Consolas, monospace' }}>{user.aws_mac}</Typography>}
-              {user?.aws_eni && <Typography variant="body2" sx={{ fontFamily: 'Monaco, Menlo, Consolas, monospace', color: 'text.secondary' }}>ENI: {user.aws_eni}</Typography>}
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                The MAC address your submissions run with — use it for MAC-bound tool licenses. Bound to your ENI when running on AWS.
-              </Typography>
-            </Box>
-          </>
-        )}
+        {(() => {
+          const isDocker = user?.execution_backend === 'local_docker';
+          const showEni = !!user?.aws_eni && !isDocker;  // ENI is an AWS concept only
+          if (!user?.aws_mac && !showEni) return null;
+          return (
+            <>
+              <Divider sx={{ my: 2 }} />
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">Licensing (MAC{showEni ? ' / ENI' : ''})</Typography>
+                {user?.aws_mac && <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: 'Monaco, Menlo, Consolas, monospace' }}>{user.aws_mac}</Typography>}
+                {showEni && <Typography variant="body2" sx={{ fontFamily: 'Monaco, Menlo, Consolas, monospace', color: 'text.secondary' }}>ENI: {user!.aws_eni}</Typography>}
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  {isDocker
+                    ? "The MAC address your submissions run with — use it for MAC-bound tool licenses. On the local Docker backend this is the container's default MAC address."
+                    : 'The MAC address your submissions run with — use it for MAC-bound tool licenses. Bound to your ENI when running on AWS.'}
+                </Typography>
+              </Box>
+            </>
+          );
+        })()}
       </Card>
       <Snackbar open={!!toast} autoHideDuration={2500} onClose={() => setToast('')} message={toast} />
     </Container>

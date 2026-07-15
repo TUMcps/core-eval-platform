@@ -11,6 +11,7 @@ export interface User {
   created_at: string;
   aws_eni?: string;
   aws_mac?: string;
+  execution_backend?: string;
 }
 
 export interface Category { id: string; name: string; result_fields: string[]; spec: Record<string, unknown>; }
