@@ -115,6 +115,11 @@ class TaskViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        qs = Task.objects.all().order_by("-created_at")
+        u = self.request.user
+        return qs if getattr(u, "is_admin", False) else qs.filter(owner=u)
+
     def _may_manage(self, request, task):
         return request.user.is_admin or task.owner_id == request.user.id
 

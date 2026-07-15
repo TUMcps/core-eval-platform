@@ -112,7 +112,8 @@ class TaskSerializer(serializers.ModelSerializer):
         ids = [s.payload.get("benchmark_id") for s in steps if s.payload.get("benchmark_id")]
         names = {str(k): v for k, v in Benchmark.objects.filter(id__in=ids).values_list("id", "name")}
         return [
-            {"name": names.get(str(s.payload.get("benchmark_id")), "benchmark"),
+            {"name": (s.payload.get("benchmark_name")
+                      or names.get(str(s.payload.get("benchmark_id")), "benchmark")),
              "state": _STEP_TO_STATE.get(s.status, "pending"), "step_id": s.order}
             for s in steps
         ]
