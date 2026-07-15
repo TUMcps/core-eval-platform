@@ -135,9 +135,10 @@ persists `Result`s → `tracks/{id}/scoreboard` calls `Competition.score`.
 ### Known follow-ups (need the Docker/DB env to verify)
 - **No migrations yet** — run `manage.py makemigrations` + `migrate` in a container (no Django on the
   dev host). Then wire real node scripts into `vnn_comp/scripts/` (vendored from the current VNN repo).
-- **Node image matching**: `Node.get_next_available` filters on `image`; when a tool's `base_image` is
-  empty/an AMI id, the local_docker backend resolves it to a default image, so the stored `image` won't
-  equal the requested one. Match on `node_type` only when `image` is empty, or store the requested image.
+- **Node image matching** (partly fixed): `Node.get_next_available` now skips the `image` filter when the
+  request is empty (the common empty/AMI→resolved-default case). Still imperfect if two tools with the
+  *same* node_type request *different* real images while one leaves it empty; a fuller fix stores the
+  requested (pre-resolution) image on the node. Verify in the Docker env.
 - **Artifact collection**: `RunBenchmarkHandler._fetch_artifacts` is a stub (returns None) — wire the
   SCP-from-node results.csv retrieval so scoring gets rows.
 - **Frontend shell + plugin-contributed views** not built yet (backend `Presentation` seam is ready).

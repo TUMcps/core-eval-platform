@@ -45,12 +45,13 @@ class Node(models.Model):
 
     @classmethod
     def get_next_available(cls, node_type: str, image: str):
-        """A free, reachable node of the given type/image (or None)."""
-        return (
-            cls.objects.filter(
-                state="running", reachability="ok", task__isnull=True,
-                node_type=node_type, image=image,
-            )
-            .exclude(ip__isnull=True)
-            .first()
-        )
+        """A free, reachable node of the given type (and image, if one was
+        requested). ``image`` is skipped when empty: a tool with no/an AMI-id
+        base_image has its image resolved to a backend default at provision time,
+        so the stored image won't equal the (empty) request."""
+        qs = cls.objects.filter(
+            state="running", reachability="ok", task__isnull=True, node_type=node_type,
+        ).exclude(ip__isnull=True)
+        if image:
+            qs = qs.filter(image=image)
+        return qs.first()
