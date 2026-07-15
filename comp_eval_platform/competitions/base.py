@@ -17,6 +17,7 @@ clean-schema core models introduced next.
 """
 from __future__ import annotations
 
+import os
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
@@ -83,6 +84,25 @@ class Competition(ABC):
         export behavior contributed to the shared frontend shell. Default:
         generic results table, no export."""
         raise NotImplementedError
+
+    # Branding assets (favicon, hero image) ------------------------------
+    def assets_dir(self) -> str | None:
+        """Directory of branding asset files this variant ships (favicon, hero
+        image). Default: none. Override to e.g. ``assets/`` beside the plugin."""
+        return None
+
+    def asset_path(self, name: str) -> str | None:
+        """Resolve a branding asset name to a file path under ``assets_dir``,
+        or ``None`` if absent. Rejects path traversal so the core can serve it
+        directly at ``/api/competition/assets/<name>``."""
+        root = self.assets_dir()
+        if not root:
+            return None
+        root = os.path.normpath(root)
+        full = os.path.normpath(os.path.join(root, name))
+        if os.path.commonpath([root, full]) != root:
+            return None  # escaped the assets dir
+        return full if os.path.isfile(full) else None
 
 
 _REGISTRY: dict[str, type[Competition]] = {}

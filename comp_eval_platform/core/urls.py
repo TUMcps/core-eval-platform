@@ -21,6 +21,7 @@ urlpatterns = [
     path("api/auth/me/", auth_views.me),
     path("api/settings/", auth_views.settings_view),
     path("api/competition/", auth_views.competition_info),
+    path("api/competition/assets/<str:name>", auth_views.competition_asset),
     path("api/toolkit/form_data/", forms_api.toolkit_form_data),
     path("api/toolkit/submit/", forms_api.toolkit_submit),
     path("api/benchmark/form_data/", forms_api.benchmark_form_data),

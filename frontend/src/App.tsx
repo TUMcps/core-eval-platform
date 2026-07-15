@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
-import theme from './theme';
+import { buildTheme } from './theme';
+import { competitionApi, type Branding } from './api';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
@@ -24,7 +25,25 @@ import AdminUsersPage from './pages/AdminUsersPage';
 
 const p = (el: ReactNode, admin?: boolean) => <ProtectedRoute requireAdmin={admin}>{el}</ProtectedRoute>;
 
+/** Point the browser-tab icon at the variant's favicon URL. */
+function setFavicon(href: string) {
+  let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+  link.href = href;
+}
+
 export default function App() {
+  const [branding, setBranding] = useState<Branding | null>(null);
+  useEffect(() => {
+    competitionApi.cached().then((c) => setBranding(c.presentation?.branding ?? null)).catch(() => {});
+  }, []);
+  useEffect(() => { if (branding?.favicon) setFavicon(branding.favicon); }, [branding?.favicon]);
+  const theme = useMemo(() => buildTheme(branding?.primary_color), [branding?.primary_color]);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />

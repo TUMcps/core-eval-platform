@@ -5,6 +5,7 @@ first account created becomes an enabled admin; later ones are disabled until an
 admin enables them.
 """
 from django.contrib.auth import authenticate, login, logout
+from django.http import FileResponse, Http404
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -107,7 +108,24 @@ def competition_info(request):
             "result_columns": pres.result_columns,
             "submission_fields": pres.submission_fields,
             "score_columns": pres.score_columns,
+            "branding": {
+                "primary_color": pres.branding.primary_color,
+                "hero_image": pres.branding.hero_image,
+                "favicon": pres.branding.favicon,
+            },
         }
     except NotImplementedError:
         pass
     return Response(data)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def competition_asset(request, name):
+    """Serve a branding asset file (favicon, hero image) shipped by the active variant."""
+    from comp_eval_platform.competitions import get_competition
+
+    path = get_competition().asset_path(name)
+    if not path:
+        raise Http404(name)
+    return FileResponse(open(path, "rb"))

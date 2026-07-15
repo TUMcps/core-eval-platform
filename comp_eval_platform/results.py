@@ -29,6 +29,20 @@ class Scoreboard:
 
 
 @dataclass
+class Branding:
+    """Per-variant look of the shared frontend shell. All optional; the shell
+    falls back to its neutral defaults for any empty field."""
+
+    #: Theme primary color (hex). Drives buttons, links, accents.
+    primary_color: str = ""
+    #: Landing-page hero image. A URL: remote, or ``/api/competition/assets/<name>``
+    #: for a file the plugin ships (see ``Competition.asset_path``).
+    hero_image: str = ""
+    #: Browser-tab icon, same URL rules as ``hero_image``.
+    favicon: str = ""
+
+
+@dataclass
 class Presentation:
     """What the active variant contributes to the frontend shell."""
 
@@ -38,3 +52,5 @@ class Presentation:
     submission_fields: list[dict] = field(default_factory=list)
     #: Columns to show on the scoreboard.
     score_columns: list[str] = field(default_factory=list)
+    #: Variant look (theme color, hero image, favicon).
+    branding: Branding = field(default_factory=Branding)

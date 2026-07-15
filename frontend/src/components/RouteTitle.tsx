@@ -20,7 +20,7 @@ export default function RouteTitle() {
   const [brand, setBrand] = useState(getBaseTitle());
 
   useEffect(() => {
-    competitionApi.info().then((c) => { setBaseTitle(c.display_name); setBrand(c.display_name); }).catch(() => {});
+    competitionApi.cached().then((c) => { setBaseTitle(c.display_name); setBrand(c.display_name); }).catch(() => {});
   }, []);
 
   useEffect(() => {

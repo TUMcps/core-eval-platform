@@ -31,7 +31,8 @@ export interface ToolkitFormData {
 }
 export interface Track { id: string; name: string; description: string; benchmarks: string[]; created_at: string; }
 export interface FieldSpec { name: string; type: string; options?: string[]; }
-export interface CompetitionInfo { name: string; display_name: string; presentation: { result_columns: string[]; submission_fields: FieldSpec[]; score_columns: string[]; } | null; }
+export interface Branding { primary_color: string; hero_image: string; favicon: string; }
+export interface CompetitionInfo { name: string; display_name: string; presentation: { result_columns: string[]; submission_fields: FieldSpec[]; score_columns: string[]; branding: Branding; } | null; }
 export interface Scoreboard { columns: string[]; rows: Record<string, unknown>[]; }
 
 const results = <T,>(url: string) => apiClient.get<{ results?: T[] } | T[]>(url).then((r) => {
@@ -46,8 +47,11 @@ export const authApi = {
   logout: () => apiClient.post('/api/auth/logout/'),
 };
 
+let _infoCache: Promise<CompetitionInfo> | null = null;
 export const competitionApi = {
   info: () => apiClient.get<CompetitionInfo>('/api/competition/').then((r) => r.data),
+  // Shared across the shell (theme, favicon, titles) — fetched once per load.
+  cached: () => (_infoCache ??= competitionApi.info()),
 };
 
 export const categoriesApi = {

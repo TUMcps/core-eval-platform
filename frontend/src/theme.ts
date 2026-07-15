@@ -1,4 +1,8 @@
-import { createTheme } from '@mui/material/styles';
+import { createTheme, lighten } from '@mui/material/styles';
+
+// Variant branding overrides this (competition presentation.branding.primary_color);
+// the near-black slate is the neutral default when a variant sets no color.
+const DEFAULT_PRIMARY = '#111827';
 
 // Soft "pill" palette for status chips (Active / Done / Aborted / ...), matching the
 // subtle look from the design mock: pale background + darker text instead of MUI's
@@ -15,9 +19,11 @@ const softChipColors: Record<string, { backgroundColor: string; color: string; h
   info: { backgroundColor: '#e1f5fe', color: '#0277bd', hover: '#cfeefc' },
 };
 
-const theme = createTheme({
+export const buildTheme = (primaryColor?: string) => {
+const primary = primaryColor || DEFAULT_PRIMARY;
+return createTheme({
   palette: {
-    primary: { main: '#111827', contrastText: '#ffffff' }, // near-black slate
+    primary: { main: primary, contrastText: '#ffffff' },
     secondary: { main: '#2563eb' }, // accent blue
     background: { default: '#f7f8fa', paper: '#ffffff' },
     text: { primary: '#1f2937', secondary: '#6b7280' },
@@ -58,10 +64,10 @@ const theme = createTheme({
             boxShadow: 'inset 0 0 0 1px currentColor, 0 2px 6px rgba(16,24,40,0.12)',
           },
         },
-        // Primary is near-black, so MUI's auto-darkened hover is invisible and
-        // disableElevation strips the shadow — lift to a lighter slate instead.
+        // Dark primaries make MUI's auto-darkened hover invisible and
+        // disableElevation strips the shadow — lift to a lighter shade instead.
         containedPrimary: {
-          '&:hover': { backgroundColor: '#374151' },
+          '&:hover': { backgroundColor: lighten(primary, 0.18) },
         },
       },
     },
@@ -128,5 +134,7 @@ const theme = createTheme({
     },
   },
 });
+};
 
+const theme = buildTheme();
 export default theme;
