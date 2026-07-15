@@ -17,6 +17,7 @@ from .serializers import (
     CategorySerializer,
     InstanceSerializer,
     ResultSerializer,
+    TaskListSerializer,
     TaskSerializer,
     ToolSerializer,
     TrackSerializer,
@@ -115,8 +116,14 @@ class TaskViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_serializer_class(self):
+        # The overview omits per-step data (avoids a log query per step).
+        return TaskListSerializer if self.action == "list" else TaskSerializer
+
     def get_queryset(self):
-        qs = Task.objects.all().order_by("-created_at")
+        qs = (Task.objects.all().order_by("-created_at")
+              .select_related("owner", "tool", "benchmark")
+              .prefetch_related("step_set"))
         u = self.request.user
         return qs if getattr(u, "is_admin", False) else qs.filter(owner=u)
 

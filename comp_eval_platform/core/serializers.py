@@ -72,8 +72,9 @@ _STEP_TO_STATE = {
 }
 
 
-class TaskSerializer(serializers.ModelSerializer):
-    steps = TaskStepSerializer(source="step_set", many=True, read_only=True)
+class TaskListSerializer(serializers.ModelSerializer):
+    """Overview rows: no per-step data (which would trigger a log query per step)."""
+
     name = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
     done = serializers.SerializerMethodField()
@@ -82,9 +83,8 @@ class TaskSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Task
-        fields = ["id", "owner", "tool", "benchmark", "outcome", "current_step",
-                  "total_runtime", "created_at", "steps", "name", "status", "done",
-                  "benchmark_progress", "user_email"]
+        fields = ["id", "tool", "benchmark", "outcome", "created_at", "name", "status",
+                  "done", "benchmark_progress", "user_email"]
         read_only_fields = fields
 
     def get_name(self, obj):
@@ -106,17 +106,30 @@ class TaskSerializer(serializers.ModelSerializer):
     def get_benchmark_progress(self, obj):
         from .models import Benchmark
 
+        # step_set is prefetched by the viewset, so this touches no extra query
+        # for the steps themselves.
         steps = [s for s in obj.step_set.all() if s.kind == "run_benchmark"]
         if not steps:
             return []
         ids = [s.payload.get("benchmark_id") for s in steps if s.payload.get("benchmark_id")]
-        names = {str(k): v for k, v in Benchmark.objects.filter(id__in=ids).values_list("id", "name")}
+        names = ({str(k): v for k, v in Benchmark.objects.filter(id__in=ids).values_list("id", "name")}
+                 if ids else {})
         return [
             {"name": (s.payload.get("benchmark_name")
                       or names.get(str(s.payload.get("benchmark_id")), "benchmark")),
              "state": _STEP_TO_STATE.get(s.status, "pending"), "step_id": s.order}
             for s in steps
         ]
+
+
+class TaskSerializer(TaskListSerializer):
+    """Full task detail: adds the step list (with logs) for the detail page."""
+
+    steps = TaskStepSerializer(source="step_set", many=True, read_only=True)
+
+    class Meta(TaskListSerializer.Meta):
+        fields = TaskListSerializer.Meta.fields + ["owner", "current_step", "total_runtime", "steps"]
+        read_only_fields = fields
 
 
 class ResultSerializer(serializers.ModelSerializer):
