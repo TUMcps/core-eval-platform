@@ -6,7 +6,6 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
-import Stack from '@mui/material/Stack';
 import { competitionApi } from '../api';
 import type { CompetitionInfo } from '../api';
 import { COMPETITION_YEAR } from '../constants/formOptions';
@@ -17,6 +16,12 @@ export default function HomePage() {
   useEffect(() => { competitionApi.cached().then(setComp).catch(() => {}); }, []);
   const name = comp?.display_name ?? 'Evaluation Platform';
   const hero = comp?.presentation?.branding?.hero_image;
+  const landing = comp?.presentation?.landing;
+  const tagline = landing?.tagline
+    || 'Submit verification toolkits against cutting-edge benchmarks, run them on provisioned workers, and compare results.';
+  const links = landing?.links ?? [];
+  const contacts = landing?.contacts ?? [];
+  const related = landing?.related;
 
   return (
     <Box>
@@ -29,10 +34,10 @@ export default function HomePage() {
                   {user ? `Welcome ${user.email}` : `${name} ${COMPETITION_YEAR}`}
                 </Typography>
                 <Typography variant="h5" sx={{ fontSize: { xs: '1.1rem', md: '1.4rem' }, mb: 4, lineHeight: 1.6, color: '#374151', fontWeight: 400 }}>
-                  Submit verification toolkits against cutting-edge benchmarks, run them on provisioned
-                  workers, and compare results. The {COMPETITION_YEAR} cycle is live.
+                  {tagline}
                 </Typography>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent={{ xs: 'center', lg: 'flex-start' }}>
+
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: { xs: 'center', lg: 'flex-start' } }}>
                   {user ? (
                     <>
                       <Button component={Link} to="/toolkit" variant="contained" size="large">Toolkits</Button>
@@ -44,7 +49,36 @@ export default function HomePage() {
                       <Button component={Link} to="/signup" variant="contained" size="large">Sign up</Button>
                     </>
                   )}
-                </Stack>
+                  {links.map((l) => (
+                    <Button key={l.url} component="a" href={l.url} target="_blank" rel="noopener noreferrer" variant="outlined" size="large">
+                      {l.label}
+                    </Button>
+                  ))}
+                </Box>
+
+                {contacts.length > 0 && (
+                  <Typography variant="body2" sx={{ mt: 3, color: '#374151', textAlign: { xs: 'center', lg: 'left' } }}>
+                    Questions? Contact{' '}
+                    {contacts.map((email, i) => (
+                      <span key={email}>
+                        {i > 0 && (i === contacts.length - 1 ? ' and ' : ', ')}
+                        <a href={`mailto:${email}`} style={{ color: 'inherit', textDecoration: 'underline' }}>{email}</a>
+                      </span>
+                    ))}
+                    .
+                  </Typography>
+                )}
+
+                {related?.url && (
+                  <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid #d1d5db' }}>
+                    <Typography variant="body2" sx={{ color: '#6b7280', textAlign: { xs: 'center', lg: 'left' }, mb: 1.5, fontSize: '0.9rem' }}>
+                      {related.text}
+                    </Typography>
+                    <Button component="a" href={related.url} target="_blank" rel="noopener noreferrer" variant="outlined" size="small">
+                      {related.label}
+                    </Button>
+                  </Box>
+                )}
               </Box>
             </Grid>
             {hero && (

@@ -113,6 +113,12 @@ def competition_info(request):
                 "hero_image": pres.branding.hero_image,
                 "favicon": pres.branding.favicon,
             },
+            "landing": {
+                "tagline": pres.landing.tagline,
+                "links": pres.landing.links,
+                "contacts": pres.landing.contacts,
+                "related": pres.landing.related,
+            },
         }
     except NotImplementedError:
         pass

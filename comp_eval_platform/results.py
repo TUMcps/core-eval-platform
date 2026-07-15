@@ -43,6 +43,21 @@ class Branding:
 
 
 @dataclass
+class Landing:
+    """Per-variant copy for the landing page. All optional; the shell omits any
+    empty piece."""
+
+    #: Hero subtitle under the "<display_name> <year>" title.
+    tagline: str = ""
+    #: Outbound buttons beside the primary actions, e.g. main site / GitHub.
+    links: list[dict] = field(default_factory=list)  # [{"label", "url"}]
+    #: Contact emails shown as "Questions? Contact …".
+    contacts: list[str] = field(default_factory=list)
+    #: Cross-promo box for a sibling competition.
+    related: dict = field(default_factory=dict)  # {"text", "label", "url"}
+
+
+@dataclass
 class Presentation:
     """What the active variant contributes to the frontend shell."""
 
@@ -54,3 +69,5 @@ class Presentation:
     score_columns: list[str] = field(default_factory=list)
     #: Variant look (theme color, hero image, favicon).
     branding: Branding = field(default_factory=Branding)
+    #: Variant landing-page copy (tagline, links, contacts, cross-promo).
+    landing: Landing = field(default_factory=Landing)

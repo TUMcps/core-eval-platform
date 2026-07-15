@@ -32,7 +32,10 @@ export interface ToolkitFormData {
 export interface Track { id: string; name: string; description: string; benchmarks: string[]; created_at: string; }
 export interface FieldSpec { name: string; type: string; options?: string[]; }
 export interface Branding { primary_color: string; hero_image: string; favicon: string; }
-export interface CompetitionInfo { name: string; display_name: string; presentation: { result_columns: string[]; submission_fields: FieldSpec[]; score_columns: string[]; branding: Branding; } | null; }
+export interface LandingLink { label: string; url: string; }
+export interface Related { text?: string; label?: string; url?: string; }
+export interface Landing { tagline: string; links: LandingLink[]; contacts: string[]; related: Related; }
+export interface CompetitionInfo { name: string; display_name: string; presentation: { result_columns: string[]; submission_fields: FieldSpec[]; score_columns: string[]; branding: Branding; landing: Landing; } | null; }
 export interface Scoreboard { columns: string[]; rows: Record<string, unknown>[]; }
 
 const results = <T,>(url: string) => apiClient.get<{ results?: T[] } | T[]>(url).then((r) => {
