@@ -90,6 +90,7 @@ class Command(BaseCommand):
             if not email:
                 continue
             u, _ = User.objects.get_or_create(email=email, defaults={
+                "name": (r.get("name") or "").strip(),
                 "role": "admin" if r["admin"] else "user",
                 "enabled": bool(r["enabled"]),
                 "is_staff": bool(r["is_staff"]),
@@ -98,7 +99,8 @@ class Command(BaseCommand):
                 "deleted_runtime": r.get("deleted_runtime") or 0,
             })
             u.password = r["password"] or ""  # copy the hash so logins keep working
-            u.save(update_fields=["password"])
+            u.name = (r.get("name") or "").strip()  # backfill on re-runs, not just create
+            u.save(update_fields=["password", "name"])
             if r.get("created_on"):
                 User.objects.filter(pk=u.pk).update(created_at=r["created_on"])
             umap[r["id"]] = u
