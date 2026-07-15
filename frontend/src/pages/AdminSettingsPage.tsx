@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
   Card, CardHeader, CardContent, Stack, FormControlLabel, Switch, TextField, MenuItem, Button,
-  Snackbar, Divider, Grid,
+  Snackbar, Divider, Grid, Typography,
 } from '@mui/material';
 import { settingsApi } from '../api';
+import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 
@@ -22,8 +23,11 @@ export default function AdminSettingsPage() {
 
   return (
     <>
-      <PageHeader title="Admin" subtitle="Runtime settings for this deployment."
-        action={<Button variant="contained" onClick={save}>Save changes</Button>} />
+      <PageHeader>
+        <PageBreadcrumbs items={[{ label: 'Admin', to: '/admin' }, { label: 'Settings' }]} />
+        <Typography variant="h3" fontWeight="bold" gutterBottom>System Settings</Typography>
+        <Typography variant="body1" color="text.secondary">Runtime configuration for this deployment.</Typography>
+      </PageHeader>
       <PageSection>
         <Grid container spacing={4}>
           <Grid size={{ xs: 12, md: 6 }}>
@@ -56,6 +60,7 @@ export default function AdminSettingsPage() {
             </Card>
           </Grid>
         </Grid>
+        <Button variant="contained" size="large" sx={{ mt: 3 }} onClick={save}>Save changes</Button>
       </PageSection>
       <Snackbar open={!!toast} autoHideDuration={3000} onClose={() => setToast('')} message={toast} />
     </>

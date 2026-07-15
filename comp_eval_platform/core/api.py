@@ -11,7 +11,7 @@ from rest_framework.response import Response
 
 from comp_eval_platform.competitions import get_competition
 
-from .models import Benchmark, Category, Instance, Result, Task, Tool, Track
+from .models import Benchmark, Category, Instance, Result, Task, Tool, Track, User
 from .serializers import (
     BenchmarkSerializer,
     CategorySerializer,
@@ -20,6 +20,7 @@ from .serializers import (
     TaskSerializer,
     ToolSerializer,
     TrackSerializer,
+    UserSerializer,
 )
 
 
@@ -114,6 +115,29 @@ class TaskViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def _may_manage(self, request, task):
+        return request.user.is_admin or task.owner_id == request.user.id
+
+    @action(detail=True, methods=["post"])
+    def abort(self, request, pk=None):
+        task = self.get_object()
+        if not self._may_manage(request, task):
+            return Response(status=403)
+        task.abort()
+        task.refresh_from_db()
+        return Response(TaskSerializer(task).data)
+
+    @action(detail=True, methods=["post"])
+    def resume(self, request, pk=None):
+        """Continue a paused task by advancing past its held step."""
+        task = self.get_object()
+        if not self._may_manage(request, task):
+            return Response(status=403)
+        if task.current_step is not None:
+            task.step_succeeded(check_status=False)
+            task.refresh_from_db()
+        return Response(TaskSerializer(task).data)
+
 
 class ResultViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ResultSerializer
@@ -136,3 +160,18 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all().order_by("name")
     serializer_class = CategorySerializer
     permission_classes = [IsOrganizer]
+
+
+class IsAdmin(permissions.BasePermission):
+    def has_permission(self, request, view):
+        u = request.user
+        return bool(u and u.is_authenticated and getattr(u, "is_admin", False))
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    """Admin user management: list + enable/disable + set role."""
+
+    queryset = User.objects.all().order_by("email")
+    serializer_class = UserSerializer
+    permission_classes = [IsAdmin]
+    http_method_names = ["get", "patch", "head", "options"]
