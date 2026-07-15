@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
 import {
   Box, Typography, Button, Paper, CircularProgress, Chip, Accordion, AccordionSummary,
-  AccordionDetails, Stack, Table, TableHead, TableRow, TableCell, TableBody, TableContainer,
-  Card, CardHeader, CardContent, Snackbar, Alert,
+  AccordionDetails, Stack, Snackbar, Alert,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -83,7 +82,7 @@ export default function BenchmarkDetailsPage() {
           </Box>
           <Stack direction="row" spacing={1.5}>
             {isPaused && <Button variant="contained" onClick={doResume}>Continue</Button>}
-            {benchmark && task.done && <Button variant="contained" disabled={benchmark.published || benchmark.instances.length === 0} onClick={publish}>Publish</Button>}
+            {benchmark && task.done && task.status === 'Done' && <Button variant="contained" disabled={benchmark.published} onClick={publish}>{benchmark.published ? 'Published' : 'Publish'}</Button>}
             {!task.done ? (
               <Button variant="outlined" color="error" onClick={doAbort}>Abort submission</Button>
             ) : (
@@ -128,21 +127,11 @@ export default function BenchmarkDetailsPage() {
           );
         })}
 
-        {benchmark && benchmark.instances.length > 0 && (
-          <Card sx={{ mt: 4 }}>
-            <CardHeader title={`Generated instances (${benchmark.instances.length})`}
-              subheader={benchmark.published ? 'Published' : 'Draft — publish to make it runnable'} />
-            <CardContent>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead><TableRow><TableCell>#</TableCell><TableCell>Name</TableCell></TableRow></TableHead>
-                  <TableBody>
-                    {benchmark.instances.map((i, n) => <TableRow key={i.id} hover><TableCell>{n + 1}</TableCell><TableCell>{i.name}</TableCell></TableRow>)}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
+        {benchmark && task.done && task.status === 'Done' && (
+          <Alert severity="success" sx={{ mt: 3 }}>
+            Benchmark generated and pushed to the benchmarks repository.
+            {benchmark.published ? ' It is published and available to tool submissions.' : ' Publish it to make it available to tool submissions.'}
+          </Alert>
         )}
       </PageSection>
       <Snackbar open={!!toast} autoHideDuration={3000} onClose={() => setToast('')} message={toast} />
