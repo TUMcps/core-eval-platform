@@ -11,24 +11,23 @@ function brandingInjector(): Plugin {
   return {
     name: 'branding-injector',
     async transformIndexHtml(html) {
-      let displayName = ''
-      let branding: unknown = null
+      let data: any = null
       try {
         const res = await fetch(`${apiBase}/api/competition/`)
-        if (res.ok) {
-          const data = (await res.json()) as any
-          displayName = data.display_name || ''
-          branding = data.presentation?.branding ?? null
-        }
+        if (res.ok) data = await res.json()
       } catch {
         return html // backend not reachable at this moment; client hydrates it
       }
-      const b = branding as { favicon?: string } | null
+      if (!data) return html
+      const displayName: string = data.display_name || ''
+      const favicon: string | undefined = data.presentation?.branding?.favicon
       const out = displayName ? html.replace(/<title>.*?<\/title>/, `<title>${displayName}</title>`) : html
-      const tags: HtmlTagDescriptor[] = []
-      // Synchronous global read before the app module executes (avoids the theme flash).
-      tags.push({ tag: 'script', injectTo: 'head-prepend', children: `window.__BRANDING__=${JSON.stringify({ display_name: displayName, branding })}` })
-      if (b?.favicon) tags.push({ tag: 'link', injectTo: 'head', attrs: { rel: 'icon', href: b.favicon } })
+      const tags: HtmlTagDescriptor[] = [
+        // Full competition payload, read synchronously before the app module runs so
+        // the first paint has the right theme, title, brand, and landing copy (no flash).
+        { tag: 'script', injectTo: 'head-prepend', children: `window.__COMPETITION__=${JSON.stringify(data)}` },
+      ]
+      if (favicon) tags.push({ tag: 'link', injectTo: 'head', attrs: { rel: 'icon', href: favicon } })
       return { html: out, tags }
     },
   }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { competitionApi } from '../api';
+import { bootBrand } from '../branding';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -25,10 +26,10 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
-  const [brand, setBrand] = useState('Eval Platform');
+  const [brand, setBrand] = useState(bootBrand || 'Eval Platform');
   const open = Boolean(menuAnchor);
 
-  useEffect(() => { competitionApi.info().then((c) => setBrand(c.display_name)).catch(() => {}); }, []);
+  useEffect(() => { competitionApi.cached().then((c) => setBrand(c.display_name)).catch(() => {}); }, []);
 
   const close = () => setMenuAnchor(null);
   const handleLogout = async () => { close(); await logout(); navigate('/login'); };

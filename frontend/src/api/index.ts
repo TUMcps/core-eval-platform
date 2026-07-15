@@ -55,10 +55,13 @@ export const authApi = {
   updateProfile: (name: string) => apiClient.patch<User>('/api/auth/profile/', { name }).then((r) => r.data),
 };
 
-let _infoCache: Promise<CompetitionInfo> | null = null;
+// Seed from the payload the Vite plugin injected into <head> (window.__COMPETITION__),
+// so the first render already has it with no network round-trip. Falls back to fetching.
+let _infoCache: Promise<CompetitionInfo> | null =
+  typeof window !== 'undefined' && window.__COMPETITION__ ? Promise.resolve(window.__COMPETITION__) : null;
 export const competitionApi = {
   info: () => apiClient.get<CompetitionInfo>('/api/competition/').then((r) => r.data),
-  // Shared across the shell (theme, favicon, titles) — fetched once per load.
+  // Shared across the shell (theme, favicon, titles) — resolved once per load.
   cached: () => (_infoCache ??= competitionApi.info()),
 };
 

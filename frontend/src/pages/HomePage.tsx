@@ -8,11 +8,12 @@ import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import { competitionApi } from '../api';
 import type { CompetitionInfo } from '../api';
+import { bootCompetition } from '../branding';
 import { COMPETITION_YEAR } from '../constants/formOptions';
 
 export default function HomePage() {
   const { user } = useAuth();
-  const [comp, setComp] = useState<CompetitionInfo | null>(null);
+  const [comp, setComp] = useState<CompetitionInfo | null>(bootCompetition);
   useEffect(() => { competitionApi.cached().then(setComp).catch(() => {}); }, []);
   const name = comp?.display_name ?? 'Evaluation Platform';
   const hero = comp?.presentation?.branding?.hero_image;

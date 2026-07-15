@@ -1,13 +1,15 @@
-import type { Branding } from './api';
+import type { Branding, CompetitionInfo } from './api';
 
-// The Vite branding-injector plugin writes this into <head> before the app boots,
-// so the first paint already has the right theme color, title, and favicon (no flash
-// of the neutral defaults). The runtime /api/competition/ fetch stays the authority.
+// The Vite branding-injector plugin writes the full competition payload into <head>
+// before the app boots, so the first paint already has the right theme, title, brand,
+// favicon, and landing copy — no flash of the neutral defaults. The runtime
+// /api/competition/ fetch remains the authority and revalidates in the background.
 declare global {
   interface Window {
-    __BRANDING__?: { display_name?: string; branding?: Branding | null };
+    __COMPETITION__?: CompetitionInfo;
   }
 }
 
-export const bootBranding: Branding | null = window.__BRANDING__?.branding ?? null;
-export const bootBrand: string = window.__BRANDING__?.display_name ?? '';
+export const bootCompetition: CompetitionInfo | null = window.__COMPETITION__ ?? null;
+export const bootBranding: Branding | null = bootCompetition?.presentation?.branding ?? null;
+export const bootBrand: string = bootCompetition?.display_name ?? '';
