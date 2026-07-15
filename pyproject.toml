@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "comp-eval-platform"
+version = "0.1.0"
+description = "Core engine for a modular competition-evaluation platform (VNN-COMP, ARCH-COMP, … are plugins)."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Tobias Ladner" }]
+
+dependencies = [
+    # Django core
+    "Django>=4.2,<5.0",
+    "djangorestframework>=3.14",
+    "django-cors-headers>=4.0",
+    # Database
+    "psycopg2-binary>=2.9",
+    "dj-database-url>=2.0",
+    # Auth
+    "djangorestframework-simplejwt>=5.2",
+    # Background scheduler (single-worker, sequential poller)
+    "APScheduler>=3.10",
+    "django-apscheduler>=0.6.2",
+    # API docs
+    "drf-spectacular>=0.26",
+    # Utilities
+    "requests>=2.28",
+    "PyYAML>=6.0",
+    "python-decouple>=3.6",
+    # Production
+    "gunicorn>=20.1",
+    "whitenoise>=6.4",
+]
+
+[project.optional-dependencies]
+aws = ["boto3>=1.26", "botocore>=1.29"]
+dev = [
+    "pytest>=7.2",
+    "pytest-django>=4.5",
+    "factory-boy>=3.2",
+    "django-debug-toolbar>=4.0",
+    "django-extensions>=3.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["comp_eval_platform"]
