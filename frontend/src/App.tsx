@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, CssBaseline, Container } from '@mui/material';
+import { ThemeProvider, CssBaseline } from '@mui/material';
 import theme from './theme';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -24,20 +24,18 @@ export default function App() {
       <AuthProvider>
         <Router>
           <Navbar />
-          <Container sx={{ py: 4 }}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/tools" element={protect(<ToolsPage />)} />
-              <Route path="/benchmarks" element={protect(<BenchmarksPage />)} />
-              <Route path="/tasks" element={protect(<TasksPage />)} />
-              <Route path="/tasks/:id" element={protect(<TaskDetailsPage />)} />
-              <Route path="/scoreboard" element={protect(<ScoreboardPage />)} />
-              <Route path="/admin" element={protect(<AdminSettingsPage />, true)} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Container>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/tools" element={protect(<ToolsPage />)} />
+            <Route path="/benchmarks" element={protect(<BenchmarksPage />)} />
+            <Route path="/tasks" element={protect(<TasksPage />)} />
+            <Route path="/tasks/:id" element={protect(<TaskDetailsPage />)} />
+            <Route path="/scoreboard" element={protect(<ScoreboardPage />)} />
+            <Route path="/admin" element={protect(<AdminSettingsPage />, true)} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </Router>
       </AuthProvider>
     </ThemeProvider>
