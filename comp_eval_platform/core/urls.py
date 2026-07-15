@@ -1,10 +1,20 @@
-"""Core node-callback routes. Mounted at the project root so the node-reachable
-URL is ``ROOT_URL/update/<task_id>/success|failure``."""
-from django.urls import path
+"""Core routes: the JSON API under ``/api/`` and the node callbacks at the root
+(``ROOT_URL/update/<task_id>/success|failure``, which must be node-reachable)."""
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
-from . import views
+from . import api, views
+
+router = DefaultRouter()
+router.register("tools", api.ToolViewSet)
+router.register("benchmarks", api.BenchmarkViewSet)
+router.register("tracks", api.TrackViewSet)
+router.register("tasks", api.TaskViewSet)
+router.register("results", api.ResultViewSet, basename="result")
+router.register("categories", api.CategoryViewSet)
 
 urlpatterns = [
+    path("api/", include(router.urls)),
     path("update/<uuid:task_id>/success", views.update_success, name="update_success"),
     path("update/<uuid:task_id>/failure", views.update_failure, name="update_failure"),
 ]
