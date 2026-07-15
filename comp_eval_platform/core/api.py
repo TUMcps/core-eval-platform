@@ -62,6 +62,7 @@ class ToolViewSet(viewsets.ModelViewSet):
         _validate(tool)
         task = Task.objects.create(owner=request.user, tool=tool)
         task.start()
+        task.refresh_from_db()  # start() advances the machine on refreshed copies
         return Response(TaskSerializer(task).data, status=201)
 
 
