@@ -6,6 +6,7 @@ import Tool`` works and Django sees them under the ``core`` app label.
 from .catalog import Benchmark, Category, Instance, Tool, Track
 from .compute import Node
 from .execution import Log, Outcome, StepStatus, Task, TaskStep
+from .results import Result
 from .settings import RuntimeSettings
 from .users import Role, User
 
@@ -23,5 +24,6 @@ __all__ = [
     "Log",
     "Outcome",
     "StepStatus",
+    "Result",
     "RuntimeSettings",
 ]
