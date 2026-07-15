@@ -41,6 +41,9 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
+    #: Human-readable display name shown across the UI (email stays the login).
+    #: Blank for legacy accounts; displays fall back to the email.
+    name = models.CharField(max_length=200, blank=True, default="")
     role = models.CharField(max_length=16, choices=Role.choices, default=Role.USER)
     #: May submit / log in. First signup is enabled; later ones await an admin.
     enabled = models.BooleanField(default=False)

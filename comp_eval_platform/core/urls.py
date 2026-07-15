@@ -19,6 +19,7 @@ urlpatterns = [
     path("api/auth/login/", auth_views.login_view),
     path("api/auth/logout/", auth_views.logout_view),
     path("api/auth/me/", auth_views.me),
+    path("api/auth/profile/", auth_views.update_profile),
     path("api/settings/", auth_views.settings_view),
     path("api/competition/", auth_views.competition_info),
     path("api/competition/assets/<str:name>", auth_views.competition_asset),

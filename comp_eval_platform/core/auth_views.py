@@ -16,7 +16,7 @@ from .models import Role, User
 
 def _user_data(u):
     return {
-        "id": str(u.id), "email": u.email, "role": u.role, "enabled": u.enabled,
+        "id": str(u.id), "email": u.email, "name": u.name, "role": u.role, "enabled": u.enabled,
         "is_admin": u.is_admin, "is_organizer": u.is_organizer,
     }
 
@@ -25,6 +25,7 @@ def _user_data(u):
 @permission_classes([AllowAny])
 def signup(request):
     email = (request.data.get("email") or "").strip()
+    name = (request.data.get("name") or "").strip()
     password = request.data.get("password") or ""
     if not email or not password:
         return Response({"detail": "email and password are required"}, status=400)
@@ -32,7 +33,7 @@ def signup(request):
         return Response({"detail": "an account with this email already exists"}, status=400)
     first = not User.objects.exists()
     user = User.objects.create_user(
-        email=email, password=password,
+        email=email, password=password, name=name,
         role=Role.ADMIN if first else Role.USER, enabled=first,
     )
     return Response(_user_data(user), status=201)
@@ -67,6 +68,18 @@ def me(request):
     if request.user.is_authenticated:
         return Response(_user_data(request.user))
     return Response(None)
+
+
+@api_view(["PATCH"])
+@permission_classes([AllowAny])
+def update_profile(request):
+    """Let the signed-in user edit their own display name."""
+    if not request.user.is_authenticated:
+        return Response({"detail": "not authenticated"}, status=401)
+    if "name" in request.data:
+        request.user.name = (request.data.get("name") or "").strip()
+        request.user.save(update_fields=["name"])
+    return Response(_user_data(request.user))
 
 
 _SETTINGS_FIELDS = [

@@ -8,8 +8,8 @@ from .models import Benchmark, Category, Instance, Result, Task, TaskStep, Tool,
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email", "role", "enabled", "is_admin", "is_organizer", "created_at"]
-        read_only_fields = ["id", "email", "is_admin", "is_organizer", "created_at"]
+        fields = ["id", "email", "name", "role", "enabled", "is_admin", "is_organizer", "created_at"]
+        read_only_fields = ["id", "email", "name", "is_admin", "is_organizer", "created_at"]
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -90,11 +90,12 @@ class TaskListSerializer(serializers.ModelSerializer):
     done = serializers.SerializerMethodField()
     benchmark_progress = serializers.SerializerMethodField()
     user_email = serializers.SerializerMethodField()
+    user_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
         fields = ["id", "tool", "benchmark", "outcome", "created_at", "name", "status",
-                  "done", "benchmark_progress", "user_email"]
+                  "done", "benchmark_progress", "user_email", "user_name"]
         read_only_fields = fields
 
     def get_name(self, obj):
@@ -112,6 +113,9 @@ class TaskListSerializer(serializers.ModelSerializer):
 
     def get_user_email(self, obj):
         return obj.owner.email if obj.owner_id else None
+
+    def get_user_name(self, obj):
+        return obj.owner.name if obj.owner_id else None
 
     def get_benchmark_progress(self, obj):
         from .models import Benchmark
