@@ -69,7 +69,7 @@ class ToolViewSet(viewsets.ModelViewSet):
 
 
 class BenchmarkViewSet(viewsets.ModelViewSet):
-    queryset = Benchmark.objects.all().order_by("-created_at")
+    queryset = Benchmark.objects.all().order_by("-created_at").prefetch_related("instances")
     serializer_class = BenchmarkSerializer
     permission_classes = [IsEnabled]
 
@@ -99,7 +99,7 @@ class BenchmarkViewSet(viewsets.ModelViewSet):
 class TrackViewSet(viewsets.ModelViewSet):
     """Organizer-managed track curation (read open to any authenticated user)."""
 
-    queryset = Track.objects.all().order_by("name")
+    queryset = Track.objects.all().order_by("name").prefetch_related("benchmarks")
     serializer_class = TrackSerializer
     permission_classes = [IsOrganizer]
 
@@ -124,6 +124,9 @@ class TaskViewSet(viewsets.ReadOnlyModelViewSet):
         qs = (Task.objects.all().order_by("-created_at")
               .select_related("owner", "tool", "benchmark")
               .prefetch_related("step_set"))
+        if self.action == "retrieve":
+            # The detail page shows per-step logs; prefetch them (list omits steps).
+            qs = qs.prefetch_related("step_set__logs_rel")
         u = self.request.user
         return qs if getattr(u, "is_admin", False) else qs.filter(owner=u)
 

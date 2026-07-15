@@ -50,15 +50,25 @@ class TrackSerializer(serializers.ModelSerializer):
 
 
 class TaskStepSerializer(serializers.ModelSerializer):
-    logs = serializers.CharField(read_only=True)
+    logs = serializers.SerializerMethodField()
     has_logs = serializers.SerializerMethodField()
 
     class Meta:
         model = TaskStep
         fields = ["id", "kind", "order", "status", "started_at", "finished_at", "logs", "has_logs"]
 
+    def _latest(self, obj):
+        # logs_rel is prefetched by the detail view; a step keeps at most one log
+        # (set_log replaces), so read it in Python instead of a per-step query.
+        rel = list(obj.logs_rel.all())
+        return rel[-1] if rel else None
+
+    def get_logs(self, obj):
+        log = self._latest(obj)
+        return log.text if log else ""
+
     def get_has_logs(self, obj):
-        return bool(obj.logs)
+        return self._latest(obj) is not None
 
 
 # Our outcomes/step-statuses → VNN's canonical chip labels (constants/status.ts).
