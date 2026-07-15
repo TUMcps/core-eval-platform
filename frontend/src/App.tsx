@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { buildTheme } from './theme';
 import { competitionApi, type Branding } from './api';
+import { bootBranding } from './branding';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
@@ -37,7 +38,7 @@ function setFavicon(href: string) {
 }
 
 export default function App() {
-  const [branding, setBranding] = useState<Branding | null>(null);
+  const [branding, setBranding] = useState<Branding | null>(bootBranding);
   useEffect(() => {
     competitionApi.cached().then((c) => setBranding(c.presentation?.branding ?? null)).catch(() => {});
   }, []);

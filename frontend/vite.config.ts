@@ -1,10 +1,42 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin, type HtmlTagDescriptor } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+// Inject the active competition's branding into index.html at serve/build time so
+// the first paint already has the correct title, favicon, and theme color — no flash
+// of the neutral defaults before the runtime /api/competition/ fetch resolves. The
+// backend is the single source of truth; on failure the client still fills it in.
+function brandingInjector(): Plugin {
+  const apiBase = process.env.VITE_API_URL || 'http://backend:8000'
+  return {
+    name: 'branding-injector',
+    async transformIndexHtml(html) {
+      let displayName = ''
+      let branding: unknown = null
+      try {
+        const res = await fetch(`${apiBase}/api/competition/`)
+        if (res.ok) {
+          const data = (await res.json()) as any
+          displayName = data.display_name || ''
+          branding = data.presentation?.branding ?? null
+        }
+      } catch {
+        return html // backend not reachable at this moment; client hydrates it
+      }
+      const b = branding as { favicon?: string } | null
+      const out = displayName ? html.replace(/<title>.*?<\/title>/, `<title>${displayName}</title>`) : html
+      const tags: HtmlTagDescriptor[] = []
+      // Synchronous global read before the app module executes (avoids the theme flash).
+      tags.push({ tag: 'script', injectTo: 'head-prepend', children: `window.__BRANDING__=${JSON.stringify({ display_name: displayName, branding })}` })
+      if (b?.favicon) tags.push({ tag: 'link', injectTo: 'head', attrs: { rel: 'icon', href: b.favicon } })
+      return { html: out, tags }
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [brandingInjector(), react()],
   server: {
     host: '0.0.0.0', // Listen on all network interfaces for Docker
     port: 5173,
