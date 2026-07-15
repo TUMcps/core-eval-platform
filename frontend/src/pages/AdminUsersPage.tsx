@@ -36,6 +36,7 @@ export default function AdminUsersPage() {
               <Table>
                 <TableHead>
                   <TableRow>
+                    <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
                     <TableCell sx={{ fontWeight: 600 }} align="center">Enabled</TableCell>
@@ -45,7 +46,8 @@ export default function AdminUsersPage() {
                 <TableBody>
                   {users.map((u) => (
                     <TableRow key={u.id} hover>
-                      <TableCell sx={{ fontWeight: 600 }}>{u.email} {u.is_admin && <Chip label="admin" size="small" color="primary" sx={{ ml: 1 }} />}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{u.name || '—'}</TableCell>
+                      <TableCell>{u.email} {u.is_admin && <Chip label="admin" size="small" color="primary" sx={{ ml: 1 }} />}</TableCell>
                       <TableCell>
                         <TextField select size="small" value={u.role} onChange={(e) => patch(u, { role: e.target.value })} sx={{ minWidth: 140 }}>
                           <MenuItem value="user">user</MenuItem>
@@ -57,7 +59,7 @@ export default function AdminUsersPage() {
                       <TableCell sx={{ color: 'text.secondary' }}>{new Date(u.created_at).toLocaleDateString()}</TableCell>
                     </TableRow>
                   ))}
-                  {users.length === 0 && <TableRow><TableCell colSpan={4}><Typography color="text.secondary" sx={{ py: 2 }}>No users.</Typography></TableCell></TableRow>}
+                  {users.length === 0 && <TableRow><TableCell colSpan={5}><Typography color="text.secondary" sx={{ py: 2 }}>No users.</Typography></TableCell></TableRow>}
                 </TableBody>
               </Table>
             </TableContainer>

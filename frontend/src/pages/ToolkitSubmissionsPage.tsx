@@ -4,6 +4,7 @@ import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import LiveIndicator from '../components/LiveIndicator';
+import OwnerLabel from '../components/OwnerLabel';
 import { toolkitApi } from '../api';
 import type { Task } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -107,7 +108,7 @@ export default function ToolkitSubmissionsPage() {
                   <TableRow key={task.id} hover>
                     <TableCell>{date}</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>{task.name}</TableCell>
-                    {user?.is_admin && <TableCell sx={{ color: 'text.secondary' }}>{task.user_email || '—'}</TableCell>}
+                    {user?.is_admin && <TableCell sx={{ color: 'text.secondary' }}><OwnerLabel stacked name={task.user_name} email={task.user_email} /></TableCell>}
                     <TableCell>
                       {task.benchmark_progress?.length ? (
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>

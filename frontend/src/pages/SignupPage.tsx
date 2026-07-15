@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 export default function SignupPage() {
   const { signup } = useAuth();
   const navigate = useNavigate();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [msg, setMsg] = useState('');
@@ -20,7 +21,7 @@ export default function SignupPage() {
     e.preventDefault();
     setError(''); setMsg(''); setLoading(true);
     try {
-      await signup(email, password);
+      await signup(name, email, password);
       setMsg('Account created. The first account is an enabled admin; later accounts await admin approval.');
       setTimeout(() => navigate('/login'), 1800);
     } catch (err: any) {
@@ -40,6 +41,7 @@ export default function SignupPage() {
               {error && <Alert severity="warning" onClose={() => setError('')} sx={{ mb: 3 }}>{error}</Alert>}
               {msg && <Alert severity="success" sx={{ mb: 3 }}>{msg}</Alert>}
               <Box component="form" onSubmit={submit}>
+                <TextField fullWidth label="Name" value={name} onChange={(e) => setName(e.target.value)} required disabled={loading} sx={{ mb: 3 }} />
                 <TextField fullWidth label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} sx={{ mb: 3 }} />
                 <TextField fullWidth label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={loading} sx={{ mb: 3 }} />
                 <Button fullWidth type="submit" variant="contained" size="large" disabled={loading}>

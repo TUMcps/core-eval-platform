@@ -31,7 +31,7 @@ export default function HomePage() {
             <Grid size={{ xs: 12, lg: hero ? 7 : 12 }}>
               <Box sx={{ textAlign: { xs: 'center', lg: 'left' } }}>
                 <Typography variant={user ? 'h2' : 'h1'} sx={{ fontSize: { xs: '2.6rem', md: user ? '3.2rem' : '5rem' }, fontWeight: 800, lineHeight: 1.1, mb: 3, color: '#000' }}>
-                  {user ? `Welcome ${user.email}` : `${name} ${COMPETITION_YEAR}`}
+                  {user ? `Welcome ${user.name || user.email}` : `${name} ${COMPETITION_YEAR}`}
                 </Typography>
                 <Typography variant="h5" sx={{ fontSize: { xs: '1.1rem', md: '1.4rem' }, mb: 4, lineHeight: 1.6, color: '#374151', fontWeight: 400 }}>
                   {tagline}

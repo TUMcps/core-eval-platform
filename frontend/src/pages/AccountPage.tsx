@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
@@ -5,10 +6,25 @@ import Typography from '@mui/material/Typography';
 import Card from '@mui/material/Card';
 import Divider from '@mui/material/Divider';
 import Chip from '@mui/material/Chip';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import Snackbar from '@mui/material/Snackbar';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 
 export default function AccountPage() {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
+  const [name, setName] = useState(user?.name ?? '');
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState('');
+  const dirty = name.trim() !== (user?.name ?? '');
+
+  const save = async () => {
+    setSaving(true);
+    try { await updateProfile(name.trim()); setToast('Name updated'); }
+    finally { setSaving(false); }
+  };
+
   return (
     <Container sx={{ py: 6 }}>
       <PageBreadcrumbs items={[{ label: 'Account' }]} />
@@ -16,6 +32,15 @@ export default function AccountPage() {
         <Typography variant="h4" sx={{ fontWeight: 700 }}>Account</Typography>
       </Box>
       <Card sx={{ p: 3, maxWidth: 640 }}>
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>Name</Typography>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <TextField size="small" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your display name" sx={{ flexGrow: 1, maxWidth: 360 }} />
+            <Button variant="contained" size="small" disabled={!dirty || saving} onClick={save}>Save</Button>
+          </Stack>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Shown across the UI as "{'{name}'} ({'{email}'})".</Typography>
+        </Box>
+        <Divider sx={{ my: 2 }} />
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle2" color="text.secondary">Email</Typography>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>{user?.email || '—'}</Typography>
@@ -34,6 +59,7 @@ export default function AccountPage() {
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Enabled accounts may submit.</Typography>
         </Box>
       </Card>
+      <Snackbar open={!!toast} autoHideDuration={2500} onClose={() => setToast('')} message={toast} />
     </Container>
   );
 }

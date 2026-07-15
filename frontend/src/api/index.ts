@@ -3,6 +3,7 @@ import apiClient from './client';
 export interface User {
   id: string;
   email: string;
+  name: string;
   role: string;
   enabled: boolean;
   is_admin: boolean;
@@ -20,7 +21,7 @@ export interface Task {
   id: string; tool: string | null; benchmark: string | null; outcome: string;
   current_step: string | null; total_runtime: number | null; created_at: string;
   steps: TaskStep[]; name: string; status: string; done: boolean;
-  benchmark_progress: BenchmarkProgress[]; user_email: string | null;
+  benchmark_progress: BenchmarkProgress[]; user_email: string | null; user_name: string | null;
 }
 export interface FormOption { value: string; label: string; hardware?: string; guidance?: string; }
 export interface ToolkitFormData {
@@ -46,8 +47,9 @@ const results = <T,>(url: string) => apiClient.get<{ results?: T[] } | T[]>(url)
 export const authApi = {
   getCurrentUser: () => apiClient.get<User | null>('/api/auth/me/').then((r) => r.data),
   login: (email: string, password: string) => apiClient.post<User>('/api/auth/login/', { email, password }).then((r) => r.data),
-  signup: (email: string, password: string) => apiClient.post<User>('/api/auth/signup/', { email, password }).then((r) => r.data),
+  signup: (name: string, email: string, password: string) => apiClient.post<User>('/api/auth/signup/', { name, email, password }).then((r) => r.data),
   logout: () => apiClient.post('/api/auth/logout/'),
+  updateProfile: (name: string) => apiClient.patch<User>('/api/auth/profile/', { name }).then((r) => r.data),
 };
 
 let _infoCache: Promise<CompetitionInfo> | null = null;

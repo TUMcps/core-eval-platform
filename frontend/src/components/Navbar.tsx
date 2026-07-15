@@ -44,7 +44,7 @@ export default function Navbar() {
           <Box sx={{ flexGrow: 1 }} />
           <Button onClick={(e) => setMenuAnchor(e.currentTarget)} aria-haspopup="true"
             sx={{ color: '#2c3e50', minWidth: 'auto', gap: 1 }}>
-            {user && <Box component="span" sx={{ fontWeight: 700, fontSize: '1rem' }}>{user.email}</Box>}
+            {user && <Box component="span" sx={{ fontWeight: 700, fontSize: '1rem' }}>{user.name || user.email}</Box>}
             <Box component="span" sx={{ fontSize: '1.25rem', lineHeight: 1 }}>Ξ</Box>
           </Button>
           <Menu id="account-menu" anchorEl={menuAnchor} open={open} onClose={close}

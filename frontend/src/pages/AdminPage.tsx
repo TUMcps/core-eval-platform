@@ -16,7 +16,7 @@ export default function AdminPage() {
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <Box sx={{ textAlign: 'center', mb: 5, maxWidth: 800 }}>
             <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 3 }}>
-              Welcome <Chip label={user?.email} sx={{ bgcolor: 'grey.50', color: '#000', fontFamily: 'Monaco, Menlo, Consolas, monospace', fontSize: '1.6rem', height: 'auto', py: 0.5, px: 1 }} />
+              Welcome <Chip label={user?.name || user?.email} sx={{ bgcolor: 'grey.50', color: '#000', fontFamily: 'Monaco, Menlo, Consolas, monospace', fontSize: '1.6rem', height: 'auto', py: 0.5, px: 1 }} />
             </Typography>
             <Typography variant="h6" color="text.secondary">Manage your system settings and users</Typography>
           </Box>
