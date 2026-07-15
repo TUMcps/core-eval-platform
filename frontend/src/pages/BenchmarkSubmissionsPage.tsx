@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import { benchmarksApi } from '../api';
 import type { Benchmark } from '../api';
+import { formatDateTime } from '../utils/datetime';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -66,7 +67,7 @@ export default function BenchmarkSubmissionsPage() {
             <TableBody>
               {items.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((b) => (
                 <TableRow key={b.id} hover>
-                  <TableCell>{new Date(b.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</TableCell>
+                  <TableCell>{formatDateTime(b.created_at)}</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>{b.name}</TableCell>
                   <TableCell sx={{ color: 'text.secondary' }}>{b.category}</TableCell>
                   <TableCell>{b.instances.length}</TableCell>

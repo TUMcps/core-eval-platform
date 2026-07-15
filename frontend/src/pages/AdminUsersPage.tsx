@@ -8,6 +8,7 @@ import type { User } from '../api';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
+import { formatDateTime } from '../utils/datetime';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -56,7 +57,7 @@ export default function AdminUsersPage() {
                         </TextField>
                       </TableCell>
                       <TableCell align="center"><Switch checked={u.enabled} onChange={(e) => patch(u, { enabled: e.target.checked })} /></TableCell>
-                      <TableCell sx={{ color: 'text.secondary' }}>{new Date(u.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell sx={{ color: 'text.secondary' }}>{formatDateTime(u.created_at)}</TableCell>
                     </TableRow>
                   ))}
                   {users.length === 0 && <TableRow><TableCell colSpan={5}><Typography color="text.secondary" sx={{ py: 2 }}>No users.</Typography></TableCell></TableRow>}

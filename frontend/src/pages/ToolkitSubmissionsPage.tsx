@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import LiveIndicator from '../components/LiveIndicator';
 import OwnerLabel from '../components/OwnerLabel';
+import { formatDateTime } from '../utils/datetime';
 import { toolkitApi } from '../api';
 import type { Task } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -103,7 +104,7 @@ export default function ToolkitSubmissionsPage() {
             <TableBody>
               {paged.map((task) => {
                 const chip = statusChip(task.status || 'Running');
-                const date = task.created_at ? new Date(task.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                const date = formatDateTime(task.created_at);
                 return (
                   <TableRow key={task.id} hover>
                     <TableCell>{date}</TableCell>

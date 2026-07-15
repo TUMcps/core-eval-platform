@@ -13,6 +13,7 @@ import LiveIndicator from '../components/LiveIndicator';
 import { toolkitApi } from '../api';
 import type { Task, TaskStep } from '../api';
 import { statusChip } from '../constants/status';
+import { formatDateTime } from '../utils/datetime';
 import { usePageTitle } from '../hooks/usePageTitle';
 
 const REFRESH_MS = 10000;
@@ -67,7 +68,7 @@ export default function ToolkitDetailsPage() {
             <Stack direction="row" spacing={1.5} alignItems="center">
               <Chip label={overall.label} color={overall.color} variant={overall.variant} />
               {!task.done && <LiveIndicator label="Live" />}
-              <Typography variant="body2" color="text.secondary">Submitted {new Date(task.created_at).toLocaleString()}</Typography>
+              <Typography variant="body2" color="text.secondary">Submitted {formatDateTime(task.created_at)}</Typography>
             </Stack>
           </Box>
           <Stack direction="row" spacing={1.5}>
@@ -106,8 +107,8 @@ export default function ToolkitDetailsPage() {
                     </Typography>
                   )}
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                    {s.started_at ? `started ${new Date(s.started_at).toLocaleTimeString()}` : 'not started'}
-                    {s.finished_at ? ` · finished ${new Date(s.finished_at).toLocaleTimeString()}` : ''}
+                    {s.started_at ? `started ${formatDateTime(s.started_at)}` : 'not started'}
+                    {s.finished_at ? ` · finished ${formatDateTime(s.finished_at)}` : ''}
                   </Typography>
                 </AccordionDetails>
               </Accordion>
