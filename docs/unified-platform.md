@@ -152,7 +152,10 @@ persists `Result`s → `tracks/{id}/scoreboard` calls `Competition.score`.
   SCP-from-node results.csv retrieval so scoring gets rows.
 - **Frontend shell + plugin-contributed views** not built yet (backend `Presentation` seam is ready).
 - **Prod ETL** (`_db_` VNN schema → clean schema) not written.
-- **arch-comp plugin** not built (validates the second variant; ARCH professionalized onto this rung).
+- **`arch-comp` plugin built** (sibling repo) — the second variant, professionalized onto the structured
+  rung, exercising the **per-category** seam VNN doesn't: `categories.py` registers a `CategorySpec` per
+  category (`default` + `AINNCS`), and `parse_results`/`score` dispatch by the submission's category. 6
+  tests pass. Adding a category = a new `CategorySpec`; adding a competition = a repo like it.
 
 ## Open items to design next
 - Exact `Competition` base-class Python signature + registry wiring (mirror `compute/base.py`).
