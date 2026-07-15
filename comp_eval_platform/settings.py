@@ -26,6 +26,9 @@ EXECUTION_BACKEND = config("EXECUTION_BACKEND", default="local_docker")  # aws |
 #: How many workers the scheduler keeps busy in parallel. Each worker still runs
 #: its benchmarks sequentially.
 MAX_PARALLEL_NODES = config("MAX_PARALLEL_NODES", default=1, cast=int)
+#: Background job cadence (seconds) and whether the web process starts it.
+AUTOMATIC_UPDATE_INTERVAL = config("AUTOMATIC_UPDATE_INTERVAL", default=60, cast=int)
+SCHEDULER_AUTOSTART = config("SCHEDULER_AUTOSTART", default=False, cast=bool)
 
 # --- Core Django ------------------------------------------------------------
 SECRET_KEY = config("SECRET_KEY", default="dev-insecure-change-me")

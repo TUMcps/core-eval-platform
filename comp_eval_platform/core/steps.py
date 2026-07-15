@@ -52,6 +52,10 @@ class StepHandler:
             else:
                 self.task.step_failed(check_status=False)
 
+    def while_active(self):
+        """Called each scheduler tick while this step is active (e.g. to enforce a
+        per-benchmark wall-clock cap). Default: nothing."""
+
     def retry_until_success(self) -> bool:
         return False
 
@@ -97,10 +101,18 @@ class AssignHandler(StepHandler):
             node.task = self.task
             node.save(update_fields=["task"])
             self.task.step_succeeded(check_status=False)
-        else:
-            from comp_eval_platform.compute import get_backend
+            return
+        # No free worker: provision one, but honor the parallelism cap. Each worker
+        # runs its benchmarks sequentially; MAX_PARALLEL_NODES bounds how many run
+        # at once (VNN on shared AWS nodes, ARCH on Glados containers).
+        from django.conf import settings
 
-            get_backend().provision(self._node_type(), self._image())
+        max_nodes = getattr(settings, "MAX_PARALLEL_NODES", 1)
+        if Node.objects.count() >= max_nodes:
+            return  # wait for a node to free up; the scheduler retries next tick
+        from comp_eval_platform.compute import get_backend
+
+        get_backend().provision(self._node_type(), self._image())
 
     def execute(self):
         self._try_assign()
