@@ -104,6 +104,13 @@ REST_FRAMEWORK = {
 # ROOT_URL must be reachable by the node (it curls callbacks back to us).
 ROOT_URL = config("ROOT_URL", default="http://localhost:8000")
 
+# Public dev tunnels (Cloudflare/ngrok) for remote demos.
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default="https://*.trycloudflare.com,https://*.ngrok-free.app,https://*.ngrok.io",
+    cast=Csv(),
+)
+
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_TZ = True

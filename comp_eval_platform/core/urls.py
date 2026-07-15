@@ -3,7 +3,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from . import api, views
+from . import api, auth_views, views
 
 router = DefaultRouter()
 router.register("tools", api.ToolViewSet)
@@ -14,6 +14,12 @@ router.register("results", api.ResultViewSet, basename="result")
 router.register("categories", api.CategoryViewSet)
 
 urlpatterns = [
+    path("api/auth/signup/", auth_views.signup),
+    path("api/auth/login/", auth_views.login_view),
+    path("api/auth/logout/", auth_views.logout_view),
+    path("api/auth/me/", auth_views.me),
+    path("api/settings/", auth_views.settings_view),
+    path("api/competition/", auth_views.competition_info),
     path("api/", include(router.urls)),
     path("update/<uuid:task_id>/success", views.update_success, name="update_success"),
     path("update/<uuid:task_id>/failure", views.update_failure, name="update_failure"),

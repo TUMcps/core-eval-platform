@@ -130,7 +130,9 @@ class ResultViewSet(viewsets.ReadOnlyModelViewSet):
         return qs
 
 
-class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
+class CategoryViewSet(viewsets.ModelViewSet):
+    """Read open to any authenticated user; create/edit is organizer-only."""
+
     queryset = Category.objects.all().order_by("name")
     serializer_class = CategorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsOrganizer]

@@ -1,0 +1,113 @@
+"""Session-based auth + competition info for the frontend shell.
+
+Session cookies + CSRF (not JWT), matching the VNN frontend's axios client. The
+first account created becomes an enabled admin; later ones are disabled until an
+admin enables them.
+"""
+from django.contrib.auth import authenticate, login, logout
+from django.views.decorators.csrf import ensure_csrf_cookie
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+
+from .models import Role, User
+
+
+def _user_data(u):
+    return {
+        "id": str(u.id), "email": u.email, "role": u.role, "enabled": u.enabled,
+        "is_admin": u.is_admin, "is_organizer": u.is_organizer,
+    }
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def signup(request):
+    email = (request.data.get("email") or "").strip()
+    password = request.data.get("password") or ""
+    if not email or not password:
+        return Response({"detail": "email and password are required"}, status=400)
+    if User.objects.filter(email=email).exists():
+        return Response({"detail": "an account with this email already exists"}, status=400)
+    first = not User.objects.exists()
+    user = User.objects.create_user(
+        email=email, password=password,
+        role=Role.ADMIN if first else Role.USER, enabled=first,
+    )
+    return Response(_user_data(user), status=201)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def login_view(request):
+    email = (request.data.get("email") or "").strip()
+    password = request.data.get("password") or ""
+    user = authenticate(request, username=email, password=password)
+    if user is None:
+        return Response({"detail": "invalid email or password"}, status=400)
+    if not user.enabled:
+        return Response({"detail": "account is awaiting admin approval"}, status=403)
+    login(request, user)
+    return Response(_user_data(user))
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def logout_view(request):
+    logout(request)
+    return Response(status=204)
+
+
+@ensure_csrf_cookie
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def me(request):
+    """Current user (or null). Also sets the CSRF cookie the client echoes back."""
+    if request.user.is_authenticated:
+        return Response(_user_data(request.user))
+    return Response(None)
+
+
+_SETTINGS_FIELDS = [
+    "scheduler_enabled", "execution_backend", "terminate_at_end", "terminate_on_failure",
+    "allow_non_admin_login", "users_can_submit_benchmarks", "users_can_submit_tools",
+    "submission_timeout", "benchmark_timeout", "enforce_timeouts", "allow_full_evaluation",
+]
+
+
+@api_view(["GET", "PATCH"])
+@permission_classes([AllowAny])
+def settings_view(request):
+    """Read/patch the RuntimeSettings singleton (admin only)."""
+    from .models import RuntimeSettings
+
+    if not (request.user.is_authenticated and request.user.is_admin):
+        return Response({"detail": "admin only"}, status=403)
+    s = RuntimeSettings.get()
+    if request.method == "PATCH":
+        for f in _SETTINGS_FIELDS:
+            if f in request.data:
+                setattr(s, f, request.data[f])
+        s.save()
+    return Response({f: getattr(s, f) for f in _SETTINGS_FIELDS})
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def competition_info(request):
+    """Active variant + its presentation hints, so the shell renders variant-specific
+    form fields / result columns / score columns."""
+    from comp_eval_platform.competitions import get_competition
+
+    comp = get_competition()
+    data = {"name": comp.name, "display_name": comp.display_name or comp.name, "presentation": None}
+    try:
+        pres = comp.presentation()
+        data["presentation"] = {
+            "result_columns": pres.result_columns,
+            "submission_fields": pres.submission_fields,
+            "score_columns": pres.score_columns,
+        }
+    except NotImplementedError:
+        pass
+    return Response(data)
