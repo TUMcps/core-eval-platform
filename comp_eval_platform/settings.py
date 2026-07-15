@@ -1,0 +1,113 @@
+"""Base Django settings shared by every variant.
+
+A variant deployment ships its own project settings that does::
+
+    from comp_eval_platform.settings import *  # noqa
+
+    ACTIVE_COMPETITION = "vnn"
+    INSTALLED_APPS += ["vnn_comp"]
+
+and overrides whatever else it needs. The three engine knobs below are the axes
+that make the platform modular; see docs/unified-platform.md.
+"""
+from pathlib import Path
+
+from decouple import Csv, config
+from dj_database_url import parse as db_url
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# --- Engine knobs -----------------------------------------------------------
+#: Which competition variant is live. Its plugin app must be in INSTALLED_APPS
+#: and register itself (AppConfig.ready). Read by competitions.get_competition().
+ACTIVE_COMPETITION = config("ACTIVE_COMPETITION", default="")
+#: What a worker is, on the (orthogonal) compute axis.
+EXECUTION_BACKEND = config("EXECUTION_BACKEND", default="local_docker")  # aws | local_docker
+#: How many workers the scheduler keeps busy in parallel. Each worker still runs
+#: its benchmarks sequentially.
+MAX_PARALLEL_NODES = config("MAX_PARALLEL_NODES", default=1, cast=int)
+
+# --- Core Django ------------------------------------------------------------
+SECRET_KEY = config("SECRET_KEY", default="dev-insecure-change-me")
+DEBUG = config("DEBUG", default=False, cast=bool)
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="*", cast=Csv())
+
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    # Third-party
+    "rest_framework",
+    "corsheaders",
+    "django_apscheduler",
+    "drf_spectacular",
+    # Core (variants append their plugin app after this)
+    "comp_eval_platform.core",
+]
+
+MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+ROOT_URLCONF = config("ROOT_URLCONF", default="comp_eval_platform.urls")
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = config("WSGI_APPLICATION", default="comp_eval_platform.wsgi.application")
+
+DATABASES = {
+    "default": config(
+        "DATABASE_URL",
+        default="postgres://postgres:postgres@localhost:5432/eval",
+        cast=db_url,
+    )
+}
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# ROOT_URL must be reachable by the node (it curls callbacks back to us).
+ROOT_URL = config("ROOT_URL", default="http://localhost:8000")
+
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "UTC"
+USE_TZ = True
+
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
