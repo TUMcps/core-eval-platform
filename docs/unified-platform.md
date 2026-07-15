@@ -132,9 +132,18 @@ Flow: `POST /api/tools/{id}/run` → validate via competition → `Task.start()`
 `/update/<task_id>/success|failure` → the machine advances → `run_benchmark.on_marked_done` parses +
 persists `Result`s → `tracks/{id}/scoreboard` calls `Competition.score`.
 
+### Testing
+28 tests pass (21 core + 7 `vnn_comp`) on SQLite in Docker. Start Docker Desktop, then:
+```
+# core:  docker run --rm -v "$PWD:/app" -w /app python:3.11-slim \
+           sh -c "pip install -q -e '.[dev]' && pytest"
+# vnn:   docker run --rm -v "<core>:/core" -v "$PWD:/vnn" -w /vnn python:3.11-slim \
+           sh -c "pip install -q -e '/core[dev]' -e /vnn && pytest"
+```
+
 ### Known follow-ups (need the Docker/DB env to verify)
-- **No migrations yet** — run `manage.py makemigrations` + `migrate` in a container (no Django on the
-  dev host). Then wire real node scripts into `vnn_comp/scripts/` (vendored from the current VNN repo).
+- **Migrations generated** (`core/migrations/0001_initial.py`, committed). Then wire real node scripts
+  into `vnn_comp/scripts/` (vendored from the current VNN repo).
 - **Node image matching** (partly fixed): `Node.get_next_available` now skips the `image` filter when the
   request is empty (the common empty/AMI→resolved-default case). Still imperfect if two tools with the
   *same* node_type request *different* real images while one leaves it empty; a fuller fix stores the
