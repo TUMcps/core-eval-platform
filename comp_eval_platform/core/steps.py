@@ -93,6 +93,17 @@ class AssignHandler(StepHandler):
     def _image(self) -> str:
         return (self.task.tool.base_image if self.task.tool else "") or ""
 
+    def _eni(self):
+        """AWS ENI to attach so the worker gets a stable MAC (many verification
+        tools license by MAC): ``use_own_eni`` -> the owner's assigned ENI; else an
+        explicit ENI from the submission; else None (random MAC). The local_docker
+        backend ignores this."""
+        tool = self.task.tool
+        extra = (tool.extra if tool else {}) or {}
+        if extra.get("use_own_eni"):
+            return getattr(self.task.owner, "aws_eni", None) or None
+        return (extra.get("eni") or "").strip() or None
+
     def _try_assign(self):
         from comp_eval_platform.core.models import Node
 
@@ -112,7 +123,7 @@ class AssignHandler(StepHandler):
             return  # wait for a node to free up; the scheduler retries next tick
         from comp_eval_platform.compute import get_backend
 
-        get_backend().provision(self._node_type(), self._image())
+        get_backend().provision(self._node_type(), self._image(), self._eni())
 
     def execute(self):
         self._try_assign()
