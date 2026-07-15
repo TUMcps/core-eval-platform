@@ -15,9 +15,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Persist the last-known user so a reload renders the correct auth state on the
+// first paint (no logged-out flash) while the /api/auth/me/ call re-confirms it.
+// Only non-sensitive profile fields — the session cookie remains the real gate.
+const STORAGE_KEY = 'auth_user';
+function readStoredUser(): User | null {
+  try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? (JSON.parse(raw) as User) : null; } catch { return null; }
+}
+function writeStoredUser(u: User | null) {
+  try { if (u) localStorage.setItem(STORAGE_KEY, JSON.stringify(u)); else localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserState] = useState<User | null>(readStoredUser());
   const [loading, setLoading] = useState(true);
+
+  const setUser = (u: User | null) => { writeStoredUser(u); setUserState(u); };
 
   const refreshUser = async () => {
     try {
