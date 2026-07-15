@@ -18,6 +18,7 @@ def _user_data(u):
     return {
         "id": str(u.id), "email": u.email, "name": u.name, "role": u.role, "enabled": u.enabled,
         "is_admin": u.is_admin, "is_organizer": u.is_organizer,
+        "aws_eni": u.aws_eni or "", "aws_mac": u.aws_mac or "",
     }
 
 

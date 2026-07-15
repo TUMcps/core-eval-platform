@@ -53,11 +53,24 @@ export default function AccountPage() {
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Organizers curate tracks/benchmarks; admins have full control.</Typography>
         </Box>
         <Divider sx={{ my: 2 }} />
-        <Box>
+        <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle2" color="text.secondary">Status</Typography>
           <Box sx={{ mt: 0.5 }}><Chip label={user?.enabled ? 'Enabled' : 'Awaiting approval'} color={user?.enabled ? 'success' : 'warning'} /></Box>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Enabled accounts may submit.</Typography>
         </Box>
+        {(user?.aws_mac || user?.aws_eni) && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">Licensing (MAC{user?.aws_eni ? ' / ENI' : ''})</Typography>
+              {user?.aws_mac && <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: 'Monaco, Menlo, Consolas, monospace' }}>{user.aws_mac}</Typography>}
+              {user?.aws_eni && <Typography variant="body2" sx={{ fontFamily: 'Monaco, Menlo, Consolas, monospace', color: 'text.secondary' }}>ENI: {user.aws_eni}</Typography>}
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                The MAC address your submissions run with — use it for MAC-bound tool licenses. Bound to your ENI when running on AWS.
+              </Typography>
+            </Box>
+          </>
+        )}
       </Card>
       <Snackbar open={!!toast} autoHideDuration={2500} onClose={() => setToast('')} message={toast} />
     </Container>
