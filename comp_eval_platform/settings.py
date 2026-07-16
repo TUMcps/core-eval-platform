@@ -104,6 +104,11 @@ REST_FRAMEWORK = {
 # ROOT_URL must be reachable by the node (it curls callbacks back to us).
 ROOT_URL = config("ROOT_URL", default="http://localhost:8000")
 
+# Bytes of a running step's node log tailed into the DB each tick (and sent to the
+# detail page). Bounded so a progress-bar-spamming generator can't bloat the row or
+# poll payload; the frontend renders a tail of this (VITE_MAX_LOG_KB).
+LIVE_LOG_TAIL_BYTES = config("LIVE_LOG_TAIL_BYTES", default=1_000_000, cast=int)
+
 # Persistent host dir holding the local git repos artifacts default to.
 DATA_DIR = config("DATA_DIR", default=str(BASE_DIR / "data"))
 LOCAL_REPOS_DIR = config("LOCAL_REPOS_DIR", default=str(Path(DATA_DIR) / "repos"))

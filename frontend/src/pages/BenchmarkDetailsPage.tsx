@@ -25,6 +25,15 @@ const REFRESH_MS = 10000;
 const STEP_STATUS: Record<string, string> = { pending: 'Pending', active: 'Running', done: 'Done', failed: 'Error', aborted: 'Aborted' };
 const PAUSE_KIND = 'vnn_pause';
 
+// Render only the tail of a log: a very verbose step (e.g. a generator spamming a
+// progress bar) can produce a multi-MB log that freezes the tab if put in the DOM
+// whole. Configurable via VITE_MAX_LOG_KB (default 1 MB); lower it if the tab lags.
+const MAX_LOG_CHARS = Number(import.meta.env.VITE_MAX_LOG_KB ?? 1000) * 1000;
+const logTail = (text: string): string =>
+  text.length <= MAX_LOG_CHARS
+    ? text
+    : `… (showing the last ${Math.round(MAX_LOG_CHARS / 1000)} KB of ${Math.round(text.length / 1000)} KB)\n${text.slice(-MAX_LOG_CHARS)}`;
+
 // Friendlier step names than the raw kinds.
 const KIND_LABEL: Record<string, string> = {
   vnn_create: 'Create submission', assign: 'Assign worker', vnn_generate: 'Generate instances',
@@ -205,7 +214,7 @@ export default function BenchmarkDetailsPage() {
                     <Typography variant="body2" fontWeight="medium">Logs</Typography>
                   </Box>
                   <Collapse in={open}>
-                    <Box className="console_log" ref={(el: HTMLDivElement | null) => { logRefs.current[s.id] = el; }}>{s.logs}</Box>
+                    <Box className="console_log" ref={(el: HTMLDivElement | null) => { logRefs.current[s.id] = el; }}>{logTail(s.logs)}</Box>
                   </Collapse>
                 </Box>
               ) : (

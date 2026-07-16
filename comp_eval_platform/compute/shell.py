@@ -69,9 +69,10 @@ def node_exec(ip: str, cmd: str, *, timeout: int = 15) -> str:
         return ""
 
 
-def fetch_node_log(ip: str, remote_path: str, *, tail_bytes: int = 2_000_000, timeout: int = 15) -> str:
+def fetch_node_log(ip: str, remote_path: str, *, tail_bytes: int = 1_000_000, timeout: int = 15) -> str:
     """Tail a node log file, for live logs during a run. ``remote_path`` is relative
-    to ubuntu's home (e.g. ``logs/generate.log``)."""
+    to ubuntu's home (e.g. ``logs/generate.log``). Bounded so a verbose step (e.g. a
+    generator spamming a progress bar) can't bloat the DB row or the poll payload."""
     return node_exec(ip, f"tail --bytes {tail_bytes} {remote_path} 2>/dev/null || true", timeout=timeout)
 
 

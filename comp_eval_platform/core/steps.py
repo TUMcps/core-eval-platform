@@ -74,9 +74,12 @@ class StepHandler:
         node = self.task.node
         if node is None or not node.ip:
             return
+        from django.conf import settings
+
         from comp_eval_platform.compute.shell import fetch_node_log
 
-        text = fetch_node_log(node.ip, self.node_log_path)
+        tail = getattr(settings, "LIVE_LOG_TAIL_BYTES", 1_000_000)
+        text = fetch_node_log(node.ip, self.node_log_path, tail_bytes=tail)
         if text:
             self.step.set_log(text)
 
