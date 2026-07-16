@@ -104,13 +104,16 @@ REST_FRAMEWORK = {
 # ROOT_URL must be reachable by the node (it curls callbacks back to us).
 ROOT_URL = config("ROOT_URL", default="http://localhost:8000")
 
-# Benchmark generation + export (node-side pipeline).
-# One competition-wide seed passed to every generator (generate_properties.py <seed>).
+# Persistent host dir holding the local git repos artifacts default to.
+DATA_DIR = config("DATA_DIR", default=str(BASE_DIR / "data"))
+LOCAL_REPOS_DIR = config("LOCAL_REPOS_DIR", default=str(Path(DATA_DIR) / "repos"))
+
+# Benchmark generation + export.
+# Seed passed to every generator (generate_properties.py <seed>).
 BENCHMARK_SEED = config("BENCHMARK_SEED", default="")
-# Push URL of the git repo the generated benchmarks are committed to (SSH form).
+# Empty -> commit to a local repo under LOCAL_REPOS_DIR; set to a remote SSH URL
+# to push there instead. Export runs backend-side, so the key stays on the host.
 BENCHMARKS_PUSH_REPO = config("BENCHMARKS_PUSH_REPO", default="")
-# Path to the SSH private deploy key (on the backend host) with push access to it;
-# scp'd to the node for the export step. Must be mode 400.
 BENCHMARKS_DEPLOY_KEY = config("BENCHMARKS_DEPLOY_KEY", default="")
 
 # Public dev tunnels (Cloudflare/ngrok) for remote demos.
