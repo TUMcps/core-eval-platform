@@ -50,6 +50,24 @@ def _ping(dir: str, script: str, params: dict = None) -> None:
     )
 
 
+def fetch_node_log(ip: str, remote_path: str, *, tail_bytes: int = 2_000_000, timeout: int = 15) -> str:
+    """SSH to a node and tail a log file, for live logs during a run. Best-effort:
+    returns "" on any SSH/timeout error (node not up yet, torn down, transient).
+    ``remote_path`` is relative to ubuntu's home (e.g. ``logs/generate.log``)."""
+    key = (os.getenv("NODE_SSH_KEY") or os.getenv("VNNCOMP_DOCKER_SSH_KEY")
+           or os.path.join(os.path.expanduser("~"), ".ssh", "vnncomp.pem"))
+    try:
+        out = subprocess.run(
+            ["ssh", "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=10",
+             "-i", key, f"ubuntu@{ip}",
+             f"tail --bytes {tail_bytes} {remote_path} 2>/dev/null || true"],
+            capture_output=True, text=True, timeout=timeout,
+        )
+        return out.stdout
+    except (subprocess.SubprocessError, OSError):
+        return ""
+
+
 def service_id() -> str:
     """Stable id tagging the workers this deployment owns (so we never manage
     someone else's). From ``VNNCOMP_SERVICE_ID`` env, else an ephemeral uuid."""

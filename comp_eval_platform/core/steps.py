@@ -33,6 +33,10 @@ class StepHandler:
 
     kind: str = ""
 
+    #: This step's live log file (relative to the node's ubuntu home), or None if it
+    #: has no node-side log. When set, ``while_active`` tails it into the DB each tick.
+    node_log_path: str = None
+
     def __init__(self, step):
         self.step = step
 
@@ -53,8 +57,22 @@ class StepHandler:
                 self.task.step_failed(check_status=False)
 
     def while_active(self):
-        """Called each scheduler tick while this step is active (e.g. to enforce a
-        per-benchmark wall-clock cap). Default: nothing."""
+        """Each scheduler tick while active. Default streams the node log; overriders
+        (e.g. wall-clock caps) should call ``super()``."""
+        self.refresh_node_log()
+
+    def refresh_node_log(self):
+        """Tail this step's node log into its DB log. No-op without a log or node."""
+        if not self.node_log_path:
+            return
+        node = self.task.node
+        if node is None or not node.ip:
+            return
+        from comp_eval_platform.compute.shell import fetch_node_log
+
+        text = fetch_node_log(node.ip, self.node_log_path)
+        if text:
+            self.step.set_log(text)
 
     def retry_until_success(self) -> bool:
         return False
