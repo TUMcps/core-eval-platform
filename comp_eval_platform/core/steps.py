@@ -3,10 +3,10 @@
 A ``StepHandler`` is bound to a step and carries what a VNN polymorphic step
 subclass used to (execute / status_check / retry / on_marked_done / …). The
 active competition registers its own kinds (install, run_instance, export, …);
-core ships the two generic ones every variant needs: ``assign`` (attach/provision
-a worker) and ``shutdown`` (release it).
+core ships the generic ones every variant needs: ``assign`` (attach/provision a
+worker), ``shutdown`` (release it), and ``pause`` (hold for an operator).
 """
-from comp_eval_platform.core.models.execution import SHUTDOWN_KIND
+from comp_eval_platform.core.models.execution import PAUSE_KIND, SHUTDOWN_KIND
 
 _STEP_HANDLERS: dict = {}
 
@@ -43,6 +43,12 @@ class StepHandler:
     @property
     def task(self):
         return self.step.task
+
+    @property
+    def node_ip(self):
+        """This task's worker IP, or None if no node is attached yet."""
+        node = self.task.node
+        return node.ip if node is not None else None
 
     def execute(self):
         """Kick off the step's work. Default: nothing (a pure marker step)."""
@@ -173,3 +179,14 @@ class ShutdownHandler(StepHandler):
     def status_check(self):
         # Node already gone is expected here.
         return
+
+
+@register_step_handler
+class PauseHandler(StepHandler):
+    """Hold the task until an operator resumes it (the ``resume`` API advances
+    past it). Stays active indefinitely."""
+
+    kind = PAUSE_KIND
+
+    def status_check(self):
+        return  # never auto-advance

@@ -39,6 +39,10 @@ class StepStatus(models.TextChoices):
 #: even on a terminal outcome so a failed/aborted task still tears its node down.
 SHUTDOWN_KIND = "shutdown"
 
+#: Well-known step kind that holds the task until an operator resumes it (the
+#: ``resume`` API advances past it). Never auto-advances.
+PAUSE_KIND = "pause"
+
 
 class Task(models.Model):
     """One execution job of the step machine, processing a Tool or a Benchmark."""
