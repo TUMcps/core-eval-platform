@@ -17,7 +17,7 @@ export interface User {
 export interface Category { id: string; name: string; result_fields: string[]; spec: Record<string, unknown>; }
 export interface Tool { id: string; name: string; category: string; repository: string; base_image: string; extra: Record<string, unknown>; published: boolean; created_at: string; }
 export interface Instance { id: string; name: string; }
-export interface Benchmark { id: string; name: string; category: string; published: boolean; instances: Instance[]; created_at: string; }
+export interface Benchmark { id: string; name: string; category: string; extra: Record<string, unknown>; published: boolean; instances: Instance[]; created_at: string; }
 export interface TaskStep { id: string; kind: string; order: number; status: string; started_at: string | null; finished_at: string | null; logs: string; has_logs: boolean; }
 export interface BenchmarkProgress { name: string; state: string; step_id: number; }
 export interface Task {
@@ -103,6 +103,7 @@ export const tasksApi = {
   get: (id: string) => apiClient.get<Task>(`/api/tasks/${id}/`).then((r) => r.data),
   abort: (id: string) => apiClient.post<Task>(`/api/tasks/${id}/abort/`).then((r) => r.data),
   resume: (id: string) => apiClient.post<Task>(`/api/tasks/${id}/resume/`).then((r) => r.data),
+  delete: (id: string) => apiClient.delete(`/api/tasks/${id}/`).then((r) => r.data),
 };
 
 export const toolkitApi = {

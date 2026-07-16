@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { benchmarksApi } from '../api';
 import type { BenchmarkFormData } from '../api';
 import Box from '@mui/material/Box';
@@ -19,9 +19,11 @@ const labelFor = (name: string) => name.replace(/_/g, ' ').replace(/\b\w/g, (c) 
 
 export default function BenchmarkSubmissionPage() {
   const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
-  const [repository, setRepository] = useState('');
+  // A details page's "Populate new submission form" button routes here with prefill.
+  const prefill = (useLocation().state as { prefillData?: any } | null)?.prefillData;
+  const [name, setName] = useState(prefill?.name ?? '');
+  const [category, setCategory] = useState(prefill?.category ?? '');
+  const [repository, setRepository] = useState(prefill?.repository ?? '');
   const [fields, setFields] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   const [data, setData] = useState<BenchmarkFormData | null>(null);
@@ -29,9 +31,10 @@ export default function BenchmarkSubmissionPage() {
   useEffect(() => {
     benchmarksApi.getFormData().then((d) => {
       setData(d);
-      // Seed each variant benchmark field with its first option / empty.
-      setFields(Object.fromEntries(d.benchmark_fields.map((f) => [f.name, f.options?.[0] ?? ''])));
+      // Seed each variant benchmark field from the prefill, else its first option / empty.
+      setFields(Object.fromEntries(d.benchmark_fields.map((f) => [f.name, prefill?.fields?.[f.name] ?? f.options?.[0] ?? ''])));
     }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const schedulerEnabled = data?.scheduler_enabled ?? true;

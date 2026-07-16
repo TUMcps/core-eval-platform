@@ -4,7 +4,7 @@ Variant-agnostic: submission validation, step-graph building, and scoring are al
 delegated to the active competition, so these viewsets never mention VNN or ARCH.
 """
 from django.core.exceptions import ValidationError as DjangoValidationError
-from rest_framework import permissions, viewsets
+from rest_framework import mixins, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.response import Response
@@ -124,7 +124,7 @@ class TrackViewSet(viewsets.ModelViewSet):
         return Response({"columns": board.columns, "rows": board.rows})
 
 
-class TaskViewSet(viewsets.ReadOnlyModelViewSet):
+class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Task.objects.all().order_by("-created_at")
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -165,6 +165,17 @@ class TaskViewSet(viewsets.ReadOnlyModelViewSet):
             task.step_succeeded(check_status=False)
             task.refresh_from_db()
         return Response(TaskSerializer(task).data)
+
+    def destroy(self, request, *args, **kwargs):
+        """Delete a finished submission (cascades steps/logs/results; the benchmark
+        row survives). A running task must be aborted first."""
+        task = self.get_object()
+        if not self._may_manage(request, task):
+            return Response(status=403)
+        if not task.done:
+            return Response({"error": "Abort the submission before deleting it."}, status=400)
+        task.delete()
+        return Response(status=204)
 
 
 class ResultViewSet(viewsets.ReadOnlyModelViewSet):
