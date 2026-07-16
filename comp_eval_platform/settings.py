@@ -116,10 +116,12 @@ BENCHMARK_SEED = config("BENCHMARK_SEED", default="")
 BENCHMARKS_PUSH_REPO = config("BENCHMARKS_PUSH_REPO", default="")
 BENCHMARKS_DEPLOY_KEY = config("BENCHMARKS_DEPLOY_KEY", default="")
 
-# Public dev tunnels (Cloudflare/ngrok) for remote demos.
+# The local dev origin (frontend proxies to the backend, so the browser's Origin is
+# the Vite host) plus public dev tunnels (Cloudflare/ngrok) for remote demos.
 CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS",
-    default="https://*.trycloudflare.com,https://*.ngrok-free.app,https://*.ngrok.io",
+    default="http://localhost:5173,http://127.0.0.1:5173,"
+            "https://*.trycloudflare.com,https://*.ngrok-free.app,https://*.ngrok.io",
     cast=Csv(),
 )
 
