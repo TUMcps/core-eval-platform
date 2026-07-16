@@ -137,7 +137,8 @@ class Command(BaseCommand):
             else:
                 name = r["_db_name"] or "benchmark"
                 extra = {"vnnlib_version": r["_db_vnnlib_version"], "onnx_dir": r["_db_onnx_dir"],
-                         "vnnlib_dir": r["_db_vnnlib_dir"], "repository": r["_db_repository"]}
+                         "vnnlib_dir": r["_db_vnnlib_dir"], "repository": r["_db_repository"],
+                         "hash": r["_db_hash"] or ""}
                 # One Benchmark row per name: a re-submission overwrites it (latest config
                 # wins), but each submission still becomes its own Task so the history stays.
                 bench, is_new = Benchmark.objects.get_or_create(
