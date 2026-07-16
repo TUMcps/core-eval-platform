@@ -118,7 +118,7 @@ export default function BenchmarkDetailsPage() {
   };
   // Re-open the submission form with this benchmark's inputs prefilled.
   const repopulate = () => navigate('/benchmark/submit', {
-    state: { prefillData: { name: task.name, repository: extra.repository ?? '', category: benchmark?.category ?? '', fields: extra } },
+    state: { prefillData: { name: task.name, repository: extra.repository ?? '', hash: extra.hash ?? '', category: benchmark?.category ?? '', fields: extra } },
   });
 
   return (

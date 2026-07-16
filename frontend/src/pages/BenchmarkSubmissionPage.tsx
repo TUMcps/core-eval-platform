@@ -24,6 +24,7 @@ export default function BenchmarkSubmissionPage() {
   const [name, setName] = useState(prefill?.name ?? '');
   const [category, setCategory] = useState(prefill?.category ?? '');
   const [repository, setRepository] = useState(prefill?.repository ?? '');
+  const [hash, setHash] = useState(prefill?.hash ?? '');
   const [fields, setFields] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   const [data, setData] = useState<BenchmarkFormData | null>(null);
@@ -44,7 +45,7 @@ export default function BenchmarkSubmissionPage() {
     e.preventDefault();
     try {
       // Flat fields: the submit endpoint runs a generate+export task and returns its id.
-      const payload: any = { name, repository, ...fields };
+      const payload: any = { name, repository, hash, ...fields };
       if (usesCategories) payload.category = category;  // else the backend files it under 'default'
       const { redirect_to } = await benchmarksApi.submit(payload);
       navigate(`/benchmark/submission/${redirect_to}`);
@@ -79,7 +80,10 @@ export default function BenchmarkSubmissionPage() {
           )}
 
           <TextField fullWidth label="Git repository URL" value={repository} onChange={(e) => setRepository(e.target.value)} required sx={{ mb: 3 }}
-            helperText="Any git URL. The benchmark's generator script is run from this repo to produce instances.csv and the instance files." />
+            helperText="Any git URL. The benchmark's generator script is run from this repo to produce instances.csv and the instance files. The commit hash below selects the exact revision." />
+
+          <TextField fullWidth label="Commit hash (optional)" value={hash} onChange={(e) => setHash(e.target.value)} sx={{ mb: 3 }}
+            helperText="Leave empty to use the latest commit on the repository's default branch." />
 
           {(data?.benchmark_fields ?? []).map((f) => (
             f.type === 'select' ? (
