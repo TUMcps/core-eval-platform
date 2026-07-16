@@ -38,7 +38,6 @@ class Category(models.Model):
 class Tool(models.Model):
     """A submitted verification tool (durable catalog entry)."""
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
         blank=True, related_name="tools",
@@ -65,7 +64,6 @@ class Tool(models.Model):
 class Benchmark(models.Model):
     """A submitted benchmark: names a set of Instances the tool runs against."""
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
         blank=True, related_name="benchmarks",

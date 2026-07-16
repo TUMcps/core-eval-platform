@@ -1,5 +1,8 @@
 import apiClient from './client';
 
+// Task/Benchmark/Tool use integer ids; callers also pass useParams() strings.
+type ID = number | string;
+
 export interface User {
   id: string;
   email: string;
@@ -15,15 +18,15 @@ export interface User {
 }
 
 export interface Category { id: string; name: string; result_fields: string[]; spec: Record<string, unknown>; }
-export interface Tool { id: string; name: string; category: string; repository: string; base_image: string; extra: Record<string, unknown>; published: boolean; created_at: string; }
+export interface Tool { id: number; name: string; category: string; repository: string; base_image: string; extra: Record<string, unknown>; published: boolean; created_at: string; }
 export interface Instance { id: string; name: string; }
-export interface Benchmark { id: string; name: string; category: string; extra: Record<string, unknown>; published: boolean; instances: Instance[]; created_at: string; }
+export interface Benchmark { id: number; name: string; category: string; extra: Record<string, unknown>; published: boolean; instances: Instance[]; created_at: string; }
 export interface TaskStep { id: string; kind: string; order: number; status: string; started_at: string | null; finished_at: string | null; logs: string; has_logs: boolean; }
 export interface BenchmarkProgress { name: string; state: string; step_id: number; }
 export interface Task {
-  id: string; number: number; tool: string | null; benchmark: string | null; outcome: string;
+  id: number; tool: number | null; benchmark: number | null; outcome: string;
   current_step: string | null; total_runtime: number | null; created_at: string;
-  steps: TaskStep[]; name: string; status: string; done: boolean;
+  steps: TaskStep[]; name: string; status: string; done: boolean; repository: string;
   benchmark_progress: BenchmarkProgress[]; user_email: string | null; user_name: string | null;
 }
 export interface FormOption { value: string; label: string; hardware?: string; guidance?: string; }
@@ -33,7 +36,7 @@ export interface ToolkitFormData {
   benchmark_categories: Record<string, { label: string; benchmarks: { id: string; name: string }[] }>;
   default_eni: string;
 }
-export interface Track { id: string; name: string; description: string; benchmarks: string[]; created_at: string; }
+export interface Track { id: string; name: string; description: string; benchmarks: number[]; created_at: string; }
 export interface FieldSpec { name: string; type: string; options?: string[]; }
 export interface Branding { primary_color: string; hero_image: string; favicon: string; }
 export interface LandingLink { label: string; url: string; }
@@ -73,7 +76,7 @@ export const categoriesApi = {
 export const toolsApi = {
   list: () => results<Tool>('/api/tools/'),
   create: (data: Partial<Tool>) => apiClient.post<Tool>('/api/tools/', data).then((r) => r.data),
-  run: (id: string) => apiClient.post<Task>(`/api/tools/${id}/run/`).then((r) => r.data),
+  run: (id: ID) => apiClient.post<Task>(`/api/tools/${id}/run/`).then((r) => r.data),
 };
 
 export interface BenchmarkFormData {
@@ -84,13 +87,13 @@ export interface BenchmarkFormData {
 
 export const benchmarksApi = {
   list: () => results<Benchmark>('/api/benchmarks/'),
-  get: (id: string) => apiClient.get<Benchmark>(`/api/benchmarks/${id}/`).then((r) => r.data),
+  get: (id: ID) => apiClient.get<Benchmark>(`/api/benchmarks/${id}/`).then((r) => r.data),
   create: (data: Partial<Benchmark>) => apiClient.post<Benchmark>('/api/benchmarks/', data).then((r) => r.data),
   submit: (data: Record<string, unknown>) => apiClient.post<{ redirect_to: string }>('/api/benchmark/submit/', data).then((r) => r.data),
   getFormData: () => apiClient.get<BenchmarkFormData>('/api/benchmark/form_data/').then((r) => r.data),
-  addInstances: (id: string, names: string[]) =>
+  addInstances: (id: ID, names: string[]) =>
     apiClient.post(`/api/benchmarks/${id}/add_instances/`, names.map((name, order) => ({ name, order }))).then((r) => r.data),
-  publish: (id: string) => apiClient.post<Benchmark>(`/api/benchmarks/${id}/publish/`).then((r) => r.data),
+  publish: (id: ID) => apiClient.post<Benchmark>(`/api/benchmarks/${id}/publish/`).then((r) => r.data),
 };
 
 export const usersApi = {
@@ -100,10 +103,11 @@ export const usersApi = {
 
 export const tasksApi = {
   list: () => results<Task>('/api/tasks/'),
-  get: (id: string) => apiClient.get<Task>(`/api/tasks/${id}/`).then((r) => r.data),
-  abort: (id: string) => apiClient.post<Task>(`/api/tasks/${id}/abort/`).then((r) => r.data),
-  resume: (id: string) => apiClient.post<Task>(`/api/tasks/${id}/resume/`).then((r) => r.data),
-  delete: (id: string) => apiClient.delete(`/api/tasks/${id}/`).then((r) => r.data),
+  get: (id: ID) => apiClient.get<Task>(`/api/tasks/${id}/`).then((r) => r.data),
+  abort: (id: ID) => apiClient.post<Task>(`/api/tasks/${id}/abort/`).then((r) => r.data),
+  resume: (id: ID) => apiClient.post<Task>(`/api/tasks/${id}/resume/`).then((r) => r.data),
+  delete: (id: ID) => apiClient.delete(`/api/tasks/${id}/`).then((r) => r.data),
+  changeOwner: (id: ID, owner: string) => apiClient.post<Task>(`/api/tasks/${id}/change_owner/`, { owner }).then((r) => r.data),
 };
 
 export const toolkitApi = {
@@ -111,9 +115,9 @@ export const toolkitApi = {
   getList: () => results<Task>('/api/tasks/').then((ts) => ts.filter((t) => t.tool)),
   getFormData: () => apiClient.get<ToolkitFormData>('/api/toolkit/form_data/').then((r) => r.data),
   submit: (data: Record<string, unknown>) => apiClient.post<{ redirect_to: string }>('/api/toolkit/submit/', data).then((r) => r.data),
-  get: (id: string) => apiClient.get<Task>(`/api/tasks/${id}/`).then((r) => r.data),
-  abort: (id: string) => apiClient.post<Task>(`/api/tasks/${id}/abort/`).then((r) => r.data),
-  resume: (id: string) => apiClient.post<Task>(`/api/tasks/${id}/resume/`).then((r) => r.data),
+  get: (id: ID) => apiClient.get<Task>(`/api/tasks/${id}/`).then((r) => r.data),
+  abort: (id: ID) => apiClient.post<Task>(`/api/tasks/${id}/abort/`).then((r) => r.data),
+  resume: (id: ID) => apiClient.post<Task>(`/api/tasks/${id}/resume/`).then((r) => r.data),
 };
 
 export const tracksApi = {

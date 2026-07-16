@@ -118,7 +118,6 @@ class Command(BaseCommand):
             ORDER BY t._db_id
         """)
         task_map, outcomes = {}, {}
-        used_bench_names = set()
         for r in cur.fetchall():
             owner = umap.get(r["tk_user"] or r["bm_user"])
             created = r["_db_created_at"]
@@ -137,17 +136,19 @@ class Command(BaseCommand):
                     Tool.objects.filter(pk=tool.pk).update(created_at=created)
             else:
                 name = r["_db_name"] or "benchmark"
-                while name in used_bench_names:
-                    name = f"{r['_db_name']} #{r['_db_id']}"
-                used_bench_names.add(name)
-                bench = Benchmark.objects.create(
-                    owner=owner, category=category, name=name,
-                    extra={"vnnlib_version": r["_db_vnnlib_version"], "onnx_dir": r["_db_onnx_dir"],
-                           "vnnlib_dir": r["_db_vnnlib_dir"], "repository": r["_db_repository"]},
-                )
+                extra = {"vnnlib_version": r["_db_vnnlib_version"], "onnx_dir": r["_db_onnx_dir"],
+                         "vnnlib_dir": r["_db_vnnlib_dir"], "repository": r["_db_repository"]}
+                # One Benchmark row per name: a re-submission overwrites it (latest config
+                # wins), but each submission still becomes its own Task so the history stays.
+                bench, is_new = Benchmark.objects.get_or_create(
+                    category=category, name=name, defaults={"owner": owner, "extra": extra})
+                if is_new:
+                    if created:
+                        Benchmark.objects.filter(pk=bench.pk).update(created_at=created)
+                else:
+                    bench.owner, bench.extra = owner, extra
+                    bench.save(update_fields=["owner", "extra"])
                 task = Task.objects.create(owner=owner, benchmark=bench, total_runtime=r["_db_total_runtime"])
-                if created:
-                    Benchmark.objects.filter(pk=bench.pk).update(created_at=created)
             if created:
                 Task.objects.filter(pk=task.pk).update(created_at=created)
             task_map[r["_db_id"]] = task

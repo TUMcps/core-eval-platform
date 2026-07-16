@@ -3,13 +3,16 @@ import { Link } from 'react-router-dom';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
+import OwnerLabel from '../components/OwnerLabel';
 import { tasksApi } from '../api';
 import type { Task } from '../api';
+import { useAuth } from '../context/AuthContext';
 import { statusChip } from '../constants/status';
 import { formatDateTime } from '../utils/datetime';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
+import MuiLink from '@mui/material/Link';
 import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
@@ -23,6 +26,7 @@ import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 
 export default function BenchmarkSubmissionsPage() {
+  const { user } = useAuth();
   const [items, setItems] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -60,6 +64,8 @@ export default function BenchmarkSubmissionsPage() {
               <TableRow>
                 <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                {user?.is_admin && <TableCell sx={{ fontWeight: 600 }}>User</TableCell>}
+                <TableCell sx={{ fontWeight: 600 }}>Repository</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600 }}>Status</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600 }}>Action</TableCell>
               </TableRow>
@@ -71,12 +77,18 @@ export default function BenchmarkSubmissionsPage() {
                   <TableRow key={t.id} hover>
                     <TableCell>{formatDateTime(t.created_at)}</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>{t.name}</TableCell>
+                    {user?.is_admin && <TableCell sx={{ color: 'text.secondary' }}><OwnerLabel stacked name={t.user_name} email={t.user_email} /></TableCell>}
+                    <TableCell sx={{ maxWidth: 260 }}>
+                      {t.repository ? (
+                        <MuiLink href={t.repository} target="_blank" rel="noopener" sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.repository}</MuiLink>
+                      ) : <Typography variant="body2" color="text.secondary">—</Typography>}
+                    </TableCell>
                     <TableCell align="center"><Chip label={chip.label} color={chip.color} variant={chip.variant} size="small" /></TableCell>
                     <TableCell align="center"><Button component={Link} to={`/benchmark/submission/${t.id}`} variant="outlined" size="small" sx={{ fontSize: '0.9rem', px: 4, py: 1 }}>View</Button></TableCell>
                   </TableRow>
                 );
               })}
-              {items.length === 0 && <TableRow><TableCell colSpan={4}><Typography color="text.secondary" sx={{ py: 2 }}>No benchmark submissions yet.</Typography></TableCell></TableRow>}
+              {items.length === 0 && <TableRow><TableCell colSpan={user?.is_admin ? 6 : 5}><Typography color="text.secondary" sx={{ py: 2 }}>No benchmark submissions yet.</Typography></TableCell></TableRow>}
             </TableBody>
           </Table>
         </TableContainer>

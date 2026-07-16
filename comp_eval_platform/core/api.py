@@ -166,6 +166,20 @@ class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
             task.refresh_from_db()
         return Response(TaskSerializer(task).data)
 
+    @action(detail=True, methods=["post"])
+    def change_owner(self, request, pk=None):
+        """Reassign this submission to another enabled user (admin only)."""
+        if not getattr(request.user, "is_admin", False):
+            return Response(status=403)
+        task = self.get_object()
+        user = User.objects.filter(id=request.data.get("owner"), enabled=True).first()
+        if user is None:
+            return Response({"error": "unknown or disabled user"}, status=400)
+        task.owner = user
+        task.save(update_fields=["owner"])
+        task.refresh_from_db()
+        return Response(TaskSerializer(task).data)
+
     def destroy(self, request, *args, **kwargs):
         """Delete a finished submission (cascades steps/logs/results; the benchmark
         row survives). A running task must be aborted first."""

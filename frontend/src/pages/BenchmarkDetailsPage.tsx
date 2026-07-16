@@ -13,6 +13,8 @@ import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import LiveIndicator from '../components/LiveIndicator';
 import OwnerLabel from '../components/OwnerLabel';
+import OwnerReassign from '../components/OwnerReassign';
+import { useAuth } from '../context/AuthContext';
 import { tasksApi, benchmarksApi } from '../api';
 import type { Task, TaskStep, Benchmark } from '../api';
 import { statusChip } from '../constants/status';
@@ -42,6 +44,7 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }) 
 export default function BenchmarkDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [task, setTask] = useState<Task | null>(null);
   const [benchmark, setBenchmark] = useState<Benchmark | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,7 +53,7 @@ export default function BenchmarkDetailsPage() {
   const [openLogs, setOpenLogs] = useState<Record<string, boolean>>({});
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  usePageTitle(task ? `${task.name} (#${task.number})` : 'Benchmark');
+  usePageTitle(task ? `${task.name} (#${task.id})` : 'Benchmark');
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   // Per-step log <pre> nodes, plus scroll bookkeeping so a live refresh only
   // follows the tail when the user is already at the bottom.
@@ -121,7 +124,7 @@ export default function BenchmarkDetailsPage() {
   return (
     <>
       <PageHeader>
-        <PageBreadcrumbs items={[{ label: 'Benchmark', to: '/benchmark' }, { label: `${task.name} (#${task.number})` }]} />
+        <PageBreadcrumbs items={[{ label: 'Benchmark', to: '/benchmark' }, { label: `${task.name} (#${task.id})` }]} />
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
           <Box>
             <Typography variant="h3" fontWeight="bold" gutterBottom>{task.name}</Typography>
@@ -152,7 +155,13 @@ export default function BenchmarkDetailsPage() {
               <DetailRow label="Repository"><code>{extra.repository || '—'}</code></DetailRow>
               <DetailRow label="Hash"><code>{extra.hash || '—'}</code></DetailRow>
               <DetailRow label="VNNLIB version"><code>{extra.vnnlib_version || '—'}</code></DetailRow>
-              <DetailRow label="Owner"><OwnerLabel name={task.user_name} email={task.user_email} /></DetailRow>
+              <DetailRow label="Owner">
+                {user?.is_admin ? (
+                  <OwnerReassign taskId={task.id} currentName={task.user_name} currentEmail={task.user_email} onChanged={load} />
+                ) : (
+                  <OwnerLabel name={task.user_name} email={task.user_email} />
+                )}
+              </DetailRow>
             </Box>
           </AccordionDetails>
         </Accordion>
