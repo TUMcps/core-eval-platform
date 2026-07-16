@@ -112,15 +112,22 @@ def benchmark_submit(request):
         category, _ = Category.objects.get_or_create(name="default")
 
     extra = {k: d.get(k) for k in _BENCHMARK_EXTRA_KEYS if k in d}
-    # Re-submitting a benchmark regenerates it: reuse the owner's existing row.
+    # Re-submitting a benchmark by name overwrites it (latest config wins); the
+    # submission is still its own Task, so the history stays. Only the owner or an
+    # admin may overwrite someone else's benchmark; an unowned one is adopted.
     bench = Benchmark.objects.filter(category=category, name=name).first()
-    if bench is not None and bench.owner_id != request.user.id:
-        return Response({"errors": {"name": ["already taken in this category"]}}, status=400)
+    if (bench is not None and bench.owner_id not in (None, request.user.id)
+            and not getattr(request.user, "is_admin", False)):
+        return Response({"errors": {"name": ["already taken by another user in this category"]}}, status=400)
     if bench is None:
         bench = Benchmark.objects.create(owner=request.user, category=category, name=name, extra=extra)
     else:
         bench.extra = extra
-        bench.save(update_fields=["extra"])
+        fields = ["extra"]
+        if bench.owner_id is None:
+            bench.owner = request.user
+            fields.append("owner")
+        bench.save(update_fields=fields)
 
     task = Task.objects.create(owner=request.user, benchmark=bench)
     task.start()

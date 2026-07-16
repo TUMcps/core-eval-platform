@@ -99,7 +99,14 @@ class Task(models.Model):
         self._set_current_step(first)
         self.save()
         if self.current_step is not None:
-            self.current_step.handler.execute()
+            try:
+                self.current_step.handler.execute()
+            except Exception:
+                # A provisioning/execute error must not fail the submit request: the
+                # step stays active and the scheduler retries it (as process_tasks does).
+                import traceback
+                print(f"start(): initial execute failed for {self}; scheduler will retry")
+                traceback.print_exc()
 
     def _set_current_step(self, step):
         """Mark the old current step done, activate the new one. Mirrors VNN's
