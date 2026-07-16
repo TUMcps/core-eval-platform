@@ -111,11 +111,6 @@ export default function BenchmarkDetailsPage() {
     try { await tasksApi.delete(task.id); navigate('/benchmark'); }
     catch (err: any) { setDeleting(false); setDeleteOpen(false); setError(err?.response?.data?.error ?? 'Delete failed'); }
   };
-  const publish = async () => {
-    if (!benchmark) return;
-    try { setBenchmark(await benchmarksApi.publish(benchmark.id)); setToast('Published'); }
-    catch (err: any) { setError(JSON.stringify(err?.response?.data ?? 'Publish failed')); }
-  };
   // Re-open the submission form with this benchmark's inputs prefilled.
   const repopulate = () => navigate('/benchmark/submit', {
     state: { prefillData: { name: task.name, repository: extra.repository ?? '', hash: extra.hash ?? '', category: benchmark?.category ?? '', fields: extra } },
@@ -136,7 +131,6 @@ export default function BenchmarkDetailsPage() {
           </Box>
           <Stack direction="row" spacing={1.5}>
             {isPaused && <Button variant="contained" onClick={doResume}>Continue</Button>}
-            {benchmark && task.done && task.status === 'Done' && <Button variant="contained" disabled={benchmark.published} onClick={publish}>{benchmark.published ? 'Published' : 'Publish'}</Button>}
             <Button variant="outlined" startIcon={<ContentCopyIcon />} onClick={repopulate}>Populate new submission form</Button>
             {!task.done ? (
               <Button variant="outlined" color="error" onClick={doAbort}>Abort submission</Button>
@@ -230,7 +224,7 @@ export default function BenchmarkDetailsPage() {
         {benchmark && task.done && task.status === 'Done' && (
           <Alert severity="success" sx={{ mt: 3 }}>
             Benchmark generated and pushed to the benchmarks repository.
-            {benchmark.published ? ' It is published and available to tool submissions.' : ' Publish it to make it available to tool submissions.'}
+            {benchmark.published ? ' It is published and available to tool submissions.' : ' It is being published automatically.'}
           </Alert>
         )}
       </PageSection>

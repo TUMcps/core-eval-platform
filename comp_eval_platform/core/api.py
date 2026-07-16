@@ -99,15 +99,6 @@ class BenchmarkViewSet(viewsets.ModelViewSet):
         ])
         return Response(InstanceSerializer(created, many=True).data, status=201)
 
-    @action(detail=True, methods=["post"])
-    def publish(self, request, pk=None):
-        """Validate against the competition spec and mark the benchmark published."""
-        benchmark = self.get_object()
-        _validate(benchmark)
-        benchmark.published = True
-        benchmark.save(update_fields=["published"])
-        return Response(BenchmarkSerializer(benchmark).data)
-
 
 class TrackViewSet(viewsets.ModelViewSet):
     """Organizer-managed track curation (read open to any authenticated user)."""

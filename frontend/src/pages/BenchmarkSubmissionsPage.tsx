@@ -56,7 +56,7 @@ export default function BenchmarkSubmissionsPage() {
       <PageSection>
         <Typography variant="h4" fontWeight="bold" gutterBottom>Proposed Benchmarks</Typography>
         <Typography variant="body1" sx={{ mb: 4 }} color="text.secondary">
-          Below are all submitted benchmarks. Add their instances and publish them so tools can run against them.
+          Below are all submitted benchmarks. Each is published automatically once its generation run completes, making it available for tools to run against.
         </Typography>
         <TableContainer component={Paper} elevation={2}>
           <Table>

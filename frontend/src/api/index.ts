@@ -93,7 +93,6 @@ export const benchmarksApi = {
   getFormData: () => apiClient.get<BenchmarkFormData>('/api/benchmark/form_data/').then((r) => r.data),
   addInstances: (id: ID, names: string[]) =>
     apiClient.post(`/api/benchmarks/${id}/add_instances/`, names.map((name, order) => ({ name, order }))).then((r) => r.data),
-  publish: (id: ID) => apiClient.post<Benchmark>(`/api/benchmarks/${id}/publish/`).then((r) => r.data),
 };
 
 export const usersApi = {

@@ -26,8 +26,9 @@ export default function BenchmarkInfoPage() {
           <Divider sx={{ my: 3 }} />
           <Typography variant="h5" fontWeight="bold" gutterBottom>Submitting</Typography>
           <Typography variant="body1" sx={{ mb: 2 }}>
-            Propose a benchmark (name + category), add its instances, and publish it. Once published, a benchmark
-            becomes selectable when submitting a toolkit, and organizers can group it into evaluation tracks.
+            Propose a benchmark (name + repository); its instances are generated from the repo. Once the run
+            completes and validates, it is published automatically — selectable when submitting a toolkit, and
+            organizers can group it into evaluation tracks.
           </Typography>
           <Button component={Link} to="/benchmark/submit" variant="contained" size="large">Propose a benchmark</Button>
         </Box>
