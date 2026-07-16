@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -52,11 +52,22 @@ export default function BenchmarkDetailsPage() {
   const [deleting, setDeleting] = useState(false);
   usePageTitle(task?.name ?? 'Benchmark');
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Per-step log <pre> nodes, plus scroll bookkeeping so a live refresh only
+  // follows the tail when the user is already at the bottom.
+  const logRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const pinnedToBottom = useRef<Record<string, boolean>>({});
+  const positioned = useRef<Set<string>>(new Set());
+  const isAtBottom = (el: HTMLDivElement | null) =>
+    !el || el.scrollHeight - el.scrollTop - el.clientHeight < 50;
 
   const load = async () => {
     if (!id) return;
     try {
       const t = await tasksApi.get(id);
+      // Capture bottom-pinned state BEFORE the new logs grow the boxes.
+      pinnedToBottom.current = Object.fromEntries(
+        Object.keys(logRefs.current).map((sid) => [sid, isAtBottom(logRefs.current[sid])]),
+      );
       setTask(t);
       // Once files exist, show the benchmark's instances + publish control.
       if (t.benchmark) setBenchmark(await benchmarksApi.get(t.benchmark).catch(() => null));
@@ -67,6 +78,19 @@ export default function BenchmarkDetailsPage() {
     if (task && !task.done) { timer.current = setInterval(load, REFRESH_MS); return () => { if (timer.current) clearInterval(timer.current); }; }
     // eslint-disable-next-line
   }, [task?.done, id]);
+
+  // After each render, pin a log box to its tail when it first appears (default to
+  // bottom) or when the user was already at the bottom before the refresh.
+  useLayoutEffect(() => {
+    task?.steps.forEach((s) => {
+      const el = logRefs.current[s.id];
+      if (!el) return;
+      if (!positioned.current.has(s.id) || pinnedToBottom.current[s.id]) {
+        el.scrollTop = el.scrollHeight;
+        positioned.current.add(s.id);
+      }
+    });
+  }, [task]);
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box>;
   if (!task) return <PageSection><Typography>Task not found.</Typography></PageSection>;
@@ -167,12 +191,19 @@ export default function BenchmarkDetailsPage() {
 
               {s.has_logs ? (
                 <Box sx={{ mt: 1.5 }}>
-                  <Box onClick={() => setOpenLogs((o) => ({ ...o, [s.id]: !open }))}
+                  <Box onClick={() => {
+                    const next = !open;
+                    setOpenLogs((o) => ({ ...o, [s.id]: next }));
+                    // Opening a collapsed log jumps it to the tail (after the expand animation).
+                    if (next) setTimeout(() => { const el = logRefs.current[s.id]; if (el) el.scrollTop = el.scrollHeight; }, 120);
+                  }}
                     sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none', p: 0.5, borderRadius: 1, '&:hover': { bgcolor: 'action.hover' } }}>
                     <IconButton size="small" sx={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}><ExpandMoreIcon /></IconButton>
                     <Typography variant="body2" fontWeight="medium">Logs</Typography>
                   </Box>
-                  <Collapse in={open}><Box className="console_log">{s.logs}</Box></Collapse>
+                  <Collapse in={open}>
+                    <Box className="console_log" ref={(el: HTMLDivElement | null) => { logRefs.current[s.id] = el; }}>{s.logs}</Box>
+                  </Collapse>
                 </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
