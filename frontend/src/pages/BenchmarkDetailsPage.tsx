@@ -50,7 +50,7 @@ export default function BenchmarkDetailsPage() {
   const [openLogs, setOpenLogs] = useState<Record<string, boolean>>({});
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  usePageTitle(task?.name ?? 'Benchmark');
+  usePageTitle(task ? `${task.name} (#${task.number})` : 'Benchmark');
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   // Per-step log <pre> nodes, plus scroll bookkeeping so a live refresh only
   // follows the tail when the user is already at the bottom.
@@ -121,7 +121,7 @@ export default function BenchmarkDetailsPage() {
   return (
     <>
       <PageHeader>
-        <PageBreadcrumbs items={[{ label: 'Benchmark', to: '/benchmark' }, { label: task.name }]} />
+        <PageBreadcrumbs items={[{ label: 'Benchmark', to: '/benchmark' }, { label: `${task.name} (#${task.number})` }]} />
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
           <Box>
             <Typography variant="h3" fontWeight="bold" gutterBottom>{task.name}</Typography>
@@ -180,8 +180,8 @@ export default function BenchmarkDetailsPage() {
           const active = s.status === 'active';
           const open = openLogs[s.id] ?? active;  // the running step's logs start expanded
           return (
-            <Paper key={s.id} id={`step-${s.order}`} elevation={active ? 3 : 1}
-              sx={{ p: 3, mb: 2, border: active ? '1px solid' : '1px solid transparent', borderColor: active ? 'secondary.main' : 'transparent' }}>
+            <Paper key={s.id} id={`step-${s.order}`} elevation={active ? 3 : 0}
+              sx={{ p: 3, mb: 2, bgcolor: 'grey.50', border: '1px solid', borderColor: active ? 'secondary.main' : 'grey.300' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
                 <Typography sx={{ fontWeight: 600, minWidth: 24, color: 'text.secondary' }}>{s.order + 1}.</Typography>
                 <Typography sx={{ fontWeight: 600, flexGrow: 1 }}>{stepName(s)}</Typography>

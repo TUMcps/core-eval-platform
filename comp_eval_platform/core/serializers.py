@@ -94,7 +94,7 @@ class TaskListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Task
-        fields = ["id", "tool", "benchmark", "outcome", "created_at", "name", "status",
+        fields = ["id", "number", "tool", "benchmark", "outcome", "created_at", "name", "status",
                   "done", "benchmark_progress", "user_email", "user_name"]
         read_only_fields = fields
 

@@ -21,7 +21,7 @@ export interface Benchmark { id: string; name: string; category: string; extra: 
 export interface TaskStep { id: string; kind: string; order: number; status: string; started_at: string | null; finished_at: string | null; logs: string; has_logs: boolean; }
 export interface BenchmarkProgress { name: string; state: string; step_id: number; }
 export interface Task {
-  id: string; tool: string | null; benchmark: string | null; outcome: string;
+  id: string; number: number; tool: string | null; benchmark: string | null; outcome: string;
   current_step: string | null; total_runtime: number | null; created_at: string;
   steps: TaskStep[]; name: string; status: string; done: boolean;
   benchmark_progress: BenchmarkProgress[]; user_email: string | null; user_name: string | null;

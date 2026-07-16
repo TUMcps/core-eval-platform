@@ -44,6 +44,9 @@ class Task(models.Model):
     """One execution job of the step machine, processing a Tool or a Benchmark."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # Short, human-friendly submission number (the PK is an opaque UUID); shown to
+    # users instead of the UUID. Assigned once on first save.
+    number = models.PositiveIntegerField(unique=True, null=True, blank=True, editable=False)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="tasks",
@@ -63,9 +66,16 @@ class Task(models.Model):
     class Meta:
         db_table = "core_task"
 
+    def save(self, *args, **kwargs):
+        # Allocate the next sequential submission number on first save.
+        if self.number is None:
+            last = Task.objects.aggregate(m=models.Max("number"))["m"] or 0
+            self.number = last + 1
+        super().save(*args, **kwargs)
+
     def __str__(self):
         subject = self.tool or self.benchmark
-        return f"Task {self.id} [{subject}]"
+        return f"Task #{self.number} [{subject}]"
 
     # --- Queries ---------------------------------------------------------
     @property
