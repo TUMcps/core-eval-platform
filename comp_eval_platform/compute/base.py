@@ -11,6 +11,14 @@ if TYPE_CHECKING:
     from comp_eval_platform.core.models import Node
 
 
+class ImageError(Exception):
+    """The requested base image is not something this backend can boot."""
+
+
+class ProvisionError(Exception):
+    """Starting a worker failed; the message is shown to the submitter."""
+
+
 class ComputeBackend(ABC):
     name: str
 
@@ -19,18 +27,21 @@ class ComputeBackend(ABC):
         """Reconcile Node rows with reality (create/update/delete, set reachability)."""
 
     @abstractmethod
-    def provision(self, node_type: str, image: str, eni: Optional[str] = None) -> bool:
-        """Start a new worker of the given type/image. ``image`` is an AMI id (aws)
-        or a Docker image ref (local_docker). Returns True on success."""
+    def provision(self, node_type: str, image: str, eni: Optional[str] = None) -> None:
+        """Start a new worker of the given type/image. ``image`` is an AMI id (aws) or
+        a Docker image ref (local_docker), already passed through ``resolve_image``.
+        Raises ProvisionError (with the backend's own error) if the worker cannot start
+        — a submission that cannot run must fail loudly rather than wait forever."""
 
     @abstractmethod
     def terminate(self, node: "Node") -> None:
         """Tear down the worker backing this row (best-effort)."""
 
     def resolve_image(self, image: str) -> str:
-        """The image this backend will actually boot for ``image``. Node rows store
-        the resolved value, so callers must match on this rather than on the raw
-        request, or a node can never be matched back to the task that asked for it."""
+        """The image this backend will actually boot for ``image``, raising ImageError
+        if it cannot boot it at all. Node rows store the resolved value, so callers must
+        match on this rather than on the raw request, or a node can never be matched
+        back to the task that asked for it."""
         return image
 
 

@@ -12,7 +12,7 @@ from typing import List, Optional
 
 from django.utils import timezone
 
-from .base import ComputeBackend
+from .base import ComputeBackend, ImageError, ProvisionError
 from .shell import service_id
 
 SERVICE_LABEL = "VNNCompServiceId"
@@ -47,10 +47,17 @@ class LocalDockerBackend(ComputeBackend):
         return _env("VNNCOMP_DOCKER_SSH_KEY", "/root/.ssh/vnncomp.pem")
 
     def resolve_image(self, image: str) -> str:
-        """An AMI id is meaningless here (benchmark tasks may carry one); fall back
-        to the default docker image for those."""
-        if not image or image.startswith("ami-"):
+        """No image requested -> the platform default. An AMI id is an EC2 image and
+        cannot be booted here: reject it instead of silently substituting the default,
+        which would run the submission against an image nobody asked for."""
+        if not image:
             return _env("VNNCOMP_DEFAULT_DOCKER_IMAGE", "ubuntu:22.04")
+        if image.startswith("ami-"):
+            raise ImageError(
+                f"{image!r} is an AWS AMI id, but this deployment runs submissions in "
+                f"local Docker. Submit a Docker image reference (e.g. 'ubuntu:22.04') "
+                f"instead, or switch the execution backend to aws."
+            )
         return image
 
     def _public_key(self) -> str:
@@ -60,9 +67,8 @@ class LocalDockerBackend(ComputeBackend):
         return proc.stdout.strip()
 
     # -- lifecycle --------------------------------------------------------
-    def provision(self, node_type: str, image: str, eni=None) -> bool:
+    def provision(self, node_type: str, image: str, eni=None) -> None:
         try:
-            image = self.resolve_image(image)
             name = f"{_env('VNNCOMP_DOCKER_NAME_PREFIX', 'eval')}-{uuid.uuid4().hex[:12]}"
             run_args = [
                 "run", "-d", "--name", name,
@@ -89,10 +95,8 @@ class LocalDockerBackend(ComputeBackend):
                 id=container_id, created_at=timezone.now(), node_type=node_type or "local",
                 image=image, state="running", reachability="none", ip=ip or None,
             )
-            return True
         except (DockerError, subprocess.SubprocessError) as exc:
-            print(f"LocalDockerBackend.provision failed: {exc}")
-            return False
+            raise ProvisionError(f"could not start a container from image {image!r}: {exc}") from exc
 
     def sync_instances(self) -> None:
         from comp_eval_platform.core.models import Node

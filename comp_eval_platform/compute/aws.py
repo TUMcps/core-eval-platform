@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from django.utils import timezone
 
-from .base import ComputeBackend
+from .base import ComputeBackend, ProvisionError
 from .shell import ScriptError, _get, service_id
 
 SERVICE_ID_TAG = "VNNCompServiceId"
@@ -72,16 +72,15 @@ class AwsBackend(ComputeBackend):
         for node in seen:
             node.save()
 
-    def provision(self, node_type: str, image: str, eni: Optional[str] = None) -> bool:
+    def provision(self, node_type: str, image: str, eni: Optional[str] = None) -> None:
+        params = {"type": node_type, "ami": image, "vnncomp_service_id": service_id()}
         try:
-            params = {"type": node_type, "ami": image, "vnncomp_service_id": service_id()}
             if eni is None:
                 _get("toolkit", "create_new_instance.sh", params)
             else:
                 _get("toolkit", "create_new_instance_with_eni.sh", {**params, "eni": eni})
-            return True
-        except ScriptError:
-            return False
+        except ScriptError as exc:
+            raise ProvisionError(f"could not start a {node_type} instance from {image!r}: {exc}") from exc
 
     def terminate(self, node) -> None:
         try:

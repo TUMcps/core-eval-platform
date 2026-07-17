@@ -110,15 +110,13 @@ def test_retrying_step_is_bounded_and_fails_the_task(settings):
     assert shutdown.status == "done"  # worker still released
 
 
-def test_assign_claims_a_node_provisioned_from_an_ami_image():
-    """local_docker resolves an AMI id to its default image at provision time, so
-    matching has to resolve too — otherwise a task can never claim the node it just
-    provisioned and waits on `assign` forever."""
+def test_assign_claims_a_free_node_matching_the_resolved_image():
+    """A backend may resolve the requested image (empty -> its default) and stores the
+    resolved value on the Node, so matching has to resolve too — otherwise a task can
+    never claim the node it just provisioned and waits on `assign` forever."""
     from comp_eval_platform.core.models import Node
 
-    task, (assign, _ok) = _mk_task(["assign", "t_ok"])
-    task.tool.base_image = "ami-0d70546e43a941d70"
-    task.tool.save(update_fields=["base_image"])
+    task, (assign, _ok) = _mk_task(["assign", "t_ok"])  # tool has no base_image
     Node.objects.create(id="c1", node_type="local", image="ubuntu:22.04",
                         state="running", reachability="ok", ip="10.0.0.2")
 
@@ -127,6 +125,23 @@ def test_assign_claims_a_node_provisioned_from_an_ami_image():
     task.refresh_from_db(), assign.refresh_from_db()
     assert task.node is not None and task.node.id == "c1"
     assert assign.status == "done"
+
+
+def test_assign_fails_the_task_when_the_image_is_invalid_for_the_backend():
+    """An AMI id cannot boot under local_docker. It must fail with a readable reason
+    rather than silently run against a substituted image or wait on `assign` forever."""
+    from comp_eval_platform.core.models.execution import SHUTDOWN_KIND, Outcome
+
+    task, (assign, shutdown) = _mk_task(["assign", SHUTDOWN_KIND])
+    task.tool.base_image = "ami-0d70546e43a941d70"
+    task.tool.save(update_fields=["base_image"])
+
+    task.current_step.handler.execute()
+
+    task.refresh_from_db(), assign.refresh_from_db(), shutdown.refresh_from_db()
+    assert task.outcome == Outcome.FAILED
+    assert "AMI" in assign.logs and "ami-0d70546e43a941d70" in assign.logs
+    assert shutdown.status == "done"
 
 
 def test_start_builds_graph_from_competition():

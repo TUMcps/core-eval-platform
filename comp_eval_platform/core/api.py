@@ -10,6 +10,8 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.response import Response
 
 from comp_eval_platform.competitions import get_competition
+from comp_eval_platform.compute import get_backend
+from comp_eval_platform.compute.base import ImageError
 
 from .models import Benchmark, Category, Instance, Result, Task, Tool, Track, User
 from .serializers import (
@@ -42,10 +44,17 @@ class IsOrganizer(permissions.BasePermission):
 
 
 def _validate(submission):
+    """The competition's own rules, plus: the active compute backend has to be able to
+    boot the requested base image. Rejected here so a submission that could never run
+    is refused at submit time instead of failing a task later."""
     try:
         get_competition().validate_submission(submission)
     except DjangoValidationError as exc:
         raise DRFValidationError(exc.messages)
+    try:
+        get_backend().resolve_image(getattr(submission, "base_image", "") or "")
+    except ImageError as exc:
+        raise DRFValidationError([str(exc)])
 
 
 class ToolViewSet(viewsets.ModelViewSet):

@@ -136,10 +136,23 @@ class AssignHandler(StepHandler):
             return getattr(self.task.owner, "aws_eni", None) or None
         return (extra.get("eni") or "").strip() or None
 
+    def _fail(self, reason: str):
+        """A submission that can never run must say why and stop, not sit on `assign`."""
+        print(f"assign failed for {self.task}: {reason}")
+        self.step.set_log(f"[ERROR] {reason}")
+        self.task.step_failed(check_status=False)
+
     def _try_assign(self):
+        from comp_eval_platform.compute import get_backend
+        from comp_eval_platform.compute.base import ImageError, ProvisionError
         from comp_eval_platform.core.models import Node
 
-        node = Node.get_next_available(self._node_type(), self._image())
+        try:
+            image = self._image()
+        except ImageError as exc:
+            self._fail(str(exc))
+            return
+        node = Node.get_next_available(self._node_type(), image)
         if node is not None:
             node.task = self.task
             node.save(update_fields=["task"])
@@ -153,9 +166,10 @@ class AssignHandler(StepHandler):
         max_nodes = getattr(settings, "MAX_PARALLEL_NODES", 1)
         if Node.objects.count() >= max_nodes:
             return  # wait for a node to free up; the scheduler retries next tick
-        from comp_eval_platform.compute import get_backend
-
-        get_backend().provision(self._node_type(), self._image(), self._eni())
+        try:
+            get_backend().provision(self._node_type(), image, self._eni())
+        except ProvisionError as exc:
+            self._fail(str(exc))
 
     def execute(self):
         self._try_assign()
