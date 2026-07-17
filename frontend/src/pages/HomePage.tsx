@@ -98,11 +98,6 @@ export default function HomePage() {
           </Grid>
         </Container>
       </Box>
-      <Box sx={{ bgcolor: 'white', py: 3, textAlign: 'center', borderTop: '1px solid', borderColor: 'divider' }}>
-        <Container>
-          <Typography variant="body2" color="text.secondary">© {name} {COMPETITION_YEAR}. All rights reserved.</Typography>
-        </Container>
-      </Box>
     </Box>
   );
 }
