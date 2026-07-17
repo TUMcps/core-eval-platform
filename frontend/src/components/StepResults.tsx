@@ -2,7 +2,7 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import type { Result, StepSummary } from '../api';
-import { VERDICTS, canonicalVerdict, formatRuntime, resultColor } from '../constants/results';
+import { VERDICTS, VERDICT_LABEL, canonicalVerdict, formatRuntime, resultColor } from '../constants/results';
 
 /** Solved/total + total runtime for one benchmark's parsed rows. */
 export function ResultsSummary({ results }: { results: Result[] }) {
@@ -31,8 +31,8 @@ const n = (counts: Record<string, number>, key: string) => counts[key] ?? 0;
 
 /**
  * The official scorer's verdict on a run, colour-coded: only a fully valid run is green.
- * The witness breakdown is the point of it — a `violated` the scorer rejected or could
- * not find means the tool claimed a violation it cannot back up.
+ * The witness breakdown is the point of it — a `sat` the scorer rejected or could not
+ * find means the tool claimed a violation it cannot back up.
  *
  * Falls back to counting the run's own rows when the scorer produced no summary (it was
  * skipped, or is still running), which is what the old site did too — but that view
@@ -47,7 +47,7 @@ export function ResultsOverview({ summary, results }: { summary: StepSummary | n
     }, {});
     return (
       <Alert severity="info" sx={{ mb: 2 }}>
-        {VERDICTS.filter((v) => counts[v]).map((v) => `${v}: ${counts[v]}`).join(', ') || 'no results'}
+        {VERDICTS.filter((v) => counts[v]).map((v) => `${VERDICT_LABEL[v]}: ${counts[v]}`).join(', ') || 'no results'}
         {' — '}counted from results.csv; the scorer produced no summary, so counterexample
         validity is unknown. See the scoring log.
       </Alert>
@@ -55,17 +55,17 @@ export function ResultsOverview({ summary, results }: { summary: StepSummary | n
   }
 
   const { verdicts, witnesses, instances } = summary.summary;
-  const violated = n(verdicts, 'violated');
+  const sat = n(verdicts, 'violated');  // the scorer's key; shown as sat
   const severity = summary.severity === 'unknown' ? 'info' : summary.severity;
 
   return (
     <Alert severity={severity} sx={{ mb: 2 }}>
-      violated: {violated}
-      {violated > 0 && (
+      sat: {sat}
+      {sat > 0 && (
         <> (valid {n(witnesses, 'valid')}, tol {n(witnesses, 'valid_with_tolerance')},
           {' '}invalid {n(witnesses, 'invalid')}, missing {n(witnesses, 'missing')})</>
       )}
-      , holds: {n(verdicts, 'holds')}, unknown: {n(verdicts, 'unknown')},
+      , unsat: {n(verdicts, 'holds')}, unknown: {n(verdicts, 'unknown')},
       {' '}timeout: {n(verdicts, 'timeout')}, error: {n(verdicts, 'error')}
       {' '}— {instances} instances, {formatRuntime(results.reduce((s, r) => s + (r.time ?? 0), 0))} total
     </Alert>

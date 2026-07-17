@@ -13,7 +13,7 @@ export const VERDICTS: Verdict[] = ['holds', 'violated', 'unknown', 'timeout', '
  * anything that is not a legitimate verification outcome is surfaced as an error, so
  * only a clean run looks clean.
  *
- *   holds / violated / unknown  genuine tool verdicts (unsat / sat / unknown)
+ *   holds / violated / unknown  genuine tool verdicts (shown as unsat / sat / unknown)
  *   timeout                     the tool reached its per-instance budget — expected
  *   error                       everything else the harness emits: no_result_in_file,
  *                               prepare_instance_error_*, prepare_instance_timeout,
@@ -29,6 +29,19 @@ export function canonicalVerdict(raw: string): Verdict {
   if (r === 'run_instance_timeout' || r === 'timed-out' || r.startsWith('timeout')) return 'timeout';
   return 'error';
 }
+
+/**
+ * What each bucket is called on screen. The keys stay in the scorer's vocabulary
+ * (its report, and results.csv, say holds/violated), but VNN-COMP speaks vnnlib
+ * everywhere else, so that is what we show.
+ */
+export const VERDICT_LABEL: Record<Verdict, string> = {
+  holds: 'unsat',
+  violated: 'sat',
+  unknown: 'unknown',
+  timeout: 'timeout',
+  error: 'error',
+};
 
 export const VERDICT_COLOR: Record<Verdict, ChipProps['color']> = {
   holds: 'success',
