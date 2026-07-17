@@ -26,6 +26,8 @@ export interface TaskStep {
   finished_at: string | null; logs: string; has_logs: boolean;
   /** True once this step has exported artifacts to download (the backend decides which do). */
   can_download_results: boolean;
+  /** The raw results file this step's run produced; empty for steps that make none. */
+  results: string;
 }
 export interface BenchmarkProgress { name: string; state: string; step_id: number; }
 export interface Task {

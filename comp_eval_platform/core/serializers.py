@@ -53,11 +53,17 @@ class TaskStepSerializer(serializers.ModelSerializer):
     logs = serializers.SerializerMethodField()
     has_logs = serializers.SerializerMethodField()
     can_download_results = serializers.SerializerMethodField()
+    results = serializers.SerializerMethodField()
 
     class Meta:
         model = TaskStep
         fields = ["id", "kind", "order", "status", "started_at", "finished_at", "logs",
-                  "has_logs", "can_download_results"]
+                  "has_logs", "can_download_results", "results"]
+
+    def get_results(self, obj):
+        """The raw results file this step's run produced, shown verbatim. A step that
+        collects one records it under this payload key."""
+        return (obj.payload or {}).get("results_csv", "")
 
     def get_can_download_results(self, obj):
         """Whether this step pushed artifacts the owner can download. Asking the

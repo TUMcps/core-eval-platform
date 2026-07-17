@@ -1,12 +1,9 @@
 import type { ChipProps } from '@mui/material/Chip';
 
-/** The base columns every variant's results table shows, in order. */
-export const BASE_RESULT_COLUMNS = ['instance', 'result', 'time'];
-
 /**
- * Chip color for a verdict. A decided case reads as success whichever way it went —
- * `sat`/`violated` is a found counterexample, not a failure of the run — while an
- * undecided one is a warning and a crashed one an error.
+ * Whether a verdict counts as decided. A decided case reads as success whichever way
+ * it went — `sat`/`violated` is a found counterexample, not a failure of the run —
+ * while an undecided one is a warning and a crashed one an error.
  */
 export function resultColor(result: string): ChipProps['color'] {
   switch (result.trim().toLowerCase()) {

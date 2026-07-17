@@ -4,7 +4,7 @@ import { Box, Typography, Paper, Chip, Button } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import LiveIndicator from './LiveIndicator';
 import CollapsibleSection from './CollapsibleSection';
-import ResultsTable, { ResultsSummary } from './ResultsTable';
+import StepResults from './StepResults';
 import { tasksApi } from '../api';
 import type { TaskStep, BenchmarkProgress, Result } from '../api';
 import { statusChip } from '../constants/status';
@@ -19,16 +19,14 @@ interface Props {
   steps: TaskStep[];
   /** Names each run_benchmark step, keyed by step order. */
   benchmarkProgress?: BenchmarkProgress[];
-  /** The task's results; each lands under the benchmark step that produced it. */
+  /** The task's parsed results; each lands under the benchmark step that produced it. */
   results?: Result[];
-  /** The variant's presentation.result_columns. */
-  resultColumns?: string[];
   /** The task these steps belong to; needed to download a step's exported archive. */
   taskId?: number;
 }
 
 /** A submission's ordered steps: status, live-tailing logs, per-benchmark results, timings. */
-export default function TaskPipeline({ steps, benchmarkProgress, results = [], resultColumns, taskId }: Props) {
+export default function TaskPipeline({ steps, benchmarkProgress, results = [], taskId }: Props) {
   const [openLogs, setOpenLogs] = useState<Record<string, boolean>>({});
   const [openResults, setOpenResults] = useState<Record<string, boolean>>({});
   const [downloading, setDownloading] = useState<Record<string, boolean>>({});
@@ -122,14 +120,11 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], r
               </Box>
             )}
 
-            {stepResults.length > 0 && (
-              <CollapsibleSection title={`Results (${stepResults.length})`}
+            {s.results && (
+              <CollapsibleSection title="Results"
                 open={openResults[s.id] ?? false}
                 onToggle={() => setOpenResults((o) => ({ ...o, [s.id]: !(o[s.id] ?? false) }))}>
-                <Box sx={{ mt: 1 }}>
-                  <Box sx={{ mb: 1 }}><ResultsSummary results={stepResults} /></Box>
-                  <ResultsTable results={stepResults} columns={resultColumns} />
-                </Box>
+                <StepResults csv={s.results} results={stepResults} />
               </CollapsibleSection>
             )}
 

@@ -13,7 +13,7 @@ import SubmissionDetails from '../components/SubmissionDetails';
 import DeleteSubmissionDialog from '../components/DeleteSubmissionDialog';
 import TaskPipeline from '../components/TaskPipeline';
 import { useAuth } from '../context/AuthContext';
-import { tasksApi, toolsApi, resultsApi, competitionApi } from '../api';
+import { tasksApi, toolsApi, resultsApi } from '../api';
 import type { Task, Tool, Result } from '../api';
 import { statusChip } from '../constants/status';
 import { isPauseKind } from '../constants/steps';
@@ -31,7 +31,6 @@ export default function ToolkitDetailsPage() {
   const [task, setTask] = useState<Task | null>(null);
   const [tool, setTool] = useState<Tool | null>(null);
   const [results, setResults] = useState<Result[]>([]);
-  const [resultColumns, setResultColumns] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -51,11 +50,6 @@ export default function ToolkitDetailsPage() {
     } catch { /* ignore */ } finally { setLoading(false); }
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
-  useEffect(() => {
-    competitionApi.cached()
-      .then((c) => setResultColumns(c.presentation?.result_columns ?? []))
-      .catch(() => { /* the base columns are enough */ });
-  }, []);
   useEffect(() => {
     if (task && !task.done) { timer.current = setInterval(load, REFRESH_MS); return () => { if (timer.current) clearInterval(timer.current); }; }
     // eslint-disable-next-line
@@ -181,7 +175,7 @@ export default function ToolkitDetailsPage() {
 
         <Typography variant="h5" fontWeight="bold" gutterBottom>Pipeline</Typography>
         <TaskPipeline steps={task.steps} benchmarkProgress={task.benchmark_progress}
-          results={results} resultColumns={resultColumns} taskId={task.id} />
+          results={results} taskId={task.id} />
       </PageSection>
     </>
   );
