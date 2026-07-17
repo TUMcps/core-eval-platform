@@ -1,5 +1,6 @@
-import { useState, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Box, Typography, Paper, Chip, Button } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import LiveIndicator from './LiveIndicator';
@@ -99,6 +100,19 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
     steps.forEach((s) => { if (pinned.current[s.id] ?? true) jumpToTail(s.id); });
   }, [steps]);
 
+  // Deep link from the submissions list ("#step-4"). The anchors only exist once the
+  // steps have loaded, so this reruns until the target is there; the ref then stops a
+  // later log refresh from yanking the page back to it.
+  const { hash } = useLocation();
+  const scrolledTo = useRef<string | null>(null);
+  useEffect(() => {
+    if (!hash || scrolledTo.current === hash) return;
+    const el = document.getElementById(hash.slice(1));
+    if (!el) return;
+    scrolledTo.current = hash;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [hash, steps]);
+
   return (
     <>
       {shown.map((s, index) => {
@@ -115,7 +129,8 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
         const stepResults = name ? results.filter((r) => r.benchmark_name === name) : [];
         return (
           <Paper key={s.id} id={`step-${s.order}`} elevation={active ? 3 : 0}
-            sx={{ p: 3, mb: 2, bgcolor: 'grey.50', border: '1px solid', borderColor: active ? 'secondary.main' : 'grey.300' }}>
+            sx={{ p: 3, mb: 2, bgcolor: 'grey.50', border: '1px solid', scrollMarginTop: 16,
+              borderColor: active ? 'secondary.main' : 'grey.300' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
               {/* Numbered by what is listed, not by step order: the folded-in scoring
                   steps would otherwise leave gaps. The anchor keeps the real order. */}
