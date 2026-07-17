@@ -54,7 +54,7 @@ export function ResultsOverview({ summary, results }: { summary: StepSummary | n
     );
   }
 
-  const { verdicts, witnesses, instances } = summary.summary;
+  const { verdicts, witnesses } = summary.summary;
   const sat = n(verdicts, 'violated');  // the scorer's key; shown as sat
   const severity = summary.severity === 'unknown' ? 'info' : summary.severity;
 
@@ -67,7 +67,6 @@ export function ResultsOverview({ summary, results }: { summary: StepSummary | n
       )}
       , unsat: {n(verdicts, 'holds')}, unknown: {n(verdicts, 'unknown')},
       {' '}timeout: {n(verdicts, 'timeout')}, error: {n(verdicts, 'error')}
-      {' '}— {instances} instances, {formatRuntime(results.reduce((s, r) => s + (r.time ?? 0), 0))} total
     </Alert>
   );
 }
