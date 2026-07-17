@@ -6,8 +6,11 @@ user with our key) so every per-step script works unchanged. Only the lifecycle
 and the ``docker`` CLI on PATH. Ported from VNN onto the ``Node`` model.
 """
 import os
+import re
 import subprocess
 import uuid
+from datetime import datetime
+from datetime import timezone as dt_timezone
 from typing import List, Optional
 
 from django.utils import timezone
@@ -18,6 +21,9 @@ from .shell import service_id
 SERVICE_LABEL = "VNNCompServiceId"
 READY_MARKER = "/tmp/vnncomp_ready"
 _GPU_TYPES = {"p3.2xlarge", "g5.8xlarge"}
+#: How long a container may exist untracked before it counts as leaked rather than
+#: as one a concurrent provision() has not finished recording.
+_REAP_GRACE_SECONDS = 300
 
 
 def _env(name: str, default: str) -> str:
@@ -112,6 +118,48 @@ class LocalDockerBackend(ComputeBackend):
             if state == "running" and self._is_ready(node.id):
                 node.reachability = "ok"
             node.save()
+        self._reap_untracked()
+
+    def _reap_untracked(self) -> None:
+        """Remove our containers that no Node row tracks.
+
+        The loop above only goes row -> container, and every cleanup path (including
+        the orphan/timeout backstops) iterates rows, so a container whose row is gone
+        is invisible to all of them and would hold its CPU/RAM until the host is
+        rebooted. Scoped to this deployment's service id, so we never touch a
+        container someone else started on the same Docker host.
+        """
+        from comp_eval_platform.core.models import Node
+
+        try:
+            out = _docker(["ps", "-q", "--no-trunc", "--filter",
+                           f"label={SERVICE_LABEL}={service_id()}"], check=False)
+        except subprocess.SubprocessError as exc:
+            print(f"_reap_untracked: listing containers failed (ignored): {exc}")
+            return
+        tracked = set(Node.objects.values_list("id", flat=True))
+        for container_id in out.split():
+            if container_id in tracked:
+                continue
+            # provision() creates the container before its row, and can run in a web
+            # request while this runs in the scheduler. Only reap once no in-flight
+            # provision could still be about to write the row.
+            if self._container_age(container_id) < _REAP_GRACE_SECONDS:
+                continue
+            print(f"Removing untracked container {container_id[:12]}")
+            _docker(["rm", "-f", container_id], timeout=60, check=False)
+
+    def _container_age(self, container_id: str) -> float:
+        """Seconds since the container started; 0 (i.e. brand new) when unknown, so an
+        unreadable timestamp never causes a reap."""
+        out = _docker(["inspect", "-f", "{{.State.StartedAt}}", container_id],
+                      timeout=15, check=False).strip()
+        # Docker stamps nanoseconds, which fromisoformat rejects; seconds are enough.
+        match = re.match(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})", out)
+        if not match:
+            return 0.0
+        started = datetime.strptime(match.group(1), "%Y-%m-%dT%H:%M:%S").replace(tzinfo=dt_timezone.utc)
+        return (timezone.now() - started).total_seconds()
 
     def terminate(self, node) -> None:
         _docker(["rm", "-f", node.id], timeout=60, check=False)
