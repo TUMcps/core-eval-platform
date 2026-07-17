@@ -65,10 +65,10 @@ export default function BenchmarkSubmissionPage() {
         </Typography>
       </PageHeader>
 
-      <PageSection>
+      <PageSection maxWidth="md">
         {message && <Alert severity="error" sx={{ mb: 3 }}>{message}</Alert>}
         {!schedulerEnabled && <Alert severity="warning" sx={{ mb: 3 }}>Submissions are paused because the scheduler is currently disabled.</Alert>}
-        <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 720 }}>
+        <Box component="form" onSubmit={handleSubmit}>
           <TextField fullWidth label="Benchmark name" value={name} onChange={(e) => setName(e.target.value)} required sx={{ mb: 3 }} />
 
           {usesCategories && (

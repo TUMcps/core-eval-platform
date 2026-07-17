@@ -99,18 +99,20 @@ export default function ToolkitSubmissionPage() {
         </Typography>
       </PageHeader>
 
-      <PageSection>
+      <PageSection maxWidth="md">
         {message && <Alert severity="error" sx={{ mb: 3 }}>{message}</Alert>}
         {!canSubmit && <Alert severity="warning" sx={{ mb: 3 }}>Submission is currently closed</Alert>}
         {canSubmit && !schedulerEnabled && <Alert severity="warning" sx={{ mb: 3 }}>Submissions are paused because the scheduler is currently disabled.</Alert>}
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 820 }}>
+        <Box component="form" onSubmit={handleSubmit}>
           <TextField fullWidth label="Toolkit name" value={form.name} onChange={(e) => set({ name: e.target.value })} required margin="normal" />
           <TextField fullWidth label="Git clone URL" required margin="normal" value={form.repository} onChange={(e) => set({ repository: e.target.value })}
             helperText="Any https Git URL, e.g. https://github.com/ABC/DEF. The commit hash below selects the exact revision to clone." />
           <TextField fullWidth label="Commit hash (optional)" margin="normal" value={form.hash} onChange={(e) => set({ hash: e.target.value })}
             helperText="Leave empty to use the latest commit on the repository's default branch." />
-          <TextField fullWidth label="Post installation script (e.g. for licenses)" margin="normal" multiline minRows={4}
+          {/* `rows`, not `minRows`: a pasted or prefilled script would otherwise autosize
+              the box to the length of the whole script. Drag the corner to see more. */}
+          <TextField fullWidth label="Post installation script (e.g. for licenses)" margin="normal" multiline rows={6}
             value={form.post_install_tool} onChange={(e) => set({ post_install_tool: e.target.value })}
             helperText="Runs after install_tool.sh — the right place for license activation or final machine-specific setup." />
 

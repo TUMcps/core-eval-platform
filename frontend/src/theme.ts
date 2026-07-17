@@ -91,6 +91,14 @@ return createTheme({
     MuiOutlinedInput: {
       styleOverrides: { root: { borderRadius: 10 } },
     },
+    MuiInputBase: {
+      styleOverrides: {
+        // MUI pins textareas to resize:none. Multiline fields here hold scripts, whose
+        // length the form cannot guess — give them a fixed `rows` and let the user drag.
+        // (Only fields with `rows`; `minRows` autosizes and would fight the drag.)
+        inputMultiline: { resize: 'vertical' },
+      },
+    },
     MuiTableCell: {
       styleOverrides: {
         root: { borderColor: '#eef0f3' },
