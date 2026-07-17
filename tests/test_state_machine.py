@@ -95,6 +95,40 @@ def test_finalize_is_idempotent():
     assert task.outcome == first == Outcome.ABORTED
 
 
+def test_retrying_step_is_bounded_and_fails_the_task(settings):
+    """A retrying step re-executes from step_failed, so one whose execute() fails
+    synchronously must not ping-pong with it until the stack overflows."""
+    from comp_eval_platform.core.models.execution import SHUTDOWN_KIND, Outcome
+
+    settings.MAX_STEP_RETRIES = 3
+    task, (retry, shutdown) = _mk_task(["t_retry_fail", SHUTDOWN_KIND])
+    task.current_step.handler.execute()
+
+    task.refresh_from_db(), retry.refresh_from_db(), shutdown.refresh_from_db()
+    assert retry.retries == 3
+    assert task.outcome == Outcome.FAILED
+    assert shutdown.status == "done"  # worker still released
+
+
+def test_assign_claims_a_node_provisioned_from_an_ami_image():
+    """local_docker resolves an AMI id to its default image at provision time, so
+    matching has to resolve too — otherwise a task can never claim the node it just
+    provisioned and waits on `assign` forever."""
+    from comp_eval_platform.core.models import Node
+
+    task, (assign, _ok) = _mk_task(["assign", "t_ok"])
+    task.tool.base_image = "ami-0d70546e43a941d70"
+    task.tool.save(update_fields=["base_image"])
+    Node.objects.create(id="c1", node_type="local", image="ubuntu:22.04",
+                        state="running", reachability="ok", ip="10.0.0.2")
+
+    task.current_step.handler.execute()
+
+    task.refresh_from_db(), assign.refresh_from_db()
+    assert task.node is not None and task.node.id == "c1"
+    assert assign.status == "done"
+
+
 def test_start_builds_graph_from_competition():
     from comp_eval_platform.core.models import Category, Task, Tool, User
     from comp_eval_platform.core.models.execution import Outcome

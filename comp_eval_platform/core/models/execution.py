@@ -148,9 +148,17 @@ class Task(models.Model):
         step = self.current_step
         if step is not None and check_status:
             step.handler.status_check()
+        # A retrying step re-executes here, so a step whose execute() fails
+        # synchronously (e.g. no node) would recurse straight back into step_failed.
+        # The attempt cap bounds that; without it the pair overflows the stack.
         if step is not None and step.handler.retry_until_success():
-            step.handler.execute()
-            return
+            max_retries = getattr(settings, "MAX_STEP_RETRIES", 10)
+            if step.retries < max_retries:
+                step.retries += 1
+                step.save(update_fields=["retries"])
+                step.handler.execute()
+                return
+            print(f"{step} exhausted {max_retries} retries; failing task {self.id}")
         self._finalize(Outcome.FAILED)
 
     def timeout(self, check_status: bool = True):
@@ -212,6 +220,9 @@ class TaskStep(models.Model):
     order = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=16, choices=StepStatus.choices, default=StepStatus.PENDING)
     run_as_root = models.BooleanField(default=True)
+    #: Re-executions so far (only steps whose handler opts into retrying); capped by
+    #: settings.MAX_STEP_RETRIES so a permanently failing step ends the task.
+    retries = models.PositiveIntegerField(default=0)
     #: Per-step data (e.g. benchmark id, instance name, version, run_networks).
     payload = models.JSONField(default=dict, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)

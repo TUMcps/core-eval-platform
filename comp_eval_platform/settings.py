@@ -26,6 +26,9 @@ EXECUTION_BACKEND = config("EXECUTION_BACKEND", default="local_docker")  # aws |
 #: How many workers the scheduler keeps busy in parallel. Each worker still runs
 #: its benchmarks sequentially.
 MAX_PARALLEL_NODES = config("MAX_PARALLEL_NODES", default=1, cast=int)
+#: Re-executions a retrying step gets before the task fails (installs are flaky over
+#: the network); also bounds the execute/step_failed retry loop.
+MAX_STEP_RETRIES = config("MAX_STEP_RETRIES", default=10, cast=int)
 #: Background job cadence (seconds) and whether the web process starts it.
 AUTOMATIC_UPDATE_INTERVAL = config("AUTOMATIC_UPDATE_INTERVAL", default=60, cast=int)
 SCHEDULER_AUTOSTART = config("SCHEDULER_AUTOSTART", default=False, cast=bool)
@@ -120,6 +123,11 @@ BENCHMARK_SEED = config("BENCHMARK_SEED", default="")
 # to push there instead. Export runs backend-side, so the key stays on the host.
 BENCHMARKS_PUSH_REPO = config("BENCHMARKS_PUSH_REPO", default="")
 BENCHMARKS_DEPLOY_KEY = config("BENCHMARKS_DEPLOY_KEY", default="")
+
+# Where a tool run's results.csv + counterexamples are exported. Same contract as
+# the benchmarks repo above: empty -> a local repo under LOCAL_REPOS_DIR.
+RESULTS_PUSH_REPO = config("RESULTS_PUSH_REPO", default="")
+RESULTS_DEPLOY_KEY = config("RESULTS_DEPLOY_KEY", default="")
 
 # The local dev origin (frontend proxies to the backend, so the browser's Origin is
 # the Vite host) plus public dev tunnels (Cloudflare/ngrok) for remote demos.

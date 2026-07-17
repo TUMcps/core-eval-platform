@@ -118,7 +118,12 @@ class AssignHandler(StepHandler):
         return extra.get("node_type") or "local"
 
     def _image(self) -> str:
-        return (self.task.tool.base_image if self.task.tool else "") or ""
+        """The image as the backend will boot it, so matching a free node agrees with
+        what provision() stored on it."""
+        from comp_eval_platform.compute import get_backend
+
+        requested = (self.task.tool.base_image if self.task.tool else "") or ""
+        return get_backend().resolve_image(requested)
 
     def _eni(self):
         """AWS ENI to attach so the worker gets a stable MAC (many verification

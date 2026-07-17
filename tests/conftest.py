@@ -12,7 +12,7 @@ import pytest
 
 @pytest.fixture(scope="session", autouse=True)
 def register_test_plugin():
-    """Register a minimal competition + two test step handlers into the core
+    """Register a minimal competition + the test step handlers into the core
     registries, so the engine has something to run under ACTIVE_COMPETITION=test."""
     from comp_eval_platform.competitions import Competition, register
     from comp_eval_platform.core.models.execution import SHUTDOWN_KIND
@@ -38,6 +38,22 @@ def register_test_plugin():
 
         def status_check(self):
             pass
+
+    @register_step_handler
+    class RetryFailHandler(StepHandler):
+        """Fails synchronously *and* asks to be retried — the execute/step_failed
+        pair that has to stay bounded."""
+
+        kind = "t_retry_fail"
+
+        def execute(self):
+            self.task.step_failed(check_status=False)
+
+        def status_check(self):
+            pass
+
+        def retry_until_success(self) -> bool:
+            return True
 
     class TestCompetition(Competition):
         name = "test"

@@ -46,9 +46,8 @@ class Node(models.Model):
     @classmethod
     def get_next_available(cls, node_type: str, image: str):
         """A free, reachable node of the given type (and image, if one was
-        requested). ``image`` is skipped when empty: a tool with no/an AMI-id
-        base_image has its image resolved to a backend default at provision time,
-        so the stored image won't equal the (empty) request."""
+        requested). ``image`` must already be backend-resolved (see
+        ``ComputeBackend.resolve_image``) to match what provision() stored."""
         qs = cls.objects.filter(
             state="running", reachability="ok", task__isnull=True, node_type=node_type,
         ).exclude(ip__isnull=True)

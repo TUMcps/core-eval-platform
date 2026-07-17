@@ -27,6 +27,12 @@ class ComputeBackend(ABC):
     def terminate(self, node: "Node") -> None:
         """Tear down the worker backing this row (best-effort)."""
 
+    def resolve_image(self, image: str) -> str:
+        """The image this backend will actually boot for ``image``. Node rows store
+        the resolved value, so callers must match on this rather than on the raw
+        request, or a node can never be matched back to the task that asked for it."""
+        return image
+
 
 _REGISTRY: dict = {}
 

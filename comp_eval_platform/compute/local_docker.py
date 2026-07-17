@@ -46,7 +46,7 @@ class LocalDockerBackend(ComputeBackend):
     def ssh_key(self) -> str:
         return _env("VNNCOMP_DOCKER_SSH_KEY", "/root/.ssh/vnncomp.pem")
 
-    def _resolve_image(self, image: str) -> str:
+    def resolve_image(self, image: str) -> str:
         """An AMI id is meaningless here (benchmark tasks may carry one); fall back
         to the default docker image for those."""
         if not image or image.startswith("ami-"):
@@ -62,7 +62,7 @@ class LocalDockerBackend(ComputeBackend):
     # -- lifecycle --------------------------------------------------------
     def provision(self, node_type: str, image: str, eni=None) -> bool:
         try:
-            image = self._resolve_image(image)
+            image = self.resolve_image(image)
             name = f"{_env('VNNCOMP_DOCKER_NAME_PREFIX', 'eval')}-{uuid.uuid4().hex[:12]}"
             run_args = [
                 "run", "-d", "--name", name,
