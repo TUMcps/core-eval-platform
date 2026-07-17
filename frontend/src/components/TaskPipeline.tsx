@@ -5,12 +5,12 @@ import DownloadIcon from '@mui/icons-material/Download';
 import LiveIndicator from './LiveIndicator';
 import CollapsibleSection from './CollapsibleSection';
 import StepResults, { ResultsOverview } from './StepResults';
+import StepTimer from './StepTimer';
 import { tasksApi } from '../api';
 import type { TaskStep, BenchmarkProgress, Result } from '../api';
 import { statusChip } from '../constants/status';
 import { KIND_LABEL, STEP_STATUS, isPauseKind } from '../constants/steps';
 import { logTail } from '../utils/logTail';
-import { formatDateTime } from '../utils/datetime';
 
 const isAtBottom = (el: HTMLDivElement | null) =>
   !el || el.scrollHeight - el.scrollTop - el.clientHeight < 50;
@@ -115,6 +115,11 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
               <Chip size="small" label={chip.label} color={chip.color} variant={chip.variant} />
             </Box>
 
+            <Box sx={{ mt: 0.5, mb: 0.5 }}>
+              <StepTimer startedAt={s.started_at} finishedAt={s.finished_at} active={s.status === 'active'}
+                timeoutHours={s.timeout_hours} timeoutEnforced={s.timeout_enforced} />
+            </Box>
+
             {s.has_logs ? (
               <CollapsibleSection title="Logs" open={logsOpen}
                 onToggle={() => {
@@ -129,11 +134,13 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
                   {logTail(s.logs)}
                 </Box>
               </CollapsibleSection>
-            ) : (
+            ) : active ? (
+              // A step with nothing to say yet is left silent: only a running one is
+              // worth a placeholder, because its logs are still coming.
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                {active ? 'Running… logs will appear here as the worker reports back.' : 'No logs for this step.'}
+                Running… logs will appear here as the worker reports back.
               </Typography>
-            )}
+            ) : null}
 
             {s.can_download_results && taskId !== undefined && (
               <Box sx={{ mt: 1.5 }}>
@@ -172,11 +179,6 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
                 <ResultsOverview summary={scoring?.summary ?? null} results={stepResults} />
               </Box>
             )}
-
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-              {s.started_at ? `started ${formatDateTime(s.started_at)}` : 'not started'}
-              {s.finished_at ? ` · finished ${formatDateTime(s.finished_at)}` : ''}
-            </Typography>
           </Paper>
         );
       })}

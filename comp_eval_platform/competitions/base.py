@@ -94,6 +94,11 @@ class Competition(ABC):
         export writes. Default: none, i.e. the step offers no download."""
         return None
 
+    def step_timeout_hours(self, step: "TaskStep") -> int | None:
+        """The wall-clock cap this step runs under, for the pipeline's timer. Only the
+        variant knows which of its kinds it caps in ``while_active``. Default: none."""
+        return None
+
     # Branding assets (favicon, hero image) ------------------------------
     def assets_dir(self) -> str | None:
         """Directory of branding asset files this variant ships (favicon, hero

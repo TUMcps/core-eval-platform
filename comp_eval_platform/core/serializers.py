@@ -55,11 +55,28 @@ class TaskStepSerializer(serializers.ModelSerializer):
     can_download_results = serializers.SerializerMethodField()
     results = serializers.SerializerMethodField()
     summary = serializers.SerializerMethodField()
+    timeout_hours = serializers.SerializerMethodField()
+    timeout_enforced = serializers.SerializerMethodField()
 
     class Meta:
         model = TaskStep
         fields = ["id", "kind", "order", "status", "started_at", "finished_at", "logs",
-                  "has_logs", "can_download_results", "results", "summary"]
+                  "has_logs", "can_download_results", "results", "summary",
+                  "timeout_hours", "timeout_enforced"]
+
+    def get_timeout_hours(self, obj):
+        """The cap this step's timer counts against, or null. Asking the competition
+        keeps the frontend from having to know which kinds are capped."""
+        from comp_eval_platform.competitions import get_competition
+
+        return get_competition().step_timeout_hours(obj)
+
+    def get_timeout_enforced(self, obj):
+        """Whether a cap would actually fire. Reported alongside rather than folded into
+        `timeout_hours`, so a configured-but-disabled cap can still be shown, marked."""
+        from comp_eval_platform.core.models import RuntimeSettings
+
+        return RuntimeSettings.get().enforce_timeouts
 
     def get_results(self, obj):
         """The raw results file this step's run produced, shown verbatim. A step that
