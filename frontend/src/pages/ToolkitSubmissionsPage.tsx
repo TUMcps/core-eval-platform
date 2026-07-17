@@ -37,9 +37,10 @@ export default function ToolkitSubmissionsPage() {
 
   const loadTasks = async () => {
     try {
-      const data = await toolkitApi.getList();
-      const ordered = data.reverse();
-      ordered.sort((a, b) => statusGroupRank(a.status || 'Running') - statusGroupRank(b.status || 'Running'));
+      // The API already returns newest-first; the stable group sort keeps that order
+      // within each group, floating still-running submissions above finished ones.
+      const ordered = [...await toolkitApi.getList()]
+        .sort((a, b) => statusGroupRank(a.status || 'Running') - statusGroupRank(b.status || 'Running'));
       setTasks(ordered);
     } catch (e) { console.error('Failed to load tasks:', e); }
     finally { setLoading(false); }
