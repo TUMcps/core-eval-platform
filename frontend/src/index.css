@@ -19,8 +19,7 @@ code {
   max-height: 30em;
   overflow-y: auto;
   overflow-x: auto;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  white-space: pre;
   font-family: 'Courier New', Courier, monospace;
   font-size: 0.9em;
 }

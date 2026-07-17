@@ -1,27 +1,12 @@
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
 import type { Result, StepSummary } from '../api';
-import { VERDICTS, VERDICT_LABEL, canonicalVerdict, formatRuntime, resultColor } from '../constants/results';
-
-/** Solved/total + total runtime for one benchmark's parsed rows. */
-export function ResultsSummary({ results }: { results: Result[] }) {
-  const decided = results.filter((r) => resultColor(r.result) === 'success').length;
-  const total = results.reduce((sum, r) => sum + (r.time ?? 0), 0);
-  return (
-    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-      <Typography variant="body2" color="text.secondary">{decided}/{results.length} decided</Typography>
-      <Typography variant="body2" color="text.secondary">·</Typography>
-      <Typography variant="body2" color="text.secondary">{formatRuntime(total)} total</Typography>
-    </Box>
-  );
-}
+import { VERDICTS, VERDICT_LABEL, canonicalVerdict } from '../constants/results';
 
 /** One benchmark step's raw results file, shown as-is. */
-export default function StepResults({ csv, results }: { csv: string; results: Result[] }) {
+export default function StepResults({ csv }: { csv: string }) {
   return (
     <Box sx={{ mt: 1 }}>
-      {results.length > 0 && <Box sx={{ mb: 1 }}><ResultsSummary results={results} /></Box>}
       <Box className="console_log">{csv}</Box>
     </Box>
   );

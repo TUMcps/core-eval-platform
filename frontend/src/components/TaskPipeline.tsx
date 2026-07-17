@@ -180,7 +180,7 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
               <CollapsibleSection title="Results"
                 open={openResults[s.id] ?? false}
                 onToggle={() => setOpenResults((o) => ({ ...o, [s.id]: !(o[s.id] ?? false) }))}>
-                <StepResults csv={s.results} results={stepResults} />
+                <StepResults csv={s.results} />
               </CollapsibleSection>
             )}
 
