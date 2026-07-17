@@ -21,6 +21,17 @@ const SCORING_KIND = 'vnn_check_results';
 /** Step statuses that will not change again. */
 const SETTLED = new Set(['done', 'failed', 'aborted']);
 
+/**
+ * The status of a benchmark and its scoring step, which are shown as one step and so
+ * need one status. The run's own, until it is done — from there the scorer has the
+ * final word, since it can still overturn a finished run by rejecting its witnesses.
+ */
+function pairedStatus(run: TaskStep, scoring?: TaskStep): string {
+  if (!scoring || run.status !== 'done') return run.status;
+  if (!SETTLED.has(scoring.status)) return 'active';  // the scorer is queued or running
+  return scoring.status;
+}
+
 interface Props {
   steps: TaskStep[];
   /** Names each run_benchmark step, keyed by step order. */
@@ -92,14 +103,13 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
     <>
       {shown.map((s, index) => {
         const scoring = s.kind === 'run_benchmark' ? scoringFor(s) : undefined;
-        // A benchmark is only finished once its validation is, so the pair reads as one
-        // step: while scoring runs, the benchmark is still working.
-        const active = s.status === 'active' || scoring?.status === 'active';
+        const status = pairedStatus(s, scoring);
+        const active = status === 'active';
         // A run with no scoring step (an old task, or a variant that scores nothing) has
         // nothing left to wait for, so its own rows are the final word.
         const scoringSettled = scoring ? SETTLED.has(scoring.status) : true;
         const paused = s.status === 'active' && isPauseKind(s.kind);
-        const chip = statusChip(paused ? 'Paused' : (STEP_STATUS[s.status] ?? 'Pending'));
+        const chip = statusChip(paused ? 'Paused' : (STEP_STATUS[status] ?? 'Pending'));
         const logsOpen = openLogs[s.id] ?? active;  // the running step's logs start expanded
         const name = benchmarkOf(s);
         const stepResults = name ? results.filter((r) => r.benchmark_name === name) : [];
