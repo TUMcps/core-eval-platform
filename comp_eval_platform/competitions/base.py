@@ -88,6 +88,12 @@ class Competition(ABC):
         generic results table, no export."""
         raise NotImplementedError
 
+    def exported_artifacts_dir(self, step: "TaskStep") -> str | None:
+        """Directory of the files this export step pushed (results, counterexamples,
+        …), which the core serves as a download. Only the variant knows where its
+        export writes. Default: none, i.e. the step offers no download."""
+        return None
+
     # Branding assets (favicon, hero image) ------------------------------
     def assets_dir(self) -> str | None:
         """Directory of branding asset files this variant ships (favicon, hero

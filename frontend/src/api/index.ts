@@ -21,7 +21,12 @@ export interface Category { id: string; name: string; result_fields: string[]; s
 export interface Tool { id: number; name: string; category: string; repository: string; hash: string; base_image: string; script_dir: string; extra: Record<string, unknown>; published: boolean; created_at: string; }
 export interface Instance { id: string; name: string; }
 export interface Benchmark { id: number; name: string; category: string; extra: Record<string, unknown>; published: boolean; instances: Instance[]; created_at: string; }
-export interface TaskStep { id: string; kind: string; order: number; status: string; started_at: string | null; finished_at: string | null; logs: string; has_logs: boolean; }
+export interface TaskStep {
+  id: string; kind: string; order: number; status: string; started_at: string | null;
+  finished_at: string | null; logs: string; has_logs: boolean;
+  /** True once this step has exported artifacts to download (the backend decides which do). */
+  can_download_results: boolean;
+}
 export interface BenchmarkProgress { name: string; state: string; step_id: number; }
 export interface Task {
   id: number; tool: number | null; benchmark: number | null; outcome: string;
@@ -129,6 +134,10 @@ export const tasksApi = {
   resume: (id: ID) => apiClient.post<Task>(`/api/tasks/${id}/resume/`).then((r) => r.data),
   delete: (id: ID) => apiClient.delete(`/api/tasks/${id}/`).then((r) => r.data),
   changeOwner: (id: ID, owner: string) => apiClient.post<Task>(`/api/tasks/${id}/change_owner/`, { owner }).then((r) => r.data),
+  // An export step's results.csv + counterexamples, zipped. `step` is the step's order.
+  resultsArchive: (id: ID, step: number) =>
+    apiClient.get<Blob>(`/api/tasks/${id}/results-archive/?step=${step}`, { responseType: 'blob' })
+      .then((r) => r.data),
 };
 
 // Toolkit submissions are tool-run tasks; their lifecycle lives on tasksApi.

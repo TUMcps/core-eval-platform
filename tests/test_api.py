@@ -58,6 +58,65 @@ def _rows(resp):
     return data.get("results", data) if isinstance(data, dict) else data
 
 
+@pytest.fixture
+def export_task(user, category, tmp_path, monkeypatch):
+    """A task with a done 'export' step whose artifacts the test competition points at."""
+    from comp_eval_platform.competitions import get_competition
+    from comp_eval_platform.core.models import Task, TaskStep, Tool
+
+    tool = Tool.objects.create(owner=user, category=category, name="t", repository="r")
+    task = Task.objects.create(owner=user, tool=tool)
+    step = TaskStep.objects.create(task=task, kind="t_ok", order=0, status="done")
+    (tmp_path / "results.csv").write_text("onnx/a.onnx,vnnlib/p.vnnlib,unsat,1.0\n")
+    (tmp_path / "a_p.counterexample.gz").write_bytes(b"\x1f\x8b binary")
+    monkeypatch.setattr(type(get_competition()), "exported_artifacts_dir",
+                        lambda self, s: str(tmp_path) if s.status == "done" else None,
+                        raising=False)
+    return task, step
+
+
+def test_results_archive_zips_the_exported_files(api, export_task):
+    import io
+    import zipfile
+
+    task, step = export_task
+
+    resp = api.get(f"/api/tasks/{task.id}/results-archive/?step={step.order}")
+
+    assert resp.status_code == 200
+    assert resp["Content-Type"] == "application/zip"
+    assert "attachment" in resp["Content-Disposition"]
+    with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
+        assert sorted(z.namelist()) == ["a_p.counterexample.gz", "results.csv"]
+        assert z.read("results.csv").decode().startswith("onnx/a.onnx")
+
+
+def test_results_archive_409s_before_the_export_finished(api, export_task):
+    task, step = export_task
+    step.status = "active"
+    step.save(update_fields=["status"])
+
+    resp = api.get(f"/api/tasks/{task.id}/results-archive/?step={step.order}")
+
+    assert resp.status_code == 409
+    assert "not exported yet" in resp.json()["error"]
+
+
+def test_results_archive_is_not_readable_by_another_user(api, export_task, django_user_model):
+    """A submission's artifacts are the owner's (or an admin's), not everyone's."""
+    from rest_framework.test import APIClient
+
+    task, step = export_task
+    other = django_user_model.objects.create_user(
+        email="someone@else.test", password="pw", enabled=True)
+    client = APIClient()
+    client.force_authenticate(other)
+
+    resp = client.get(f"/api/tasks/{task.id}/results-archive/?step={step.order}")
+
+    assert resp.status_code in (403, 404)  # scoped queryset hides it before the check
+
+
 def test_results_for_a_task_carry_names_and_run_order(api, category, user):
     """What the submission page's results table reads: one task's rows, in run order,
     named rather than by FK id."""

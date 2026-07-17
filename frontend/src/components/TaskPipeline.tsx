@@ -1,9 +1,11 @@
 import { useState, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { Box, Typography, Paper, Chip } from '@mui/material';
+import { Box, Typography, Paper, Chip, Button } from '@mui/material';
+import DownloadIcon from '@mui/icons-material/Download';
 import LiveIndicator from './LiveIndicator';
 import CollapsibleSection from './CollapsibleSection';
 import ResultsTable, { ResultsSummary } from './ResultsTable';
+import { tasksApi } from '../api';
 import type { TaskStep, BenchmarkProgress, Result } from '../api';
 import { statusChip } from '../constants/status';
 import { KIND_LABEL, STEP_STATUS, isPauseKind } from '../constants/steps';
@@ -21,12 +23,15 @@ interface Props {
   results?: Result[];
   /** The variant's presentation.result_columns. */
   resultColumns?: string[];
+  /** The task these steps belong to; needed to download a step's exported archive. */
+  taskId?: number;
 }
 
 /** A submission's ordered steps: status, live-tailing logs, per-benchmark results, timings. */
-export default function TaskPipeline({ steps, benchmarkProgress, results = [], resultColumns }: Props) {
+export default function TaskPipeline({ steps, benchmarkProgress, results = [], resultColumns, taskId }: Props) {
   const [openLogs, setOpenLogs] = useState<Record<string, boolean>>({});
   const [openResults, setOpenResults] = useState<Record<string, boolean>>({});
+  const [downloading, setDownloading] = useState<Record<string, boolean>>({});
   const logRefs = useRef<Record<string, HTMLDivElement | null>>({});
   // A log box follows its tail until the user scrolls up inside it, so reading
   // earlier output isn't yanked back down by the next refresh.
@@ -35,6 +40,25 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], r
   const jumpToTail = (id: string) => {
     const el = logRefs.current[id];
     if (el) el.scrollTop = el.scrollHeight;
+  };
+
+  const download = async (step: TaskStep) => {
+    if (taskId === undefined) return;
+    setDownloading((d) => ({ ...d, [step.id]: true }));
+    try {
+      const blob = await tasksApi.resultsArchive(taskId, step.order);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `task${taskId}_step${step.order}_results.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // The button only shows once the export step is done, so a failure here means
+      // the archive went missing server-side; the step's own log says why.
+    } finally {
+      setDownloading((d) => ({ ...d, [step.id]: false }));
+    }
   };
 
   const benchmarkAt = new Map((benchmarkProgress ?? []).map((p) => [p.step_id, p.name]));
@@ -87,6 +111,15 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], r
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 {active ? 'Running… logs will appear here as the worker reports back.' : 'No logs for this step.'}
               </Typography>
+            )}
+
+            {s.can_download_results && taskId !== undefined && (
+              <Box sx={{ mt: 1.5 }}>
+                <Button variant="outlined" size="small" startIcon={<DownloadIcon />}
+                  disabled={!!downloading[s.id]} onClick={() => download(s)}>
+                  {downloading[s.id] ? 'Preparing download…' : 'Download results'}
+                </Button>
+              </Box>
             )}
 
             {stepResults.length > 0 && (

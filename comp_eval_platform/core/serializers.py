@@ -52,10 +52,22 @@ class TrackSerializer(serializers.ModelSerializer):
 class TaskStepSerializer(serializers.ModelSerializer):
     logs = serializers.SerializerMethodField()
     has_logs = serializers.SerializerMethodField()
+    can_download_results = serializers.SerializerMethodField()
 
     class Meta:
         model = TaskStep
-        fields = ["id", "kind", "order", "status", "started_at", "finished_at", "logs", "has_logs"]
+        fields = ["id", "kind", "order", "status", "started_at", "finished_at", "logs",
+                  "has_logs", "can_download_results"]
+
+    def get_can_download_results(self, obj):
+        """Whether this step pushed artifacts the owner can download. Asking the
+        competition keeps the frontend from having to know which kinds export."""
+        from comp_eval_platform.competitions import get_competition
+        from comp_eval_platform.core.models.execution import StepStatus
+
+        if obj.status != StepStatus.DONE:
+            return False
+        return bool(get_competition().exported_artifacts_dir(obj))
 
     def _latest(self, obj):
         # logs_rel is prefetched by the detail view; a step keeps at most one log

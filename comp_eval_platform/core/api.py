@@ -3,7 +3,12 @@
 Variant-agnostic: submission validation, step-graph building, and scoring are all
 delegated to the active competition, so these viewsets never mention VNN or ARCH.
 """
+import io
+import os
+import zipfile
+
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.http import HttpResponse
 from rest_framework import mixins, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -14,6 +19,7 @@ from comp_eval_platform.compute import get_backend
 from comp_eval_platform.compute.base import ImageError
 
 from .models import Benchmark, Category, Instance, Result, Task, Tool, Track, User
+from .models.execution import StepStatus
 from .serializers import (
     BenchmarkSerializer,
     CategorySerializer,
@@ -41,6 +47,18 @@ class IsOrganizer(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return bool(u and u.is_authenticated)
         return bool(u and u.is_authenticated and getattr(u, "is_organizer", False))
+
+
+def _zip_dir(directory: str) -> bytes:
+    """Zip a directory's files, flattened to paths relative to it. Held in memory: an
+    exported run is a results.csv plus a few gzipped counterexamples."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as archive:
+        for root, _dirs, files in os.walk(directory):
+            for name in sorted(files):
+                full = os.path.join(root, name)
+                archive.write(full, os.path.relpath(full, directory))
+    return buf.getvalue()
 
 
 def _validate(submission):
@@ -145,6 +163,31 @@ class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
 
     def _may_manage(self, request, task):
         return request.user.is_admin or task.owner_id == request.user.id
+
+    @action(detail=True, methods=["get"], url_path="results-archive")
+    def results_archive(self, request, pk=None):
+        """Zip of the artifacts an export step pushed (results.csv, counterexamples),
+        selected by the step's ``order``. A run submitted without result export never
+        pushed anything, so it has no archive to offer."""
+        task = self.get_object()
+        if not self._may_manage(request, task):
+            return Response(status=403)
+        try:
+            order = int(request.query_params.get("step", ""))
+        except ValueError:
+            return Response({"error": "step is required"}, status=400)
+        step = task.step_set.filter(order=order).first()
+        if step is None:
+            return Response({"error": "no such step"}, status=404)
+        if step.status != StepStatus.DONE:
+            return Response({"error": "results not exported yet"}, status=409)
+        directory = get_competition().exported_artifacts_dir(step)
+        if not directory or not os.path.isdir(directory):
+            return Response({"error": "results not found in the exported repository"}, status=404)
+        name = f"task{task.id}_{os.path.basename(directory)}"
+        response = HttpResponse(_zip_dir(directory), content_type="application/zip")
+        response["Content-Disposition"] = f'attachment; filename="{name}.zip"'
+        return response
 
     @action(detail=True, methods=["post"])
     def abort(self, request, pk=None):
