@@ -58,6 +58,28 @@ class Landing:
 
 
 @dataclass
+class Guide:
+    """The copy for one how-to page, keyed ``"toolkit"``/``"benchmark"`` in
+    ``Presentation.guides``. All optional; the shell omits any empty piece, and
+    falls back to its own neutral copy for a variant that ships no guide.
+
+    Prose carries a small inline markup the shell renders: ``` `code` ``` and
+    ``[label](url)``. Anything longer than a span belongs in a ``code`` block.
+    """
+
+    #: Sentence under the page title.
+    intro: str = ""
+    #: The steps a submission runs, in order, as ``{"title", "details": [str]}``.
+    #: Rendered twice: a strip of boxes up top, then a card per step with its
+    #: ``details`` paragraphs. Keep the titles short — the strip is one line.
+    pipeline: list[dict] = field(default_factory=list)
+    #: Prose below the pipeline, as ``{"heading", "blocks": [block]}``. A block is
+    #: ``{"type": "text"|"note"|"code"|"bullets", ...}``: "text"/"note" take ``text``,
+    #: "code" takes ``code``, "bullets" takes ``items``.
+    sections: list[dict] = field(default_factory=list)
+
+
+@dataclass
 class Presentation:
     """What the active variant contributes to the frontend shell."""
 
@@ -73,3 +95,6 @@ class Presentation:
     branding: Branding = field(default_factory=Branding)
     #: Variant landing-page copy (tagline, links, contacts, cross-promo).
     landing: Landing = field(default_factory=Landing)
+    #: How-to page copy, keyed "toolkit"/"benchmark". A variant documents its own
+    #: scripts and pipeline; the shell knows neither.
+    guides: dict[str, Guide] = field(default_factory=dict)

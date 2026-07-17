@@ -67,7 +67,16 @@ export interface Branding { primary_color: string; hero_image: string; favicon: 
 export interface LandingLink { label: string; url: string; }
 export interface Related { text?: string; label?: string; url?: string; }
 export interface Landing { tagline: string; links: LandingLink[]; contacts: string[]; related: Related; }
-export interface CompetitionInfo { name: string; display_name: string; presentation: { result_columns: string[]; submission_fields: FieldSpec[]; score_columns: string[]; branding: Branding; landing: Landing; } | null; }
+
+/** One step of a guide's pipeline: a box in the strip, and a card explaining it. */
+export interface GuideStep { title: string; details: string[]; }
+/** A chunk of guide prose. `text`/`note` carry `text`, `code` carries `code`, `bullets` carries `items`. */
+export interface GuideBlock { type: 'text' | 'note' | 'code' | 'bullets'; text?: string; code?: string; items?: string[]; }
+export interface GuideSection { heading: string; blocks: GuideBlock[]; }
+/** A how-to page's copy, written by the active competition (see results.py Guide). */
+export interface Guide { intro: string; pipeline: GuideStep[]; sections: GuideSection[]; }
+
+export interface CompetitionInfo { name: string; display_name: string; presentation: { result_columns: string[]; submission_fields: FieldSpec[]; score_columns: string[]; branding: Branding; landing: Landing; guides?: Record<string, Guide>; } | null; }
 export interface Scoreboard { columns: string[]; rows: Record<string, unknown>[]; }
 
 const results = <T,>(url: string) => apiClient.get<{ results?: T[] } | T[]>(url).then((r) => {

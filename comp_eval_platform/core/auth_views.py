@@ -4,6 +4,8 @@ Session cookies + CSRF (not JWT), matching the VNN frontend's axios client. The
 first account created becomes an enabled admin; later ones are disabled until an
 admin enables them.
 """
+from dataclasses import asdict
+
 from django.contrib.auth import authenticate, login, logout
 from django.http import FileResponse, Http404
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -136,6 +138,7 @@ def competition_info(request):
                 "contacts": pres.landing.contacts,
                 "related": pres.landing.related,
             },
+            "guides": {name: asdict(g) for name, g in pres.guides.items()},
         }
     except NotImplementedError:
         pass

@@ -99,6 +99,19 @@ return createTheme({
         inputMultiline: { resize: 'vertical' },
       },
     },
+    // Steppers here diagram a pipeline rather than walk the user through a wizard: no
+    // step is "current", so they all read as real instead of one lit and the rest greyed
+    // out as unreached.
+    MuiStepIcon: {
+      styleOverrides: {
+        root: { color: primary, fontSize: '1.65rem' },
+      },
+    },
+    MuiStepLabel: {
+      styleOverrides: {
+        label: { fontWeight: 600, lineHeight: 1.35 },
+      },
+    },
     MuiTableCell: {
       styleOverrides: {
         root: { borderColor: '#eef0f3' },
