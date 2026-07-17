@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import {
   Box, Typography, TextField, Button, Link as MuiLink, MenuItem, FormControlLabel,
   Checkbox, Alert, Divider, FormGroup, Accordion, AccordionDetails, AccordionSummary,
@@ -16,23 +16,31 @@ import { useAuth } from '../context/AuthContext';
 export default function ToolkitSubmissionPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  // The details page's "Populate new submission form" button routes here with prefill.
+  const prefill = (useLocation().state as { prefillData?: any } | null)?.prefillData;
   const [form, setForm] = useState<any>({
     name: '', repository: '', hash: '', ami: '', aws_instance_type: 't2.large', eni: '', use_own_eni: false,
     scripts_dir: '', manual_installation_step: false, run_installation_script_as_root: false,
     run_post_installation_script_as_root: false, run_toolkit_as_root: false, post_install_tool: '',
-    vnnlib_version: '1.0', run_networks: 'all', benchmarks: [] as string[],
+    vnnlib_version: '1.0', run_networks: 'all',
     pause_after_postinstallation: false, restart_after_postinstallation: false,
     reverse_order: false, split: 0, export_results: false, force_pause: false, force_no_pause: false, local_execution: false,
+    ...prefill,
+    // A tool submitted outside this form may carry no benchmark list; the checkboxes need an array.
+    benchmarks: Array.isArray(prefill?.benchmarks) ? prefill.benchmarks : [],
   });
   const set = (patch: any) => setForm((f: any) => ({ ...f, ...patch }));
   const [message, setMessage] = useState('');
   const [data, setData] = useState<ToolkitFormData | null>(null);
-  const [useRepoRoot, setUseRepoRoot] = useState(true);
+  const [useRepoRoot, setUseRepoRoot] = useState(!prefill?.scripts_dir);
 
   useEffect(() => {
     toolkitApi.getFormData().then((d) => {
       setData(d);
-      set({ ami: form.ami || d.ami_options[0]?.value || '', run_networks: d.run_networks_options[0]?.value || 'all' });
+      set({
+        ami: form.ami || d.ami_options[0]?.value || '',
+        run_networks: prefill?.run_networks || d.run_networks_options[0]?.value || 'all',
+      });
     }).catch(() => setMessage('Failed to load form data'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

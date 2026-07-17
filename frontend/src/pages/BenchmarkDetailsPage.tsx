@@ -1,12 +1,6 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import type { ReactNode } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Box, Typography, Button, Paper, CircularProgress, Chip, Accordion, AccordionSummary,
-  AccordionDetails, Stack, Snackbar, Alert, Collapse, IconButton,
-  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
-} from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { Box, Typography, Button, CircularProgress, Chip, Stack, Alert } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
@@ -14,41 +8,19 @@ import PageSection from '../components/PageSection';
 import LiveIndicator from '../components/LiveIndicator';
 import OwnerLabel from '../components/OwnerLabel';
 import OwnerReassign from '../components/OwnerReassign';
+import DetailRow from '../components/DetailRow';
+import SubmissionDetails from '../components/SubmissionDetails';
+import DeleteSubmissionDialog from '../components/DeleteSubmissionDialog';
+import TaskPipeline from '../components/TaskPipeline';
 import { useAuth } from '../context/AuthContext';
 import { tasksApi, benchmarksApi } from '../api';
-import type { Task, TaskStep, Benchmark } from '../api';
+import type { Task, Benchmark } from '../api';
 import { statusChip } from '../constants/status';
+import { isPauseKind } from '../constants/steps';
 import { formatDateTime } from '../utils/datetime';
 import { usePageTitle } from '../hooks/usePageTitle';
 
 const REFRESH_MS = 10000;
-const STEP_STATUS: Record<string, string> = { pending: 'Pending', active: 'Running', done: 'Done', failed: 'Error', aborted: 'Aborted' };
-const PAUSE_KIND = 'vnn_pause';
-
-// Render only the tail of a log: a very verbose step (e.g. a generator spamming a
-// progress bar) can produce a multi-MB log that freezes the tab if put in the DOM
-// whole. Configurable via VITE_MAX_LOG_KB (default 1 MB); lower it if the tab lags.
-const MAX_LOG_CHARS = Number(import.meta.env.VITE_MAX_LOG_KB ?? 1000) * 1000;
-const logTail = (text: string): string =>
-  text.length <= MAX_LOG_CHARS
-    ? text
-    : `… (showing the last ${Math.round(MAX_LOG_CHARS / 1000)} KB of ${Math.round(text.length / 1000)} KB)\n${text.slice(-MAX_LOG_CHARS)}`;
-
-// Friendlier step names than the raw kinds.
-const KIND_LABEL: Record<string, string> = {
-  vnn_create: 'Create submission', assign: 'Assign worker', vnn_generate: 'Generate instances',
-  vnn_benchmark_export: 'Export to benchmarks repo', vnn_pause: 'Paused (waiting to continue)', shutdown: 'Shutdown',
-};
-
-/** One label/value pair in the compact submission-details grid. */
-function DetailRow({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <>
-      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>{label}</Typography>
-      <Typography variant="body2" component="div">{children}</Typography>
-    </>
-  );
-}
 
 export default function BenchmarkDetailsPage() {
   const { id } = useParams();
@@ -57,31 +29,18 @@ export default function BenchmarkDetailsPage() {
   const [task, setTask] = useState<Task | null>(null);
   const [benchmark, setBenchmark] = useState<Benchmark | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState('');
   const [error, setError] = useState('');
-  const [openLogs, setOpenLogs] = useState<Record<string, boolean>>({});
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   usePageTitle(task ? `${task.name} (#${task.id})` : 'Benchmark');
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Per-step log <pre> nodes, plus scroll bookkeeping so a live refresh only
-  // follows the tail when the user is already at the bottom.
-  const logRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const pinnedToBottom = useRef<Record<string, boolean>>({});
-  const positioned = useRef<Set<string>>(new Set());
-  const isAtBottom = (el: HTMLDivElement | null) =>
-    !el || el.scrollHeight - el.scrollTop - el.clientHeight < 50;
 
   const load = async () => {
     if (!id) return;
     try {
       const t = await tasksApi.get(id);
-      // Capture bottom-pinned state BEFORE the new logs grow the boxes.
-      pinnedToBottom.current = Object.fromEntries(
-        Object.keys(logRefs.current).map((sid) => [sid, isAtBottom(logRefs.current[sid])]),
-      );
       setTask(t);
-      // Once files exist, show the benchmark's instances + publish control.
+      // Refetched each poll: the export step records the resolved commit and publishes.
       if (t.benchmark) setBenchmark(await benchmarksApi.get(t.benchmark).catch(() => null));
     } catch { /* ignore */ } finally { setLoading(false); }
   };
@@ -91,26 +50,12 @@ export default function BenchmarkDetailsPage() {
     // eslint-disable-next-line
   }, [task?.done, id]);
 
-  // After each render, pin a log box to its tail when it first appears (default to
-  // bottom) or when the user was already at the bottom before the refresh.
-  useLayoutEffect(() => {
-    task?.steps.forEach((s) => {
-      const el = logRefs.current[s.id];
-      if (!el) return;
-      if (!positioned.current.has(s.id) || pinnedToBottom.current[s.id]) {
-        el.scrollTop = el.scrollHeight;
-        positioned.current.add(s.id);
-      }
-    });
-  }, [task]);
-
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box>;
   if (!task) return <PageSection><Typography>Task not found.</Typography></PageSection>;
 
   const overall = statusChip(task.status || (task.done ? 'Done' : 'Running'));
-  const current = task.steps.find((s) => s.status === 'active');
-  const isPaused = current?.kind === PAUSE_KIND;
-  const stepName = (s: TaskStep) => KIND_LABEL[s.kind] ?? s.kind;
+  const active = task.steps.find((s) => s.status === 'active');
+  const isPaused = !!active && isPauseKind(active.kind);
   const extra = (benchmark?.extra ?? {}) as Record<string, string>;
 
   const doAbort = async () => { if (window.confirm('Abort this submission?')) setTask(await tasksApi.abort(task.id)); };
@@ -149,86 +94,28 @@ export default function BenchmarkDetailsPage() {
           </Stack>
         </Box>
 
-        <Accordion disableGutters elevation={0} sx={{ mt: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, '&:before': { display: 'none' } }}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography sx={{ fontWeight: 500 }}>Submission details</Typography>
-          </AccordionSummary>
-          <AccordionDetails sx={{ pt: 0 }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 2, rowGap: 0.75, alignItems: 'baseline' }}>
-              <DetailRow label="Repository"><code>{extra.repository || '—'}</code></DetailRow>
-              <DetailRow label="Hash"><code>{extra.hash || '—'}</code></DetailRow>
-              <DetailRow label="VNNLIB version"><code>{extra.vnnlib_version || '—'}</code></DetailRow>
-              <DetailRow label="Owner">
-                {user?.is_admin ? (
-                  <OwnerReassign taskId={task.id} currentName={task.user_name} currentEmail={task.user_email} onChanged={load} />
-                ) : (
-                  <OwnerLabel name={task.user_name} email={task.user_email} />
-                )}
-              </DetailRow>
-            </Box>
-          </AccordionDetails>
-        </Accordion>
+        <SubmissionDetails>
+          <DetailRow label="Repository"><code>{extra.repository || '—'}</code></DetailRow>
+          <DetailRow label="Hash"><code>{extra.hash || '—'}</code></DetailRow>
+          <DetailRow label="VNNLIB version"><code>{extra.vnnlib_version || '—'}</code></DetailRow>
+          <DetailRow label="Owner">
+            {user?.is_admin ? (
+              <OwnerReassign taskId={task.id} currentName={task.user_name} currentEmail={task.user_email} onChanged={load} />
+            ) : (
+              <OwnerLabel name={task.user_name} email={task.user_email} />
+            )}
+          </DetailRow>
+        </SubmissionDetails>
       </PageHeader>
 
-      <Dialog open={deleteOpen} onClose={() => !deleting && setDeleteOpen(false)}>
-        <DialogTitle>Delete this submission?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            This permanently deletes <strong>{task.name}</strong> and all of its steps, logs, and
-            results. The generated benchmark itself is not removed. This cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteOpen(false)} disabled={deleting}>Cancel</Button>
-          <Button onClick={doDelete} color="error" variant="contained" disabled={deleting}>{deleting ? 'Deleting…' : 'Delete'}</Button>
-        </DialogActions>
-      </Dialog>
+      <DeleteSubmissionDialog open={deleteOpen} name={task.name} deleting={deleting}
+        note="The generated benchmark itself is not removed."
+        onCancel={() => setDeleteOpen(false)} onConfirm={doDelete} />
 
       <PageSection>
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
         <Typography variant="h5" fontWeight="bold" gutterBottom>Pipeline</Typography>
-        {task.steps.map((s) => {
-          const chip = statusChip(STEP_STATUS[s.status] ?? 'Pending');
-          const active = s.status === 'active';
-          const open = openLogs[s.id] ?? active;  // the running step's logs start expanded
-          return (
-            <Paper key={s.id} id={`step-${s.order}`} elevation={active ? 3 : 0}
-              sx={{ p: 3, mb: 2, bgcolor: 'grey.50', border: '1px solid', borderColor: active ? 'secondary.main' : 'grey.300' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                <Typography sx={{ fontWeight: 600, minWidth: 24, color: 'text.secondary' }}>{s.order + 1}.</Typography>
-                <Typography sx={{ fontWeight: 600, flexGrow: 1 }}>{stepName(s)}</Typography>
-                {active && <LiveIndicator label={null} />}
-                <Chip size="small" label={chip.label} color={chip.color} variant={chip.variant} />
-              </Box>
-
-              {s.has_logs ? (
-                <Box sx={{ mt: 1.5 }}>
-                  <Box onClick={() => {
-                    const next = !open;
-                    setOpenLogs((o) => ({ ...o, [s.id]: next }));
-                    // Opening a collapsed log jumps it to the tail (after the expand animation).
-                    if (next) setTimeout(() => { const el = logRefs.current[s.id]; if (el) el.scrollTop = el.scrollHeight; }, 120);
-                  }}
-                    sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none', p: 0.5, borderRadius: 1, '&:hover': { bgcolor: 'action.hover' } }}>
-                    <IconButton size="small" sx={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}><ExpandMoreIcon /></IconButton>
-                    <Typography variant="body2" fontWeight="medium">Logs</Typography>
-                  </Box>
-                  <Collapse in={open}>
-                    <Box className="console_log" ref={(el: HTMLDivElement | null) => { logRefs.current[s.id] = el; }}>{logTail(s.logs)}</Box>
-                  </Collapse>
-                </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  {active ? 'Running… logs will appear here as the worker reports back.' : 'No logs for this step.'}
-                </Typography>
-              )}
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                {s.started_at ? `started ${formatDateTime(s.started_at)}` : 'not started'}
-                {s.finished_at ? ` · finished ${formatDateTime(s.finished_at)}` : ''}
-              </Typography>
-            </Paper>
-          );
-        })}
+        <TaskPipeline steps={task.steps} benchmarkProgress={task.benchmark_progress} />
 
         {benchmark && task.done && task.status === 'Done' && (
           <Alert severity="success" sx={{ mt: 3 }}>
@@ -237,7 +124,6 @@ export default function BenchmarkDetailsPage() {
           </Alert>
         )}
       </PageSection>
-      <Snackbar open={!!toast} autoHideDuration={3000} onClose={() => setToast('')} message={toast} />
     </>
   );
 }

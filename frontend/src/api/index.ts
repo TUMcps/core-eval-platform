@@ -18,7 +18,7 @@ export interface User {
 }
 
 export interface Category { id: string; name: string; result_fields: string[]; spec: Record<string, unknown>; }
-export interface Tool { id: number; name: string; category: string; repository: string; base_image: string; extra: Record<string, unknown>; published: boolean; created_at: string; }
+export interface Tool { id: number; name: string; category: string; repository: string; hash: string; base_image: string; script_dir: string; extra: Record<string, unknown>; published: boolean; created_at: string; }
 export interface Instance { id: string; name: string; }
 export interface Benchmark { id: number; name: string; category: string; extra: Record<string, unknown>; published: boolean; instances: Instance[]; created_at: string; }
 export interface TaskStep { id: string; kind: string; order: number; status: string; started_at: string | null; finished_at: string | null; logs: string; has_logs: boolean; }
@@ -75,6 +75,7 @@ export const categoriesApi = {
 
 export const toolsApi = {
   list: () => results<Tool>('/api/tools/'),
+  get: (id: ID) => apiClient.get<Tool>(`/api/tools/${id}/`).then((r) => r.data),
   create: (data: Partial<Tool>) => apiClient.post<Tool>('/api/tools/', data).then((r) => r.data),
   run: (id: ID) => apiClient.post<Task>(`/api/tools/${id}/run/`).then((r) => r.data),
 };
@@ -109,14 +110,11 @@ export const tasksApi = {
   changeOwner: (id: ID, owner: string) => apiClient.post<Task>(`/api/tasks/${id}/change_owner/`, { owner }).then((r) => r.data),
 };
 
+// Toolkit submissions are tool-run tasks; their lifecycle lives on tasksApi.
 export const toolkitApi = {
-  // Toolkit submissions are tool-run tasks.
   getList: () => results<Task>('/api/tasks/').then((ts) => ts.filter((t) => t.tool)),
   getFormData: () => apiClient.get<ToolkitFormData>('/api/toolkit/form_data/').then((r) => r.data),
   submit: (data: Record<string, unknown>) => apiClient.post<{ redirect_to: string }>('/api/toolkit/submit/', data).then((r) => r.data),
-  get: (id: ID) => apiClient.get<Task>(`/api/tasks/${id}/`).then((r) => r.data),
-  abort: (id: ID) => apiClient.post<Task>(`/api/tasks/${id}/abort/`).then((r) => r.data),
-  resume: (id: ID) => apiClient.post<Task>(`/api/tasks/${id}/resume/`).then((r) => r.data),
 };
 
 export const tracksApi = {

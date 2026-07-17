@@ -1,41 +1,50 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, Link as RouterLink } from 'react-router-dom';
-import {
-  Box, Typography, Button, Paper, CircularProgress, Chip, Accordion, AccordionSummary,
-  AccordionDetails, Stack,
-} from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Box, Typography, Button, CircularProgress, Chip, Stack, Alert } from '@mui/material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import LiveIndicator from '../components/LiveIndicator';
-import { toolkitApi } from '../api';
-import type { Task, TaskStep } from '../api';
+import OwnerLabel from '../components/OwnerLabel';
+import OwnerReassign from '../components/OwnerReassign';
+import DetailRow from '../components/DetailRow';
+import SubmissionDetails from '../components/SubmissionDetails';
+import DeleteSubmissionDialog from '../components/DeleteSubmissionDialog';
+import TaskPipeline from '../components/TaskPipeline';
+import { useAuth } from '../context/AuthContext';
+import { tasksApi, toolsApi } from '../api';
+import type { Task, Tool } from '../api';
 import { statusChip } from '../constants/status';
+import { isPauseKind } from '../constants/steps';
 import { formatDateTime } from '../utils/datetime';
 import { usePageTitle } from '../hooks/usePageTitle';
 
 const REFRESH_MS = 10000;
-const STEP_STATUS: Record<string, string> = { pending: 'Pending', active: 'Running', done: 'Done', failed: 'Error', aborted: 'Aborted' };
-const PAUSE_KIND = 'vnn_pause';
 
-// Friendlier step names than the raw kinds.
-const KIND_LABEL: Record<string, string> = {
-  vnn_create: 'Create submission', assign: 'Assign worker', vnn_install: 'Install toolkit',
-  vnn_pause: 'Paused (waiting to continue)', run_benchmark: 'Run benchmark', vnn_export: 'Export results', shutdown: 'Shutdown',
-};
+const yn = (b: unknown) => (b ? 'yes' : 'no');
 
 export default function ToolkitDetailsPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [task, setTask] = useState<Task | null>(null);
+  const [tool, setTool] = useState<Tool | null>(null);
   const [loading, setLoading] = useState(true);
-  usePageTitle(task?.name ?? 'Toolkit');
+  const [error, setError] = useState('');
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  usePageTitle(task ? `${task.name} (#${task.id})` : 'Toolkit');
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = async () => {
     if (!id) return;
-    try { setTask(await toolkitApi.get(id)); } catch { /* ignore */ } finally { setLoading(false); }
+    try {
+      const t = await tasksApi.get(id);
+      setTask(t);
+      // Refetched each poll: the install step records the resolved commit onto the tool.
+      if (t.tool) setTool(await toolsApi.get(t.tool).catch(() => null));
+    } catch { /* ignore */ } finally { setLoading(false); }
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
   useEffect(() => {
@@ -47,21 +56,53 @@ export default function ToolkitDetailsPage() {
   if (!task) return <PageSection><Typography>Task not found.</Typography></PageSection>;
 
   const overall = statusChip(task.status || (task.done ? 'Done' : 'Running'));
-  const current = task.steps.find((s) => s.status === 'active');
-  const isPaused = current?.kind === PAUSE_KIND;
+  const active = task.steps.find((s) => s.status === 'active');
+  const isPaused = !!active && isPauseKind(active.kind);
+  const extra = (tool?.extra ?? {}) as Record<string, any>;
+  const benchmarkNames = task.benchmark_progress.map((p) => p.name);
+  const scriptDir = tool?.script_dir === '.' ? 'Repository root' : (tool?.script_dir || '—');
 
-  const stepName = (s: TaskStep) => {
-    if (s.kind === 'run_benchmark') return 'Run benchmark';
-    return KIND_LABEL[s.kind] ?? s.kind;
+  // Imported tasks carry the old system's key names for the same options; take whichever is set.
+  const opt = (...names: string[]) => names.map((n) => extra[n]).find((v) => v !== undefined);
+  const rootFlags = [
+    opt('run_installation_script_as_root', 'run_install_as_root'),
+    opt('run_post_installation_script_as_root'),
+    opt('run_toolkit_as_root', 'run_tool_as_root'),
+  ];
+  const holdFlags = [
+    opt('manual_installation_step'),
+    opt('pause_after_postinstallation'),
+    opt('restart_after_postinstallation'),
+  ];
+  const known = (vs: unknown[]) => vs.some((v) => v !== undefined);
+
+  const doAbort = async () => { if (window.confirm('Abort this submission?')) setTask(await tasksApi.abort(task.id)); };
+  const doResume = async () => { setTask(await tasksApi.resume(task.id)); };
+  const doDelete = async () => {
+    setDeleting(true);
+    try { await tasksApi.delete(task.id); navigate('/toolkit'); }
+    catch (err: any) { setDeleting(false); setDeleteOpen(false); setError(err?.response?.data?.error ?? 'Delete failed'); }
   };
-
-  const doAbort = async () => { if (window.confirm('Abort this submission?')) setTask(await toolkitApi.abort(task.id)); };
-  const doResume = async () => { setTask(await toolkitApi.resume(task.id)); };
+  // Re-open the submission form with this toolkit's inputs prefilled. `extra` holds the
+  // submitted option set; the columns after it win, so a resolved hash replaces the
+  // (possibly empty) submitted one.
+  const repopulate = () => navigate('/toolkit/submit', {
+    state: {
+      prefillData: {
+        ...extra,
+        name: task.name,
+        repository: tool?.repository ?? '',
+        hash: tool?.hash ?? '',
+        ami: tool?.base_image ?? '',
+        scripts_dir: tool?.script_dir === '.' ? '' : (tool?.script_dir ?? ''),
+      },
+    },
+  });
 
   return (
     <>
       <PageHeader>
-        <PageBreadcrumbs items={[{ label: 'Toolkit', to: '/toolkit' }, { label: task.name }]} />
+        <PageBreadcrumbs items={[{ label: 'Toolkit', to: '/toolkit' }, { label: `${task.name} (#${task.id})` }]} />
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
           <Box>
             <Typography variant="h3" fontWeight="bold" gutterBottom>{task.name}</Typography>
@@ -73,48 +114,63 @@ export default function ToolkitDetailsPage() {
           </Box>
           <Stack direction="row" spacing={1.5}>
             {isPaused && <Button variant="contained" onClick={doResume}>Continue</Button>}
+            <Button variant="outlined" startIcon={<ContentCopyIcon />} onClick={repopulate}>Populate new submission form</Button>
             {!task.done ? (
               <Button variant="outlined" color="error" onClick={doAbort}>Abort submission</Button>
             ) : (
-              <Button component={RouterLink} to="/toolkit" variant="outlined" startIcon={<ArrowBackIcon />}>Back</Button>
+              <Button variant="outlined" color="error" onClick={() => setDeleteOpen(true)}>Delete submission</Button>
             )}
           </Stack>
         </Box>
+
+        <SubmissionDetails>
+          <DetailRow label="Repository"><code>{tool?.repository || task.repository || '—'}</code></DetailRow>
+          <DetailRow label="Hash"><code>{tool?.hash || '—'}</code></DetailRow>
+          <DetailRow label="Script dir"><code>{scriptDir}</code></DetailRow>
+          <DetailRow label="Base image">
+            <code>{tool?.base_image || '—'}</code>
+            {extra.aws_instance_type ? <> on <code>{extra.aws_instance_type}</code></> : null}
+            {extra.eni ? <>, eni <code>{extra.eni}</code></> : null}
+          </DetailRow>
+          <DetailRow label="VNNLIB version"><code>{extra.vnnlib_version || '—'}</code></DetailRow>
+          <DetailRow label="Evaluation mode"><code>{extra.run_networks || '—'}</code></DetailRow>
+          <DetailRow label="Benchmarks">{benchmarkNames.join(', ') || '—'}</DetailRow>
+          {known(rootFlags) && (
+            <DetailRow label="Run as root">
+              install: <code>{yn(rootFlags[0])}</code>, post-install: <code>{yn(rootFlags[1])}</code>,{' '}
+              toolkit: <code>{yn(rootFlags[2])}</code>
+            </DetailRow>
+          )}
+          {known(holdFlags) && (
+            <DetailRow label="Pause / restart">
+              after install: <code>{yn(holdFlags[0])}</code>, after post-install: <code>{yn(holdFlags[1])}</code>,{' '}
+              restart after post-install: <code>{yn(holdFlags[2])}</code>
+            </DetailRow>
+          )}
+          <DetailRow label="Owner">
+            {user?.is_admin ? (
+              <OwnerReassign taskId={task.id} currentName={task.user_name} currentEmail={task.user_email} onChanged={load} />
+            ) : (
+              <OwnerLabel name={task.user_name} email={task.user_email} />
+            )}
+          </DetailRow>
+          {extra.post_install_tool ? (
+            <DetailRow label="Post-install script">
+              <Box component="pre" sx={{ m: 0, p: 1.5, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', maxHeight: 200, fontFamily: 'monospace', fontSize: '0.8125rem', whiteSpace: 'pre-wrap' }}>
+                {extra.post_install_tool}
+              </Box>
+            </DetailRow>
+          ) : null}
+        </SubmissionDetails>
       </PageHeader>
 
+      <DeleteSubmissionDialog open={deleteOpen} name={task.name} deleting={deleting}
+        onCancel={() => setDeleteOpen(false)} onConfirm={doDelete} />
+
       <PageSection>
+        {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
         <Typography variant="h5" fontWeight="bold" gutterBottom>Pipeline</Typography>
-        {task.steps.map((s) => {
-          const chip = statusChip(STEP_STATUS[s.status] ?? 'Pending');
-          const active = s.status === 'active';
-          return (
-            <Paper key={s.id} id={`step-${s.order}`} elevation={active ? 3 : 1} sx={{ mb: 1.5, border: active ? '1px solid' : '1px solid transparent', borderColor: active ? 'secondary.main' : 'transparent' }}>
-              <Accordion disableGutters elevation={0} defaultExpanded={active} sx={{ '&:before': { display: 'none' }, bgcolor: 'transparent' }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
-                    <Typography sx={{ fontWeight: 600, minWidth: 40, color: 'text.secondary' }}>{s.order + 1}.</Typography>
-                    <Typography sx={{ fontWeight: 600, flexGrow: 1 }}>{stepName(s)}</Typography>
-                    {active && <LiveIndicator label={null} />}
-                    <Chip size="small" label={chip.label} color={chip.color} variant={chip.variant} />
-                  </Box>
-                </AccordionSummary>
-                <AccordionDetails>
-                  {s.has_logs ? (
-                    <Box className="console_log">{s.logs}</Box>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      {active ? 'Running… logs will appear here as the worker reports back.' : 'No logs for this step.'}
-                    </Typography>
-                  )}
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                    {s.started_at ? `started ${formatDateTime(s.started_at)}` : 'not started'}
-                    {s.finished_at ? ` · finished ${formatDateTime(s.finished_at)}` : ''}
-                  </Typography>
-                </AccordionDetails>
-              </Accordion>
-            </Paper>
-          );
-        })}
+        <TaskPipeline steps={task.steps} benchmarkProgress={task.benchmark_progress} />
       </PageSection>
     </>
   );
