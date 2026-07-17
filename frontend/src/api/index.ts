@@ -28,6 +28,20 @@ export interface TaskStep {
   can_download_results: boolean;
   /** The raw results file this step's run produced; empty for steps that make none. */
   results: string;
+  /** A step's frozen outcome, for steps that compute one (a scoring step's report). */
+  summary: StepSummary | null;
+}
+
+/** The official scorer's report on one benchmark run. */
+export interface StepSummary {
+  summary: {
+    instances: number;
+    /** holds / violated / timeout / error / unknown. */
+    verdicts: Record<string, number>;
+    /** valid / valid_with_tolerance / invalid / missing — only when the run had violations. */
+    witnesses: Record<string, number>;
+  };
+  severity: 'success' | 'error' | 'unknown';
 }
 export interface BenchmarkProgress { name: string; state: string; step_id: number; }
 export interface Task {

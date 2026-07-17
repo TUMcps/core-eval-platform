@@ -1,10 +1,8 @@
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
-import type { Result } from '../api';
-import {
-  VERDICTS, VERDICT_COLOR, canonicalVerdict, formatRuntime, resultColor,
-} from '../constants/results';
+import type { Result, StepSummary } from '../api';
+import { VERDICTS, canonicalVerdict, formatRuntime, resultColor } from '../constants/results';
 
 /** Solved/total + total runtime for one benchmark's parsed rows. */
 export function ResultsSummary({ results }: { results: Result[] }) {
@@ -29,36 +27,47 @@ export default function StepResults({ csv, results }: { csv: string; results: Re
   );
 }
 
+const n = (counts: Record<string, number>, key: string) => counts[key] ?? 0;
+
 /**
- * A run's verdict tallies. Counted from the run's own rows, which is what the old site
- * fell back to when the scorer's summary was unavailable — so it says nothing about
- * whether a counterexample was *valid*; that lives in the scoring log.
+ * The official scorer's verdict on a run, colour-coded: only a fully valid run is green.
+ * The witness breakdown is the point of it — a `violated` the scorer rejected or could
+ * not find means the tool claimed a violation it cannot back up.
+ *
+ * Falls back to counting the run's own rows when the scorer produced no summary (it was
+ * skipped, or is still running), which is what the old site did too — but that view
+ * cannot speak to witness validity, so it says so.
  */
-export function ResultsOverview({ results }: { results: Result[] }) {
-  const counts = results.reduce<Record<string, number>>((acc, r) => {
-    const v = canonicalVerdict(r.result);
-    acc[v] = (acc[v] ?? 0) + 1;
-    return acc;
-  }, {});
-  const runtime = results.reduce((sum, r) => sum + (r.time ?? 0), 0);
-  const errors = counts.error ?? 0;
+export function ResultsOverview({ summary, results }: { summary: StepSummary | null; results: Result[] }) {
+  if (!summary) {
+    const counts = results.reduce<Record<string, number>>((acc, r) => {
+      const v = canonicalVerdict(r.result);
+      acc[v] = (acc[v] ?? 0) + 1;
+      return acc;
+    }, {});
+    return (
+      <Alert severity="info" sx={{ mb: 2 }}>
+        {VERDICTS.filter((v) => counts[v]).map((v) => `${v}: ${counts[v]}`).join(', ') || 'no results'}
+        {' — '}counted from results.csv; the scorer produced no summary, so counterexample
+        validity is unknown. See the scoring log.
+      </Alert>
+    );
+  }
+
+  const { verdicts, witnesses, instances } = summary.summary;
+  const violated = n(verdicts, 'violated');
+  const severity = summary.severity === 'unknown' ? 'info' : summary.severity;
 
   return (
-    <Box sx={{ mt: 1 }}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: 1.5 }}>
-        {VERDICTS.filter((v) => counts[v]).map((v) => (
-          <Chip key={v} size="small" color={VERDICT_COLOR[v]} label={`${v}: ${counts[v]}`} />
-        ))}
-        <Chip size="small" variant="outlined" label={`${results.length} instances`} />
-        <Chip size="small" variant="outlined" label={`${formatRuntime(runtime)} total`} />
-      </Box>
-      <Typography variant="body2" color="text.secondary">
-        {errors > 0
-          ? `${errors} instance(s) did not produce a usable verdict — see the logs above.`
-          : 'Every instance produced a usable verdict.'}
-        {' '}A per-instance timeout is a normal outcome and scores 0, not an error.
-        Whether a counterexample is <em>valid</em> is decided by the scorer — see the scoring log.
-      </Typography>
-    </Box>
+    <Alert severity={severity} sx={{ mb: 2 }}>
+      violated: {violated}
+      {violated > 0 && (
+        <> (valid {n(witnesses, 'valid')}, tol {n(witnesses, 'valid_with_tolerance')},
+          {' '}invalid {n(witnesses, 'invalid')}, missing {n(witnesses, 'missing')})</>
+      )}
+      , holds: {n(verdicts, 'holds')}, unknown: {n(verdicts, 'unknown')},
+      {' '}timeout: {n(verdicts, 'timeout')}, error: {n(verdicts, 'error')}
+      {' '}— {instances} instances, {formatRuntime(results.reduce((s, r) => s + (r.time ?? 0), 0))} total
+    </Alert>
   );
 }

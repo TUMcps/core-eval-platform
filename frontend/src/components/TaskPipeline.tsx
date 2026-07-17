@@ -33,7 +33,6 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
   const [openLogs, setOpenLogs] = useState<Record<string, boolean>>({});
   const [openResults, setOpenResults] = useState<Record<string, boolean>>({});
   const [openScoring, setOpenScoring] = useState<Record<string, boolean>>({});
-  const [openOverview, setOpenOverview] = useState<Record<string, boolean>>({});
   const [downloading, setDownloading] = useState<Record<string, boolean>>({});
   const logRefs = useRef<Record<string, HTMLDivElement | null>>({});
   // A log box follows its tail until the user scrolls up inside it, so reading
@@ -159,12 +158,11 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
               </CollapsibleSection>
             )}
 
-            {stepResults.length > 0 && (
-              <CollapsibleSection title="Overview"
-                open={openOverview[s.id] ?? false}
-                onToggle={() => setOpenOverview((o) => ({ ...o, [s.id]: !(o[s.id] ?? false) }))}>
-                <ResultsOverview results={stepResults} />
-              </CollapsibleSection>
+            {/* The verdict on the run: never collapsed, since it is the thing to read. */}
+            {(scoring?.summary || stepResults.length > 0) && (
+              <Box sx={{ mt: 2 }}>
+                <ResultsOverview summary={scoring?.summary ?? null} results={stepResults} />
+              </Box>
             )}
 
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
