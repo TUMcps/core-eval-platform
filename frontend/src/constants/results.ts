@@ -1,20 +1,45 @@
 import type { ChipProps } from '@mui/material/Chip';
 
+export type Verdict = 'holds' | 'violated' | 'unknown' | 'timeout' | 'error';
+
+/** The buckets a run is summarised in, in reading order. */
+export const VERDICTS: Verdict[] = ['holds', 'violated', 'unknown', 'timeout', 'error'];
+
 /**
- * Whether a verdict counts as decided. A decided case reads as success whichever way
- * it went — `sat`/`violated` is a found counterexample, not a failure of the run —
- * while an undecided one is a warning and a crashed one an error.
+ * Classify a raw results.csv verdict.
+ *
+ * This is a submission-health view, not the official scorer's: the scorer buckets an
+ * infrastructure failure as `unknown` so the tool simply scores 0 there, whereas here
+ * anything that is not a legitimate verification outcome is surfaced as an error, so
+ * only a clean run looks clean.
+ *
+ *   holds / violated / unknown  genuine tool verdicts (unsat / sat / unknown)
+ *   timeout                     the tool reached its per-instance budget — expected
+ *   error                       everything else the harness emits: no_result_in_file,
+ *                               prepare_instance_error_*, prepare_instance_timeout,
+ *                               error_exit_code_*, error_nonmaximal, or anything
+ *                               unrecognized
  */
-export function resultColor(result: string): ChipProps['color'] {
-  const r = result.trim().toLowerCase();
-  if (['sat', 'unsat', 'holds', 'violated'].includes(r)) return 'success';
-  if (r === 'unknown') return 'warning';
-  // The harness's per-instance budget: expected, not a fault.
-  if (r === 'run_instance_timeout' || r === 'timed-out' || r.startsWith('timeout')) return 'warning';
-  // Everything else the harness emits is an infrastructure failure:
-  // no_result_in_file, prepare_instance_*, error_exit_code_*, error_nonmaximal.
+export function canonicalVerdict(raw: string): Verdict {
+  const r = (raw ?? '').trim().toLowerCase();
+  if (r === 'unsat' || r === 'holds') return 'holds';
+  if (r === 'sat' || r === 'violated') return 'violated';
+  if (r === 'unknown') return 'unknown';
+  // Deliberately narrow: prepare_instance_timeout is a prepare-phase fault, not this.
+  if (r === 'run_instance_timeout' || r === 'timed-out' || r.startsWith('timeout')) return 'timeout';
   return 'error';
 }
+
+export const VERDICT_COLOR: Record<Verdict, ChipProps['color']> = {
+  holds: 'success',
+  violated: 'success',  // a found counterexample is a result, not a failure
+  unknown: 'warning',
+  timeout: 'warning',
+  error: 'error',
+};
+
+export const resultColor = (result: string): ChipProps['color'] =>
+  VERDICT_COLOR[canonicalVerdict(result)];
 
 /** Runtime in seconds, or an em dash when the run reported none. */
 export const formatRuntime = (seconds: number | null): string =>

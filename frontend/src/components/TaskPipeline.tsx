@@ -4,7 +4,7 @@ import { Box, Typography, Paper, Chip, Button } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import LiveIndicator from './LiveIndicator';
 import CollapsibleSection from './CollapsibleSection';
-import StepResults from './StepResults';
+import StepResults, { ResultsOverview } from './StepResults';
 import { tasksApi } from '../api';
 import type { TaskStep, BenchmarkProgress, Result } from '../api';
 import { statusChip } from '../constants/status';
@@ -14,6 +14,9 @@ import { formatDateTime } from '../utils/datetime';
 
 const isAtBottom = (el: HTMLDivElement | null) =>
   !el || el.scrollHeight - el.scrollTop - el.clientHeight < 50;
+
+/** The step that validates a benchmark's counterexamples; shown inside that benchmark. */
+const SCORING_KIND = 'vnn_check_results';
 
 interface Props {
   steps: TaskStep[];
@@ -29,6 +32,8 @@ interface Props {
 export default function TaskPipeline({ steps, benchmarkProgress, results = [], taskId }: Props) {
   const [openLogs, setOpenLogs] = useState<Record<string, boolean>>({});
   const [openResults, setOpenResults] = useState<Record<string, boolean>>({});
+  const [openScoring, setOpenScoring] = useState<Record<string, boolean>>({});
+  const [openOverview, setOpenOverview] = useState<Record<string, boolean>>({});
   const [downloading, setDownloading] = useState<Record<string, boolean>>({});
   const logRefs = useRef<Record<string, HTMLDivElement | null>>({});
   // A log box follows its tail until the user scrolls up inside it, so reading
@@ -62,6 +67,15 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
   const benchmarkAt = new Map((benchmarkProgress ?? []).map((p) => [p.step_id, p.name]));
   /** The benchmark a run step ran, or undefined for every other kind. */
   const benchmarkOf = (s: TaskStep) => (s.kind === 'run_benchmark' ? benchmarkAt.get(s.order) : undefined);
+
+  // Validating a benchmark is part of that benchmark's story, so its step is folded
+  // into the run's rather than listed on its own. build_steps emits it directly after
+  // the run it validates.
+  const scoringFor = (s: TaskStep) =>
+    steps.find((c) => c.kind === SCORING_KIND && c.order > s.order
+      && !steps.some((between) => between.kind === 'run_benchmark'
+        && between.order > s.order && between.order < c.order));
+  const shown = steps.filter((s) => s.kind !== SCORING_KIND);
   const stepName = (s: TaskStep): ReactNode => {
     const name = benchmarkOf(s);
     if (name) return <>Run benchmark: <strong>{name}</strong></>;
@@ -74,9 +88,12 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
 
   return (
     <>
-      {steps.map((s) => {
-        const active = s.status === 'active';
-        const paused = active && isPauseKind(s.kind);
+      {shown.map((s, index) => {
+        const scoring = s.kind === 'run_benchmark' ? scoringFor(s) : undefined;
+        // A benchmark is only finished once its validation is, so the pair reads as one
+        // step: while scoring runs, the benchmark is still working.
+        const active = s.status === 'active' || scoring?.status === 'active';
+        const paused = s.status === 'active' && isPauseKind(s.kind);
         const chip = statusChip(paused ? 'Paused' : (STEP_STATUS[s.status] ?? 'Pending'));
         const logsOpen = openLogs[s.id] ?? active;  // the running step's logs start expanded
         const name = benchmarkOf(s);
@@ -85,7 +102,9 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
           <Paper key={s.id} id={`step-${s.order}`} elevation={active ? 3 : 0}
             sx={{ p: 3, mb: 2, bgcolor: 'grey.50', border: '1px solid', borderColor: active ? 'secondary.main' : 'grey.300' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-              <Typography sx={{ fontWeight: 600, minWidth: 24, color: 'text.secondary' }}>{s.order + 1}.</Typography>
+              {/* Numbered by what is listed, not by step order: the folded-in scoring
+                  steps would otherwise leave gaps. The anchor keeps the real order. */}
+              <Typography sx={{ fontWeight: 600, minWidth: 24, color: 'text.secondary' }}>{index + 1}.</Typography>
               <Typography sx={{ fontWeight: 600, flexGrow: 1 }} component="div">{stepName(s)}</Typography>
               {active && !paused && <LiveIndicator label={null} />}
               <Chip size="small" label={chip.label} color={chip.color} variant={chip.variant} />
@@ -125,6 +144,26 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
                 open={openResults[s.id] ?? false}
                 onToggle={() => setOpenResults((o) => ({ ...o, [s.id]: !(o[s.id] ?? false) }))}>
                 <StepResults csv={s.results} results={stepResults} />
+              </CollapsibleSection>
+            )}
+
+            {scoring && (scoring.has_logs || scoring.status === 'active') && (
+              <CollapsibleSection title="Scoring logs"
+                open={openScoring[s.id] ?? false}
+                onToggle={() => setOpenScoring((o) => ({ ...o, [s.id]: !(o[s.id] ?? false) }))}>
+                <Box className="console_log">
+                  {scoring.has_logs
+                    ? logTail(scoring.logs)
+                    : 'Validating the counterexamples with the official scorer…'}
+                </Box>
+              </CollapsibleSection>
+            )}
+
+            {stepResults.length > 0 && (
+              <CollapsibleSection title="Overview"
+                open={openOverview[s.id] ?? false}
+                onToggle={() => setOpenOverview((o) => ({ ...o, [s.id]: !(o[s.id] ?? false) }))}>
+                <ResultsOverview results={stepResults} />
               </CollapsibleSection>
             )}
 
