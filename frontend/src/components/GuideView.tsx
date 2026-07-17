@@ -66,9 +66,13 @@ function PipelineStrip({ steps }: { steps: Guide['pipeline'] }) {
         In order, under the same names they appear under on a submission's page. Some are
         optional and depend on the options you choose. Pick one to read what it does.
       </Typography>
-      {/* Below its min width the labels would crush into unreadable columns; scroll instead. */}
-      <Box sx={{ overflowX: 'auto', pt: 1, pb: 1 }}>
-        <Stepper alternativeLabel activeStep={-1} sx={{ minWidth: 660 }}>
+      {/* Below its min width the labels would crush into unreadable columns; scroll instead.
+          Only sideways: overflow-x alone would compute overflow-y to auto and bring a
+          second scrollbar along with it. */}
+      <Box sx={{ overflowX: 'auto', overflowY: 'hidden', py: 1 }}>
+        {/* nonLinear, or a stepper with no active step counts every step as unreached
+            and disables it — the boxes would render but not take a click. */}
+        <Stepper nonLinear alternativeLabel activeStep={-1} sx={{ minWidth: 660 }}>
           {steps.map((step, i) => (
             <Step key={step.title}>
               <StepButton onClick={() => jumpTo(i)}>{step.title}</StepButton>

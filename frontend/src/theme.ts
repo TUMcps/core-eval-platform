@@ -112,6 +112,15 @@ return createTheme({
         label: { fontWeight: 600, lineHeight: 1.35 },
       },
     },
+    // MUI widens a step's hit area by padding it and cancelling that with negative
+    // margins, which puts the button's box outside the strip that scrolls it and raises
+    // a scrollbar on both axes. Drop both: the icon and its label are target enough, and
+    // zeroing them in pairs keeps the icons on the connector line.
+    MuiStepButton: {
+      styleOverrides: {
+        root: { margin: 0, padding: 0 },
+      },
+    },
     MuiTableCell: {
       styleOverrides: {
         root: { borderColor: '#eef0f3' },
