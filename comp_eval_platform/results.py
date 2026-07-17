@@ -38,6 +38,9 @@ class Branding:
     #: Landing-page hero image. A URL: remote, or ``/api/competition/assets/<name>``
     #: for a file the plugin ships (see ``Competition.asset_path``).
     hero_image: str = ""
+    #: Cap on the hero's rendered width, in px; 0 uses the shell's default. A
+    #: near-square logo needs a tighter cap than a wide banner to match its height.
+    hero_max_width: int = 0
     #: Browser-tab icon, same URL rules as ``hero_image``.
     favicon: str = ""
 

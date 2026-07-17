@@ -17,6 +17,7 @@ export default function HomePage() {
   useEffect(() => { competitionApi.cached().then(setComp).catch(() => {}); }, []);
   const name = comp?.display_name ?? 'Evaluation Platform';
   const hero = comp?.presentation?.branding?.hero_image;
+  const heroMaxWidth = comp?.presentation?.branding?.hero_max_width || 520;
   const landing = comp?.presentation?.landing;
   const tagline = landing?.tagline
     || 'Submit verification toolkits against cutting-edge benchmarks, run them on provisioned workers, and compare results.';
@@ -89,7 +90,8 @@ export default function HomePage() {
                   src={hero}
                   alt={name}
                   sx={{
-                    width: '100%', maxWidth: 520, display: 'block', margin: '0 auto',
+                    width: '100%', maxWidth: heroMaxWidth, display: 'block', margin: '0 auto',
+                    borderRadius: 4,
                     filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.3))',
                   }}
                 />
