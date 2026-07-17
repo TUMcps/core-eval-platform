@@ -30,6 +30,7 @@ export const KIND_LABEL: Record<string, string> = {
   [PAUSE_KIND]: 'Paused (waiting to continue)',
   [LEGACY_PAUSE_KIND]: 'Paused (waiting to continue)',
   run_benchmark: 'Run benchmark',
+  vnn_check_results: 'Validate counterexamples',
   vnn_generate: 'Generate instances',
   vnn_export: 'Export results',
   vnn_benchmark_export: 'Export to benchmarks repo',
