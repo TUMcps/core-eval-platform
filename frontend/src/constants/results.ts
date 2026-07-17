@@ -6,20 +6,14 @@ import type { ChipProps } from '@mui/material/Chip';
  * while an undecided one is a warning and a crashed one an error.
  */
 export function resultColor(result: string): ChipProps['color'] {
-  switch (result.trim().toLowerCase()) {
-    case 'sat':
-    case 'unsat':
-    case 'holds':
-    case 'violated':
-      return 'success';
-    case 'timeout':
-    case 'unknown':
-      return 'warning';
-    case 'error':
-      return 'error';
-    default:
-      return 'default';
-  }
+  const r = result.trim().toLowerCase();
+  if (['sat', 'unsat', 'holds', 'violated'].includes(r)) return 'success';
+  if (r === 'unknown') return 'warning';
+  // The harness's per-instance budget: expected, not a fault.
+  if (r === 'run_instance_timeout' || r === 'timed-out' || r.startsWith('timeout')) return 'warning';
+  // Everything else the harness emits is an infrastructure failure:
+  // no_result_in_file, prepare_instance_*, error_exit_code_*, error_nonmaximal.
+  return 'error';
 }
 
 /** Runtime in seconds, or an em dash when the run reported none. */
