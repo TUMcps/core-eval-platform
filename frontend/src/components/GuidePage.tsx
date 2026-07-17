@@ -4,6 +4,7 @@ import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import PageBreadcrumbs from './PageBreadcrumbs';
 import PageHeader from './PageHeader';
+import PageTitle from './PageTitle';
 import PageSection from './PageSection';
 import GuideView from './GuideView';
 import { competitionApi } from '../api';
@@ -34,7 +35,7 @@ export default function GuidePage({ guideKey, title, crumb, cta, fallback }: Pro
     <>
       <PageHeader>
         <PageBreadcrumbs items={[crumb, { label: 'Info' }]} />
-        <Typography variant="h3" fontWeight="bold" gutterBottom>{title}</Typography>
+        <PageTitle>{title}</PageTitle>
         {guide.intro && <Typography variant="body1" color="text.secondary">{guide.intro}</Typography>}
         <Button component={Link} to={cta.to} variant="contained" size="large" sx={{ mt: 3 }}>
           {cta.label}

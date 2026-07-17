@@ -11,6 +11,7 @@ import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Snackbar from '@mui/material/Snackbar';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
+import PageTitle from '../components/PageTitle';
 
 export default function AccountPage() {
   const { user, updateProfile } = useAuth();
@@ -28,9 +29,7 @@ export default function AccountPage() {
   return (
     <Container sx={{ py: 6 }}>
       <PageBreadcrumbs items={[{ label: 'Account' }]} />
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>Account</Typography>
-      </Box>
+      <PageTitle variant="h4" mb={3}>Account</PageTitle>
       <Card sx={{ p: 3, maxWidth: 640 }}>
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>Name</Typography>

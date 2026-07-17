@@ -6,6 +6,7 @@ import {
 import { settingsApi } from '../api';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
+import PageTitle from '../components/PageTitle';
 import PageSection from '../components/PageSection';
 
 const BOOLS = [
@@ -25,7 +26,7 @@ export default function AdminSettingsPage() {
     <>
       <PageHeader>
         <PageBreadcrumbs items={[{ label: 'Admin', to: '/admin' }, { label: 'Settings' }]} />
-        <Typography variant="h3" fontWeight="bold" gutterBottom>System Settings</Typography>
+        <PageTitle>System Settings</PageTitle>
         <Typography variant="body1" color="text.secondary">Runtime configuration for this deployment.</Typography>
       </PageHeader>
       <PageSection>

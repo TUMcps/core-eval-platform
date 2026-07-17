@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
+import PageTitle from '../components/PageTitle';
 import PageSection from '../components/PageSection';
 import OwnerLabel from '../components/OwnerLabel';
 import { tasksApi } from '../api';
@@ -43,7 +44,7 @@ export default function BenchmarkSubmissionsPage() {
     <>
       <PageHeader>
         <PageBreadcrumbs items={[{ label: 'Benchmark' }]} />
-        <Typography variant="h3" fontWeight="bold" gutterBottom>Benchmark Submissions</Typography>
+        <PageTitle>Benchmark Submissions</PageTitle>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
           Use this page to submit benchmarks and review proposed benchmark entries.
         </Typography>

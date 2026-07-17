@@ -10,6 +10,7 @@ import { toolkitApi } from '../api';
 import type { ToolkitFormData } from '../api';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
+import PageTitle from '../components/PageTitle';
 import PageSection from '../components/PageSection';
 import { useAuth } from '../context/AuthContext';
 
@@ -92,7 +93,7 @@ export default function ToolkitSubmissionPage() {
     <>
       <PageHeader>
         <PageBreadcrumbs items={[{ label: 'Toolkit', to: '/toolkit' }, { label: 'Submit' }]} />
-        <Typography variant="h3" fontWeight="bold" gutterBottom>Submit a Toolkit</Typography>
+        <PageTitle>Submit a Toolkit</PageTitle>
         <Typography variant="body1" color="text.secondary">
           Use this form to submit a new toolkit for benchmarking. See the{' '}
           <MuiLink component={RouterLink} to="/toolkit/info">toolkit info page</MuiLink> for the full submission pipeline.

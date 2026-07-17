@@ -12,6 +12,7 @@ import MuiLink from '@mui/material/Link';
 import MenuItem from '@mui/material/MenuItem';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
+import PageTitle from '../components/PageTitle';
 import PageSection from '../components/PageSection';
 
 // Turn a field name (e.g. vnnlib_version) into a readable label.
@@ -58,7 +59,7 @@ export default function BenchmarkSubmissionPage() {
     <>
       <PageHeader>
         <PageBreadcrumbs items={[{ label: 'Benchmark', to: '/benchmark' }, { label: 'Submit' }]} />
-        <Typography variant="h3" fontWeight="bold" gutterBottom>Submit a Benchmark</Typography>
+        <PageTitle>Submit a Benchmark</PageTitle>
         <Typography variant="body1" color="text.secondary">
           Use this form to submit a new proposed benchmark. The required layout is described on the{' '}
           <MuiLink component={Link} to="/benchmark/info">benchmark info page</MuiLink>.

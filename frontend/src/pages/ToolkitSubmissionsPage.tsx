@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
+import PageTitle from '../components/PageTitle';
 import PageSection from '../components/PageSection';
 import LiveIndicator from '../components/LiveIndicator';
 import OwnerLabel from '../components/OwnerLabel';
@@ -64,7 +65,7 @@ export default function ToolkitSubmissionsPage() {
     <>
       <PageHeader>
         <PageBreadcrumbs items={[{ label: 'Toolkit' }]} />
-        <Typography variant="h3" fontWeight="bold" gutterBottom>Toolkit Submissions</Typography>
+        <PageTitle>Toolkit Submissions</PageTitle>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
           Use this page to submit a toolkit and review current toolkit submissions.
         </Typography>

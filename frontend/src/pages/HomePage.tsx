@@ -32,9 +32,15 @@ export default function HomePage() {
           <Grid container spacing={6} alignItems="center">
             <Grid size={{ xs: 12, lg: hero ? 7 : 12 }}>
               <Box sx={{ textAlign: { xs: 'center', lg: 'left' } }}>
-                <Typography variant={user ? 'h2' : 'h1'} sx={{ fontSize: { xs: '2.6rem', md: user ? '3.2rem' : '5rem' }, fontWeight: 800, lineHeight: 1.1, mb: 3, color: '#000' }}>
-                  {user ? `Welcome ${user.name || user.email}` : `${name} ${COMPETITION_YEAR}`}
-                </Typography>
+                {/* Same headline accent as the inner pages (PageTitle), scaled to the hero
+                    and shown only in the desktop left-aligned layout — the fill rule
+                    doesn't fit the centered mobile hero. */}
+                <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, mb: 3 }}>
+                  <Typography variant={user ? 'h2' : 'h1'} sx={{ fontSize: { xs: '2.6rem', md: user ? '3.2rem' : '5rem' }, fontWeight: 800, lineHeight: 1.1, color: '#000' }}>
+                    {user ? `Welcome ${user.name || user.email}` : `${name} ${COMPETITION_YEAR}`}
+                  </Typography>
+                  <Box aria-hidden sx={{ display: { xs: 'none', lg: 'block' }, flex: 1, minWidth: 24, height: 6, mb: '8px', borderRadius: 999, bgcolor: 'primary.main' }} />
+                </Box>
                 <Typography variant="h5" sx={{ fontSize: { xs: '1.1rem', md: '1.4rem' }, mb: 4, lineHeight: 1.6, color: '#374151', fontWeight: 400 }}>
                   {tagline}
                 </Typography>

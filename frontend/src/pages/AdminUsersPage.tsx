@@ -7,6 +7,7 @@ import { usersApi } from '../api';
 import type { User } from '../api';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
+import PageTitle from '../components/PageTitle';
 import PageSection from '../components/PageSection';
 import { formatDateTime } from '../utils/datetime';
 
@@ -27,7 +28,7 @@ export default function AdminUsersPage() {
     <>
       <PageHeader>
         <PageBreadcrumbs items={[{ label: 'Admin', to: '/admin' }, { label: 'Users' }]} />
-        <Typography variant="h3" fontWeight="bold" gutterBottom>Users</Typography>
+        <PageTitle>Users</PageTitle>
         <Typography variant="body1" color="text.secondary">Enable accounts and assign roles.</Typography>
       </PageHeader>
       <PageSection>
