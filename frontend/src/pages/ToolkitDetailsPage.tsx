@@ -12,9 +12,10 @@ import DetailRow from '../components/DetailRow';
 import SubmissionDetails from '../components/SubmissionDetails';
 import DeleteSubmissionDialog from '../components/DeleteSubmissionDialog';
 import TaskPipeline from '../components/TaskPipeline';
+import ResultsTable, { ResultsSummary } from '../components/ResultsTable';
 import { useAuth } from '../context/AuthContext';
-import { tasksApi, toolsApi } from '../api';
-import type { Task, Tool } from '../api';
+import { tasksApi, toolsApi, resultsApi, competitionApi } from '../api';
+import type { Task, Tool, Result } from '../api';
 import { statusChip } from '../constants/status';
 import { isPauseKind } from '../constants/steps';
 import { formatDateTime } from '../utils/datetime';
@@ -30,6 +31,8 @@ export default function ToolkitDetailsPage() {
   const { user } = useAuth();
   const [task, setTask] = useState<Task | null>(null);
   const [tool, setTool] = useState<Tool | null>(null);
+  const [results, setResults] = useState<Result[]>([]);
+  const [resultColumns, setResultColumns] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -44,9 +47,16 @@ export default function ToolkitDetailsPage() {
       setTask(t);
       // Refetched each poll: the install step records the resolved commit onto the tool.
       if (t.tool) setTool(await toolsApi.get(t.tool).catch(() => null));
+      // Each finished benchmark adds its rows, so this grows as the run progresses.
+      setResults(await resultsApi.forTask(id).catch(() => []));
     } catch { /* ignore */ } finally { setLoading(false); }
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+  useEffect(() => {
+    competitionApi.cached()
+      .then((c) => setResultColumns(c.presentation?.result_columns ?? []))
+      .catch(() => { /* the base columns are enough */ });
+  }, []);
   useEffect(() => {
     if (task && !task.done) { timer.current = setInterval(load, REFRESH_MS); return () => { if (timer.current) clearInterval(timer.current); }; }
     // eslint-disable-next-line
@@ -75,6 +85,13 @@ export default function ToolkitDetailsPage() {
     opt('restart_after_postinstallation'),
   ];
   const known = (vs: unknown[]) => vs.some((v) => v !== undefined);
+
+  // One table per benchmark, in the order the API returned (benchmark, then instance order).
+  const byBenchmark = results.reduce<Record<string, Result[]>>((acc, r) => {
+    const key = r.benchmark_name ?? 'Results';
+    (acc[key] ??= []).push(r);
+    return acc;
+  }, {});
 
   const doAbort = async () => { if (window.confirm('Abort this submission?')) setTask(await tasksApi.abort(task.id)); };
   const doResume = async () => { setTask(await tasksApi.resume(task.id)); };
@@ -169,6 +186,22 @@ export default function ToolkitDetailsPage() {
 
       <PageSection>
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+
+        {results.length > 0 && (
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h5" fontWeight="bold" gutterBottom>Results</Typography>
+            {Object.entries(byBenchmark).map(([name, rows]) => (
+              <Box key={name} sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 2, mb: 1, flexWrap: 'wrap' }}>
+                  <Typography variant="subtitle1" fontWeight={600}>{name}</Typography>
+                  <ResultsSummary results={rows} />
+                </Box>
+                <ResultsTable results={rows} columns={resultColumns} />
+              </Box>
+            ))}
+          </Box>
+        )}
+
         <Typography variant="h5" fontWeight="bold" gutterBottom>Pipeline</Typography>
         <TaskPipeline steps={task.steps} benchmarkProgress={task.benchmark_progress} />
       </PageSection>

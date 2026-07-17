@@ -155,7 +155,12 @@ class TaskSerializer(TaskListSerializer):
 
 
 class ResultSerializer(serializers.ModelSerializer):
+    # The FKs serialize as ids; a results table needs the names. Null-safe: a row from
+    # before instances were recorded has no instance to name.
+    instance_name = serializers.CharField(source="instance.name", read_only=True, default=None)
+    benchmark_name = serializers.CharField(source="benchmark.name", read_only=True, default=None)
+
     class Meta:
         model = Result
-        fields = ["id", "task", "tool", "benchmark", "instance", "category",
-                  "result", "time", "extra", "created_at"]
+        fields = ["id", "task", "tool", "benchmark", "benchmark_name", "instance",
+                  "instance_name", "category", "result", "time", "extra", "created_at"]

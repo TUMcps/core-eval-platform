@@ -80,6 +80,27 @@ export const toolsApi = {
   run: (id: ID) => apiClient.post<Task>(`/api/tools/${id}/run/`).then((r) => r.data),
 };
 
+export interface Result {
+  id: string;
+  task: number;
+  tool: number;
+  benchmark: string;
+  benchmark_name: string | null;
+  /** Null on a run from before the benchmark's instances were recorded. */
+  instance: string | null;
+  instance_name: string | null;
+  result: string;
+  /** Seconds. */
+  time: number | null;
+  extra: Record<string, unknown>;
+  created_at: string;
+}
+
+export const resultsApi = {
+  // Comes back in run order: by benchmark, then the instance's own order.
+  forTask: (task: ID) => results<Result>(`/api/results/?task=${task}`),
+};
+
 export interface BenchmarkFormData {
   scheduler_enabled: boolean; can_submit: boolean;
   uses_categories: boolean; categories: { id: string; name: string }[];

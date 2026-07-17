@@ -197,13 +197,15 @@ class ResultViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        qs = Result.objects.all().order_by("-created_at")
-        tool = self.request.query_params.get("tool")
-        benchmark = self.request.query_params.get("benchmark")
-        if tool:
-            qs = qs.filter(tool_id=tool)
-        if benchmark:
-            qs = qs.filter(benchmark_id=benchmark)
+        # Ordered by the instance's own order so a run reads in the order it ran, not
+        # by write time.
+        qs = (Result.objects.all()
+              .select_related("instance", "benchmark")
+              .order_by("benchmark__name", "instance__order", "created_at"))
+        for param, field in (("tool", "tool_id"), ("benchmark", "benchmark_id"), ("task", "task_id")):
+            value = self.request.query_params.get(param)
+            if value:
+                qs = qs.filter(**{field: value})
         return qs
 
 
