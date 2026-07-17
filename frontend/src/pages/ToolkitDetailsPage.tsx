@@ -12,7 +12,6 @@ import DetailRow from '../components/DetailRow';
 import SubmissionDetails from '../components/SubmissionDetails';
 import DeleteSubmissionDialog from '../components/DeleteSubmissionDialog';
 import TaskPipeline from '../components/TaskPipeline';
-import ResultsTable, { ResultsSummary } from '../components/ResultsTable';
 import { useAuth } from '../context/AuthContext';
 import { tasksApi, toolsApi, resultsApi, competitionApi } from '../api';
 import type { Task, Tool, Result } from '../api';
@@ -85,13 +84,6 @@ export default function ToolkitDetailsPage() {
     opt('restart_after_postinstallation'),
   ];
   const known = (vs: unknown[]) => vs.some((v) => v !== undefined);
-
-  // One table per benchmark, in the order the API returned (benchmark, then instance order).
-  const byBenchmark = results.reduce<Record<string, Result[]>>((acc, r) => {
-    const key = r.benchmark_name ?? 'Results';
-    (acc[key] ??= []).push(r);
-    return acc;
-  }, {});
 
   const doAbort = async () => { if (window.confirm('Abort this submission?')) setTask(await tasksApi.abort(task.id)); };
   const doResume = async () => { setTask(await tasksApi.resume(task.id)); };
@@ -187,23 +179,9 @@ export default function ToolkitDetailsPage() {
       <PageSection>
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-        {results.length > 0 && (
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h5" fontWeight="bold" gutterBottom>Results</Typography>
-            {Object.entries(byBenchmark).map(([name, rows]) => (
-              <Box key={name} sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 2, mb: 1, flexWrap: 'wrap' }}>
-                  <Typography variant="subtitle1" fontWeight={600}>{name}</Typography>
-                  <ResultsSummary results={rows} />
-                </Box>
-                <ResultsTable results={rows} columns={resultColumns} />
-              </Box>
-            ))}
-          </Box>
-        )}
-
         <Typography variant="h5" fontWeight="bold" gutterBottom>Pipeline</Typography>
-        <TaskPipeline steps={task.steps} benchmarkProgress={task.benchmark_progress} />
+        <TaskPipeline steps={task.steps} benchmarkProgress={task.benchmark_progress}
+          results={results} resultColumns={resultColumns} />
       </PageSection>
     </>
   );

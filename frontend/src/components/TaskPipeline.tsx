@@ -1,9 +1,10 @@
 import { useState, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { Box, Typography, Paper, Chip, Collapse, IconButton } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { Box, Typography, Paper, Chip } from '@mui/material';
 import LiveIndicator from './LiveIndicator';
-import type { TaskStep, BenchmarkProgress } from '../api';
+import CollapsibleSection from './CollapsibleSection';
+import ResultsTable, { ResultsSummary } from './ResultsTable';
+import type { TaskStep, BenchmarkProgress, Result } from '../api';
 import { statusChip } from '../constants/status';
 import { KIND_LABEL, STEP_STATUS, isPauseKind } from '../constants/steps';
 import { logTail } from '../utils/logTail';
@@ -16,11 +17,16 @@ interface Props {
   steps: TaskStep[];
   /** Names each run_benchmark step, keyed by step order. */
   benchmarkProgress?: BenchmarkProgress[];
+  /** The task's results; each lands under the benchmark step that produced it. */
+  results?: Result[];
+  /** The variant's presentation.result_columns. */
+  resultColumns?: string[];
 }
 
-/** A submission's ordered steps: status, live-tailing logs, and timings. */
-export default function TaskPipeline({ steps, benchmarkProgress }: Props) {
+/** A submission's ordered steps: status, live-tailing logs, per-benchmark results, timings. */
+export default function TaskPipeline({ steps, benchmarkProgress, results = [], resultColumns }: Props) {
   const [openLogs, setOpenLogs] = useState<Record<string, boolean>>({});
+  const [openResults, setOpenResults] = useState<Record<string, boolean>>({});
   const logRefs = useRef<Record<string, HTMLDivElement | null>>({});
   // A log box follows its tail until the user scrolls up inside it, so reading
   // earlier output isn't yanked back down by the next refresh.
@@ -32,8 +38,10 @@ export default function TaskPipeline({ steps, benchmarkProgress }: Props) {
   };
 
   const benchmarkAt = new Map((benchmarkProgress ?? []).map((p) => [p.step_id, p.name]));
+  /** The benchmark a run step ran, or undefined for every other kind. */
+  const benchmarkOf = (s: TaskStep) => (s.kind === 'run_benchmark' ? benchmarkAt.get(s.order) : undefined);
   const stepName = (s: TaskStep): ReactNode => {
-    const name = s.kind === 'run_benchmark' ? benchmarkAt.get(s.order) : undefined;
+    const name = benchmarkOf(s);
     if (name) return <>Run benchmark: <strong>{name}</strong></>;
     return KIND_LABEL[s.kind] ?? s.kind;
   };
@@ -48,7 +56,9 @@ export default function TaskPipeline({ steps, benchmarkProgress }: Props) {
         const active = s.status === 'active';
         const paused = active && isPauseKind(s.kind);
         const chip = statusChip(paused ? 'Paused' : (STEP_STATUS[s.status] ?? 'Pending'));
-        const open = openLogs[s.id] ?? active;  // the running step's logs start expanded
+        const logsOpen = openLogs[s.id] ?? active;  // the running step's logs start expanded
+        const name = benchmarkOf(s);
+        const stepResults = name ? results.filter((r) => r.benchmark_name === name) : [];
         return (
           <Paper key={s.id} id={`step-${s.order}`} elevation={active ? 3 : 0}
             sx={{ p: 3, mb: 2, bgcolor: 'grey.50', border: '1px solid', borderColor: active ? 'secondary.main' : 'grey.300' }}>
@@ -60,31 +70,34 @@ export default function TaskPipeline({ steps, benchmarkProgress }: Props) {
             </Box>
 
             {s.has_logs ? (
-              <Box sx={{ mt: 1.5 }}>
-                <Box onClick={() => {
-                  const next = !open;
+              <CollapsibleSection title="Logs" open={logsOpen}
+                onToggle={() => {
+                  const next = !logsOpen;
                   setOpenLogs((o) => ({ ...o, [s.id]: next }));
                   // Opening a collapsed log jumps it to the tail (after the expand animation).
                   if (next) { pinned.current[s.id] = true; setTimeout(() => jumpToTail(s.id), 120); }
-                }}
-                  sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none', p: 0.5, borderRadius: 1, '&:hover': { bgcolor: 'action.hover' } }}>
-                  <IconButton size="small" sx={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                    <ExpandMoreIcon />
-                  </IconButton>
-                  <Typography variant="body2" fontWeight="medium">Logs</Typography>
+                }}>
+                <Box className="console_log"
+                  ref={(el: HTMLDivElement | null) => { logRefs.current[s.id] = el; }}
+                  onScroll={(e) => { pinned.current[s.id] = isAtBottom(e.currentTarget); }}>
+                  {logTail(s.logs)}
                 </Box>
-                <Collapse in={open}>
-                  <Box className="console_log"
-                    ref={(el: HTMLDivElement | null) => { logRefs.current[s.id] = el; }}
-                    onScroll={(e) => { pinned.current[s.id] = isAtBottom(e.currentTarget); }}>
-                    {logTail(s.logs)}
-                  </Box>
-                </Collapse>
-              </Box>
+              </CollapsibleSection>
             ) : (
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 {active ? 'Running… logs will appear here as the worker reports back.' : 'No logs for this step.'}
               </Typography>
+            )}
+
+            {stepResults.length > 0 && (
+              <CollapsibleSection title={`Results (${stepResults.length})`}
+                open={openResults[s.id] ?? false}
+                onToggle={() => setOpenResults((o) => ({ ...o, [s.id]: !(o[s.id] ?? false) }))}>
+                <Box sx={{ mt: 1 }}>
+                  <Box sx={{ mb: 1 }}><ResultsSummary results={stepResults} /></Box>
+                  <ResultsTable results={stepResults} columns={resultColumns} />
+                </Box>
+              </CollapsibleSection>
             )}
 
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
