@@ -8,10 +8,12 @@ import os
 import zipfile
 
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Case, IntegerField, Q, When
 from django.http import HttpResponse
 from rest_framework import mixins, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError as DRFValidationError
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from comp_eval_platform.competitions import get_competition
@@ -142,10 +144,20 @@ class TrackViewSet(viewsets.ModelViewSet):
         return Response({"columns": board.columns, "rows": board.rows})
 
 
+class TaskPagination(PageNumberPagination):
+    """One overview page at a time; the client pages/searches server-side so an
+    admin's full submission list is never shipped at once."""
+
+    page_size = 25
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
 class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Task.objects.all().order_by("-created_at")
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = TaskPagination
 
     def get_serializer_class(self):
         # The overview omits per-step data (avoids a log query per step).
@@ -158,6 +170,24 @@ class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         if self.action == "retrieve":
             # The detail page shows per-step logs; prefetch them (list omits steps).
             qs = qs.prefetch_related("step_set__logs_rel")
+        # The toolkit and benchmark overview pages each want only their own kind;
+        # filtering here avoids shipping the other kind for the client to drop.
+        kind = self.request.query_params.get("type")
+        if kind == "tool":
+            qs = qs.filter(tool__isnull=False)
+        elif kind == "benchmark":
+            qs = qs.filter(benchmark__isnull=False)
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(Q(tool__name__icontains=search) | Q(benchmark__name__icontains=search))
+        # Match the overview's grouping (mirrors statusGroupRank in the client):
+        # queued first, then running, then finished; newest-first within each group.
+        # A stable rank keeps running submissions on the first page under pagination.
+        qs = qs.annotate(_rank=Case(
+            When(outcome="pending", then=0),
+            When(outcome="running", then=1),
+            default=2, output_field=IntegerField(),
+        )).order_by("_rank", "-created_at")
         u = self.request.user
         return qs if getattr(u, "is_admin", False) else qs.filter(owner=u)
 

@@ -84,6 +84,10 @@ const results = <T,>(url: string) => apiClient.get<{ results?: T[] } | T[]>(url)
   return (d.results ?? d) as T[];
 });
 
+/** One page of a paginated (DRF) list endpoint. */
+export interface Page<T> { count: number; results: T[]; }
+const page = <T,>(url: string) => apiClient.get<Page<T>>(url).then((r) => r.data);
+
 export const authApi = {
   getCurrentUser: () => apiClient.get<User | null>('/api/auth/me/').then((r) => r.data),
   login: (email: string, password: string) => apiClient.post<User>('/api/auth/login/', { email, password }).then((r) => r.data),
@@ -157,7 +161,7 @@ export const usersApi = {
 };
 
 export const tasksApi = {
-  list: () => results<Task>('/api/tasks/'),
+  list: (type?: 'tool' | 'benchmark') => results<Task>(`/api/tasks/${type ? `?type=${type}` : ''}`),
   get: (id: ID) => apiClient.get<Task>(`/api/tasks/${id}/`).then((r) => r.data),
   abort: (id: ID) => apiClient.post<Task>(`/api/tasks/${id}/abort/`).then((r) => r.data),
   resume: (id: ID) => apiClient.post<Task>(`/api/tasks/${id}/resume/`).then((r) => r.data),
@@ -169,9 +173,14 @@ export const tasksApi = {
       .then((r) => r.data),
 };
 
+/** A page of task rows for the overview tables (server paginates/sorts/searches). */
+export const taskPage = (opts: { type: 'tool' | 'benchmark'; page: number; pageSize: number; search?: string }) =>
+  page<Task>(`/api/tasks/?type=${opts.type}&page=${opts.page}&page_size=${opts.pageSize}`
+    + (opts.search ? `&search=${encodeURIComponent(opts.search)}` : ''));
+
 // Toolkit submissions are tool-run tasks; their lifecycle lives on tasksApi.
 export const toolkitApi = {
-  getList: () => results<Task>('/api/tasks/').then((ts) => ts.filter((t) => t.tool)),
+  getList: () => results<Task>('/api/tasks/?type=tool'),
   getFormData: () => apiClient.get<ToolkitFormData>('/api/toolkit/form_data/').then((r) => r.data),
   submit: (data: Record<string, unknown>) => apiClient.post<{ redirect_to: string }>('/api/toolkit/submit/', data).then((r) => r.data),
 };

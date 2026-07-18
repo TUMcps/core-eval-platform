@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
@@ -7,10 +7,10 @@ import PageSection from '../components/PageSection';
 import LiveIndicator from '../components/LiveIndicator';
 import OwnerLabel from '../components/OwnerLabel';
 import { formatDateTime } from '../utils/datetime';
-import { toolkitApi } from '../api';
+import { taskPage } from '../api';
 import type { Task } from '../api';
 import { useAuth } from '../context/AuthContext';
-import { statusChip, statusGroupRank } from '../constants/status';
+import { statusChip } from '../constants/status';
 import { benchmarkStateColor, BENCHMARK_STATE_LEGEND } from '../constants/benchmarks';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -36,24 +36,36 @@ export default function ToolkitSubmissionsPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
 
-  const loadTasks = async () => {
+  // Paint the first page immediately, then backfill the rest in the background, so
+  // the table appears at once while search and paging stay instant (client-side)
+  // once loaded. The server sorts globally (running first, newest within a group),
+  // so appending its chunks keeps the right order. DRF pages are 1-indexed.
+  const loadTasks = useCallback(async () => {
     try {
-      // The API already returns newest-first; the stable group sort keeps that order
-      // within each group, floating still-running submissions above finished ones.
-      const ordered = [...await toolkitApi.getList()]
-        .sort((a, b) => statusGroupRank(a.status || 'Running') - statusGroupRank(b.status || 'Running'));
-      setTasks(ordered);
-    } catch (e) { console.error('Failed to load tasks:', e); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => { loadTasks(); }, []);
+      const first = await taskPage({ type: 'tool', page: 1, pageSize: 25 });
+      setTasks(first.results);
+      setLoading(false);
+      const CHUNK = 100;
+      let acc: Task[] = [];
+      for (let p = 1; (p - 1) * CHUNK < first.count; p++) {
+        const chunk = await taskPage({ type: 'tool', page: p, pageSize: CHUNK });
+        acc = acc.concat(chunk.results);
+        setTasks(acc);
+        if (chunk.results.length < CHUNK) break;
+      }
+    } catch (e) {
+      console.error('Failed to load tasks:', e);
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => { loadTasks(); }, [loadTasks]);
 
   const anyRunning = tasks.some((t) => !t.done);
   useEffect(() => {
     if (!anyRunning) return;
     const handle = setInterval(loadTasks, 30000);
     return () => clearInterval(handle);
-  }, [anyRunning]);
+  }, [anyRunning, loadTasks]);
 
   const filtered = searchTerm ? tasks.filter((t) => t.name?.toLowerCase().includes(searchTerm.toLowerCase())) : tasks;
   useEffect(() => { setPage(0); }, [searchTerm]);

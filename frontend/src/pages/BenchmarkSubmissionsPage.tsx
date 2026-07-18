@@ -35,7 +35,7 @@ export default function BenchmarkSubmissionsPage() {
 
   useEffect(() => {
     // Benchmark submissions are generate/export tasks (one per submission/regeneration).
-    tasksApi.list().then((d) => setItems(d.filter((t) => t.benchmark))).catch((e) => console.error(e)).finally(() => setLoading(false));
+    tasksApi.list('benchmark').then((d) => setItems(d)).catch((e) => console.error(e)).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}><CircularProgress /></Box>;
