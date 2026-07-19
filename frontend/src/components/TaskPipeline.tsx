@@ -198,10 +198,12 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
 
             {/* The verdict on the run: never collapsed, since it is the thing to read.
                 Held back until the scorer has finished (or failed), because until then
-                the fallback would state a verdict the scorer may still overturn. */}
-            {scoringSettled && (scoring?.summary || stepResults.length > 0) && (
+                the fallback would state a verdict the scorer may still overturn. Prefer the
+                scoring step's summary (VNN); fall back to the run's own (ARCH freezes its
+                green tally there, having no separate validation step). */}
+            {scoringSettled && (scoring?.summary || s.summary || stepResults.length > 0) && (
               <Box sx={{ mt: 2 }}>
-                <ResultsOverview summary={scoring?.summary ?? null} results={stepResults} />
+                <ResultsOverview summary={scoring?.summary ?? s.summary ?? null} results={stepResults} />
               </Box>
             )}
           </Paper>
