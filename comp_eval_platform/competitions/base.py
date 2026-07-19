@@ -62,6 +62,12 @@ class Competition(ABC):
         interface allows (generalizes VNN's ``_define_steps``): the structured
         rung is install-once → per-instance prepare/run → parse → score → export."""
 
+    def load_benchmarks(self, *, category_name, repository, ref, owner) -> list:
+        """Load a set of benchmarks + instances from a submitted ``(category,
+        repository, ref)``. ARCH fans a central ``instances.csv`` into many
+        ``Benchmark``s; a per-benchmark-repo variant loads one. Default: unsupported."""
+        raise NotImplementedError
+
     # (3) Node scripts + I/O contract -------------------------------------
     def script_root(self) -> str:
         """Filesystem root of this competition's node scripts (install /

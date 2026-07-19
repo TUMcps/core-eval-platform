@@ -118,6 +118,24 @@ class BenchmarkViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
+    @action(detail=False, methods=["post"])
+    def load(self, request):
+        """Load a whole category's benchmarks from one central repo (ARCH). Body:
+        ``{category, repository, hash}``; fans instances.csv into Benchmarks."""
+        data = request.data
+        try:
+            benchmarks = get_competition().load_benchmarks(
+                category_name=data.get("category"),
+                repository=data.get("repository", ""),
+                ref=data.get("hash", ""),
+                owner=request.user,
+            )
+        except NotImplementedError:
+            raise DRFValidationError("This competition does not support bulk benchmark loading.")
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.messages)
+        return Response(BenchmarkSerializer(benchmarks, many=True).data, status=201)
+
     @action(detail=True, methods=["post"])
     def add_instances(self, request, pk=None):
         """Bulk-add instances: body is a list of {name, spec, order}."""

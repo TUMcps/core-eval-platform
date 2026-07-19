@@ -37,8 +37,8 @@ class BenchmarkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Benchmark
-        fields = ["id", "owner", "category", "name", "extra", "published",
-                  "created_at", "instances"]
+        fields = ["id", "owner", "category", "name", "repository", "hash", "extra",
+                  "published", "created_at", "instances"]
         read_only_fields = ["owner", "created_at"]
 
 

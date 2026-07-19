@@ -70,7 +70,13 @@ class Benchmark(models.Model):
     )
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="benchmarks")
     name = models.CharField(max_length=255)
-    #: Competition/category-specific benchmark-level config.
+    #: Source of the benchmark's instances. ARCH loads many benchmarks from one
+    #: central repo@hash (fanned out from instances.csv); all share these.
+    repository = models.CharField(max_length=512, blank=True)
+    hash = models.CharField(max_length=255, blank=True)
+    #: Competition/category-specific benchmark-level config. ARCH stores the ordered
+    #: instances.csv header here as ``extra["columns"]`` (jsonb drops dict key order,
+    #: so instance column order is carried explicitly, not by Instance.spec key order).
     extra = models.JSONField(default=dict, blank=True)
     published = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
