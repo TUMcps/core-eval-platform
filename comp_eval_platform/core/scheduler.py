@@ -28,7 +28,7 @@ def start_scheduler():
         timezone=settings.TIME_ZONE,
         job_defaults={"coalesce": True, "max_instances": 1},
     )
-    interval = getattr(settings, "AUTOMATIC_UPDATE_INTERVAL", 60)
+    interval = getattr(settings, "AUTOMATIC_UPDATE_INTERVAL", 10)
     _scheduler.add_job(
         automatic_update,
         trigger=IntervalTrigger(seconds=interval),

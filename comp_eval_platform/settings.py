@@ -29,8 +29,10 @@ MAX_PARALLEL_NODES = config("MAX_PARALLEL_NODES", default=1, cast=int)
 #: Re-executions a retrying step gets before the task fails (installs are flaky over
 #: the network); also bounds the execute/step_failed retry loop.
 MAX_STEP_RETRIES = config("MAX_STEP_RETRIES", default=10, cast=int)
-#: Background job cadence (seconds) and whether the web process starts it.
-AUTOMATIC_UPDATE_INTERVAL = config("AUTOMATIC_UPDATE_INTERVAL", default=60, cast=int)
+#: Background job cadence (seconds) and whether the web process starts it. Matched to
+#: the frontend's 10s poll so live node logs land in the DB about as fast as the page
+#: reads them; the job self-throttles (coalesce + max_instances=1) if a tick runs long.
+AUTOMATIC_UPDATE_INTERVAL = config("AUTOMATIC_UPDATE_INTERVAL", default=10, cast=int)
 SCHEDULER_AUTOSTART = config("SCHEDULER_AUTOSTART", default=False, cast=bool)
 
 # --- Core Django ------------------------------------------------------------
