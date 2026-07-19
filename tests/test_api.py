@@ -144,6 +144,32 @@ def test_results_for_a_task_carry_names_and_run_order(api, category, user):
     assert rows[0]["benchmark_name"] == "acasxu"
 
 
+def test_abort_benchmark_endpoint_aborts_only_the_running_step(api, category, user):
+    """POST /tasks/<id>/abort-benchmark/ cuts the running benchmark short (recorded
+    Aborted) and advances, while a step that is not an abortable benchmark is rejected."""
+    from comp_eval_platform.core.models import Task, TaskStep, Tool
+    from comp_eval_platform.core.models.execution import SHUTDOWN_KIND
+
+    tool = Tool.objects.create(owner=user, category=category, name="t")
+    task = Task.objects.create(owner=user, tool=tool, outcome="running")
+    run = TaskStep.objects.create(task=task, kind="t_abortable", order=0)
+    TaskStep.objects.create(task=task, kind="t_ok", order=1)
+    TaskStep.objects.create(task=task, kind=SHUTDOWN_KIND, order=2)
+    task.current_step = run
+    task.save(update_fields=["current_step"])
+    run.mark_active()
+
+    resp = api.post(f"/api/tasks/{task.id}/abort-benchmark/")
+    assert resp.status_code == 200, resp.content
+    run.refresh_from_db()
+    assert run.status == "aborted"
+
+    # The task advanced past the run; the current step is no longer abortable, so a
+    # second call is rejected rather than aborting an unrelated step.
+    again = api.post(f"/api/tasks/{task.id}/abort-benchmark/")
+    assert again.status_code == 400
+
+
 def test_result_without_an_instance_still_serializes(api, category, user):
     """Runs from before instances were recorded have a null instance FK."""
     from comp_eval_platform.core.models import Benchmark, Result, Task, Tool

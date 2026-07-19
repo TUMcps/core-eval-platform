@@ -40,6 +40,27 @@ def register_test_plugin():
             pass
 
     @register_step_handler
+    class AbortableHandler(StepHandler):
+        """A benchmark-run-like step: abortable on its own, and it records that its
+        on_marked_done ran, so a test can assert partial results were finalized. Stays
+        active (no execute) until aborted or advanced."""
+
+        kind = "t_abortable"
+
+        def status_check(self):
+            pass
+
+        def can_abort_benchmark(self) -> bool:
+            return True
+
+        def abort_benchmark(self):
+            self.task.step_aborted()
+
+        def on_marked_done(self):
+            self.step.payload = {**(self.step.payload or {}), "finalized": True}
+            self.step.save(update_fields=["payload"])
+
+    @register_step_handler
     class RetryFailHandler(StepHandler):
         """Fails synchronously *and* asks to be retried — the execute/step_failed
         pair that has to stay bounded."""

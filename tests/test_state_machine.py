@@ -71,6 +71,24 @@ def test_timeout_finalizes():
     assert task.outcome == Outcome.TIMED_OUT
 
 
+def test_abort_benchmark_records_aborted_finalizes_and_continues():
+    """A per-benchmark abort marks that step ABORTED (not DONE, so the UI shows it was
+    cut short), finalizes its partial results, and lets the rest of the task run on."""
+    from comp_eval_platform.core.models.execution import SHUTDOWN_KIND, Outcome
+
+    task, (run, _nxt, shutdown) = _mk_task(["t_abortable", "t_ok", SHUTDOWN_KIND])
+    task.abort_benchmark()
+
+    task.refresh_from_db()
+    run.refresh_from_db()
+    assert run.status == "aborted"  # not "done" — the reported bug
+    assert run.payload.get("finalized") is True  # on_marked_done ran before leaving
+    # The task itself keeps going: it advanced past the aborted benchmark to completion.
+    assert task.outcome == Outcome.SUCCEEDED
+    shutdown.refresh_from_db()
+    assert shutdown.status == "done"
+
+
 def test_finalize_without_shutdown_still_finishes():
     from comp_eval_platform.core.models.execution import Outcome
 
