@@ -28,10 +28,11 @@ _log_repeat() {  # COUNT CHAR — CHAR repeated COUNT times, so the bars can't m
     while [ "$_n" -gt 0 ]; do _s="${_s}$2"; _n=$((_n - 1)); done
     printf '%s' "$_s"
 }
-# Widths inset by tier (double longest → thin shortest) so nesting reads at a glance.
-_LOG_DOUBLE="$(_log_repeat 60 ═)"
-_LOG_THICK="$(_log_repeat 57 ━)"
-_LOG_THIN="$(_log_repeat 54 ─)"
+# Widths inset by tier in even 2-char steps (double longest → thin shortest) so the
+# nesting reads at a glance.
+_LOG_DOUBLE="$(_log_repeat 62 ═)"
+_LOG_THICK="$(_log_repeat 60 ━)"
+_LOG_THIN="$(_log_repeat 58 ─)"
 
 _log_tag() { printf '%s · %s' "$COMP_LABEL" "$(date -u +%H:%M:%S)"; }
 
