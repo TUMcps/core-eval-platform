@@ -147,6 +147,27 @@ class Task(models.Model):
         if self.current_step is not None:
             self.current_step.handler.execute()
 
+    def step_aborted(self):
+        """Advance past the current step, recording it ABORTED rather than DONE (so the UI
+        shows the benchmark was cut short) while still freezing its derived state: a
+        per-benchmark abort finalizes that benchmark's partial results, then the rest of
+        the submission continues. Finalizing is best-effort — an abort must always advance."""
+        self.refresh_from_db()
+        step = self.current_step
+        if step is None:
+            return
+        try:
+            step.handler.on_marked_done()  # finalize partial results before we leave
+        except Exception:
+            import traceback
+            print(f"step_aborted: finalize failed for {step}; continuing")
+            traceback.print_exc()
+        step.mark_aborted()  # keeps _set_current_step from re-closing it as done
+        self._set_current_step(step.next_step())
+        self.refresh_from_db()
+        if self.current_step is not None:
+            self.current_step.handler.execute()
+
     def step_failed(self, check_status: bool = True):
         if self.done:
             return
