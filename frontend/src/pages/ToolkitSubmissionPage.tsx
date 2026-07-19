@@ -34,6 +34,9 @@ export default function ToolkitSubmissionPage() {
   const [message, setMessage] = useState('');
   const [data, setData] = useState<ToolkitFormData | null>(null);
   const [useRepoRoot, setUseRepoRoot] = useState(!prefill?.scripts_dir);
+  // Category variants (ARCH): a tool enters one category; the benchmark list below is
+  // filtered to it and the VNN-only VNNLIB version is hidden.
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
 
   useEffect(() => {
     toolkitApi.getFormData().then((d) => {
@@ -42,6 +45,13 @@ export default function ToolkitSubmissionPage() {
         ami: form.ami || d.ami_options[0]?.value || '',
         run_networks: prefill?.run_networks || d.run_networks_options[0]?.value || 'all',
       });
+      if (d.uses_categories) {
+        const keys = Object.keys(d.benchmark_categories);
+        const preIds = Array.isArray(prefill?.benchmarks) ? prefill.benchmarks : [];
+        // Default to the category holding the prefilled benchmarks, else the first.
+        const holding = keys.find((k) => d.benchmark_categories[k].benchmarks.some((b) => preIds.includes(b.id)));
+        setSelectedCategory(holding || keys[0] || '');
+      }
     }).catch(() => setMessage('Failed to load form data'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -49,8 +59,17 @@ export default function ToolkitSubmissionPage() {
   const isDocker = data?.execution_backend === 'local_docker';
   const canSubmit = data?.can_submit ?? true;
   const schedulerEnabled = data?.scheduler_enabled ?? true;
+  const usesCategories = data?.uses_categories ?? false;
 
   const toggleBenchmark = (id: string) => set({ benchmarks: form.benchmarks.includes(id) ? form.benchmarks.filter((b: string) => b !== id) : [...form.benchmarks, id] });
+
+  // Switching category drops any selected benchmarks that aren't in the new one, so a
+  // tool never carries benchmarks from two categories.
+  const changeCategory = (cat: string) => {
+    const ids = new Set((data?.benchmark_categories[cat]?.benchmarks ?? []).map((b) => b.id));
+    setSelectedCategory(cat);
+    set({ benchmarks: form.benchmarks.filter((id: string) => ids.has(id)) });
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -63,9 +82,11 @@ export default function ToolkitSubmissionPage() {
         manual_installation_step: form.manual_installation_step,
         run_installation_script_as_root: form.run_installation_script_as_root,
         run_post_installation_script_as_root: form.run_post_installation_script_as_root,
-        run_toolkit_as_root: form.run_toolkit_as_root, vnnlib_version: form.vnnlib_version,
+        run_toolkit_as_root: form.run_toolkit_as_root,
         benchmarks: form.benchmarks, run_networks: form.run_networks, use_own_eni: form.use_own_eni,
       };
+      // VNNLIB version is VNN-only; category variants (ARCH) have no such concept.
+      if (!usesCategories) payload.vnnlib_version = form.vnnlib_version;
       if (!form.use_own_eni && form.eni) payload.eni = form.eni;
       if (form.post_install_tool) payload.post_install_tool = form.post_install_tool;
       if (form.pause_after_postinstallation) payload.pause_after_postinstallation = true;
@@ -173,17 +194,31 @@ export default function ToolkitSubmissionPage() {
 
           <Divider sx={{ my: 3 }} />
           <Typography variant="h6" gutterBottom>Benchmarks</Typography>
-          <TextField fullWidth select label="Preferred VNNLIB version" required margin="normal" value={form.vnnlib_version} onChange={(e) => set({ vnnlib_version: e.target.value })} helperText="Select the benchmark VNNLIB version to run.">
-            <MenuItem value="1.0">1.0</MenuItem><MenuItem value="2.0">2.0</MenuItem>
-          </TextField>
+          {/* VNNLIB version is a VNN concept; category variants (ARCH) don't have it. */}
+          {!usesCategories && (
+            <TextField fullWidth select label="Preferred VNNLIB version" required margin="normal" value={form.vnnlib_version} onChange={(e) => set({ vnnlib_version: e.target.value })} helperText="Select the benchmark VNNLIB version to run.">
+              <MenuItem value="1.0">1.0</MenuItem><MenuItem value="2.0">2.0</MenuItem>
+            </TextField>
+          )}
+          {usesCategories && (
+            <TextField fullWidth select label="Category" required margin="normal" value={selectedCategory} onChange={(e) => changeCategory(e.target.value)}
+              helperText="A tool enters one category; pick its benchmarks below.">
+              {Object.entries(data?.benchmark_categories ?? {}).map(([key, cat]) => <MenuItem key={key} value={key}>{cat.label}</MenuItem>)}
+              {Object.keys(data?.benchmark_categories ?? {}).length === 0 && <MenuItem disabled value="">No categories with published benchmarks yet</MenuItem>}
+            </TextField>
+          )}
           <TextField fullWidth select label="Evaluation mode" required margin="normal" value={form.run_networks} onChange={(e) => set({ run_networks: e.target.value })}>
             {(data?.run_networks_options ?? []).map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
           </TextField>
 
           <Box sx={{ mt: 3, mb: 2 }}>
-            {Object.entries(data?.benchmark_categories ?? {}).map(([key, cat]) => (
+            {/* ARCH: only the selected category's benchmarks; VNN: all, grouped by category. */}
+            {(usesCategories
+              ? Object.entries(data?.benchmark_categories ?? {}).filter(([key]) => key === selectedCategory)
+              : Object.entries(data?.benchmark_categories ?? {})
+            ).map(([key, cat]) => (
               <Box key={key} sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>{cat.label}</Typography>
+                {!usesCategories && <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>{cat.label}</Typography>}
                 <FormGroup>
                   {[...cat.benchmarks].sort((a, b) => a.name.localeCompare(b.name)).map((b) => (
                     <FormControlLabel key={b.id} control={<Checkbox checked={form.benchmarks.includes(b.id)} onChange={() => toggleBenchmark(b.id)} />} label={b.name} />

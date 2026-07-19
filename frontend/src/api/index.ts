@@ -59,7 +59,7 @@ export interface ToolkitFormData {
   can_submit: boolean; scheduler_enabled: boolean; execution_backend: string;
   instance_types: FormOption[]; ami_options: FormOption[]; run_networks_options: FormOption[];
   benchmark_categories: Record<string, { label: string; benchmarks: { id: string; name: string }[] }>;
-  default_eni: string;
+  default_eni: string; uses_categories: boolean;
 }
 export interface Track { id: string; name: string; description: string; benchmarks: number[]; created_at: string; }
 export interface FieldSpec { name: string; type: string; options?: string[]; }

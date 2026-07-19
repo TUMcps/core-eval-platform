@@ -23,6 +23,8 @@ _TOOLKIT_EXTRA_KEYS = [
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def toolkit_form_data(request):
+    from comp_eval_platform.competitions import get_competition
+
     from .models import Benchmark, RuntimeSettings
 
     s = RuntimeSettings.get()
@@ -35,6 +37,9 @@ def toolkit_form_data(request):
         "can_submit": s.users_can_submit_tools or is_admin,
         "scheduler_enabled": s.scheduler_enabled,
         "execution_backend": s.execution_backend,
+        # Categories are user-chosen for variants that use them (ARCH); the form then
+        # filters benchmarks to one category and drops the VNN-only VNNLIB version.
+        "uses_categories": get_competition().uses_categories,
         "instance_types": [
             {"value": "t2.large", "label": "t2.large", "hardware": "CPU", "guidance": "general purpose"},
             {"value": "m5.16xlarge", "label": "m5.16xlarge", "hardware": "CPU", "guidance": "large CPU"},
