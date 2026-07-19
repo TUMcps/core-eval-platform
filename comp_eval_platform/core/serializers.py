@@ -133,14 +133,16 @@ class TaskListSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField()
     done = serializers.SerializerMethodField()
     repository = serializers.SerializerMethodField()
+    hash = serializers.SerializerMethodField()
     benchmark_progress = serializers.SerializerMethodField()
     user_email = serializers.SerializerMethodField()
     user_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
-        fields = ["id", "tool", "benchmark", "outcome", "created_at", "name", "status",
-                  "done", "repository", "benchmark_progress", "user_email", "user_name"]
+        fields = ["id", "tool", "benchmark", "category", "outcome", "created_at", "name",
+                  "status", "done", "repository", "hash", "benchmark_progress",
+                  "user_email", "user_name"]
         read_only_fields = fields
 
     def get_repository(self, obj):
@@ -150,6 +152,13 @@ class TaskListSerializer(serializers.ModelSerializer):
             return obj.tool.repository
         # A per-category benchmark load carries its repo on the task itself.
         return (obj.extra or {}).get("repository", "")
+
+    def get_hash(self, obj):
+        if obj.benchmark_id:
+            return (obj.benchmark.extra or {}).get("hash", "")
+        if obj.tool_id:
+            return obj.tool.hash or ""
+        return (obj.extra or {}).get("hash", "")
 
     def get_name(self, obj):
         if obj.tool_id:

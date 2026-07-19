@@ -57,6 +57,13 @@ export default function BenchmarkDetailsPage() {
   const active = task.steps.find((s) => s.status === 'active');
   const isPaused = !!active && isPauseKind(active.kind);
   const extra = (benchmark?.extra ?? {}) as Record<string, string>;
+  // The submission's inputs live on the task (a per-category load has no Benchmark row);
+  // the serializer already resolves these across task shapes.
+  const repository = task.repository || '';
+  const hash = task.hash || '';
+  const categoryId = (task.category ?? benchmark?.category ?? '') as string;
+  // A per-category load (ARCH) is a category task, not one Benchmark.
+  const isCategoryLoad = !task.benchmark && !!task.category;
 
   const doAbort = async () => { if (window.confirm('Abort this submission?')) setTask(await tasksApi.abort(task.id)); };
   const doResume = async () => { setTask(await tasksApi.resume(task.id)); };
@@ -65,9 +72,10 @@ export default function BenchmarkDetailsPage() {
     try { await tasksApi.delete(task.id); navigate('/benchmark'); }
     catch (err: any) { setDeleting(false); setDeleteOpen(false); setError(err?.response?.data?.error ?? 'Delete failed'); }
   };
-  // Re-open the submission form with this benchmark's inputs prefilled.
+  // Re-open the submission form with this submission's inputs prefilled. (The ARCH form
+  // ignores `name`; the VNN form ignores `category`.)
   const repopulate = () => navigate('/benchmark/submit', {
-    state: { prefillData: { name: task.name, repository: extra.repository ?? '', hash: extra.hash ?? '', category: benchmark?.category ?? '', fields: extra } },
+    state: { prefillData: { name: task.name, repository, hash, category: categoryId, fields: extra } },
   });
 
   return (
@@ -95,9 +103,10 @@ export default function BenchmarkDetailsPage() {
         </Box>
 
         <SubmissionDetails>
-          <DetailRow label="Repository"><code>{extra.repository || '—'}</code></DetailRow>
-          <DetailRow label="Hash"><code>{extra.hash || '—'}</code></DetailRow>
-          <DetailRow label="VNNLIB version"><code>{extra.vnnlib_version || '—'}</code></DetailRow>
+          {isCategoryLoad && <DetailRow label="Category"><code>{task.name}</code></DetailRow>}
+          <DetailRow label="Repository"><code>{repository || '—'}</code></DetailRow>
+          <DetailRow label="Hash"><code>{hash || '—'}</code></DetailRow>
+          {!isCategoryLoad && <DetailRow label="VNNLIB version"><code>{extra.vnnlib_version || '—'}</code></DetailRow>}
           <DetailRow label="Owner">
             {user?.is_admin ? (
               <OwnerReassign taskId={task.id} currentName={task.user_name} currentEmail={task.user_email} onChanged={load} />
