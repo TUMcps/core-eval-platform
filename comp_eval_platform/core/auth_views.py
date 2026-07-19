@@ -79,12 +79,23 @@ def me(request):
 @api_view(["PATCH"])
 @permission_classes([AllowAny])
 def update_profile(request):
-    """Let the signed-in user edit their own display name."""
+    """Let the signed-in user edit their own display name and email."""
     if not request.user.is_authenticated:
         return Response({"detail": "not authenticated"}, status=401)
+    fields = []
     if "name" in request.data:
         request.user.name = (request.data.get("name") or "").strip()
-        request.user.save(update_fields=["name"])
+        fields.append("name")
+    if "email" in request.data:
+        email = (request.data.get("email") or "").strip()
+        if not email:
+            return Response({"detail": "email is required"}, status=400)
+        if User.objects.filter(email__iexact=email).exclude(pk=request.user.pk).exists():
+            return Response({"detail": "an account with this email already exists"}, status=400)
+        request.user.email = email
+        fields.append("email")
+    if fields:
+        request.user.save(update_fields=fields)
     return Response(_user_data(request.user))
 
 

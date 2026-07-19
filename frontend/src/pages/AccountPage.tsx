@@ -16,13 +16,16 @@ import PageTitle from '../components/PageTitle';
 export default function AccountPage() {
   const { user, updateProfile } = useAuth();
   const [name, setName] = useState(user?.name ?? '');
+  const [email, setEmail] = useState(user?.email ?? '');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
-  const dirty = name.trim() !== (user?.name ?? '');
+  const nameDirty = name.trim() !== (user?.name ?? '');
+  const emailDirty = email.trim() !== (user?.email ?? '');
 
-  const save = async () => {
+  const save = async (patch: { name?: string; email?: string }, label: string) => {
     setSaving(true);
-    try { await updateProfile(name.trim()); setToast('Name updated'); }
+    try { await updateProfile(patch); setToast(label); }
+    catch (e: any) { setToast(e?.response?.data?.detail ?? 'Update failed'); }
     finally { setSaving(false); }
   };
 
@@ -35,15 +38,18 @@ export default function AccountPage() {
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>Name</Typography>
           <Stack direction="row" spacing={1.5} alignItems="center">
             <TextField size="small" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your display name" sx={{ flexGrow: 1, maxWidth: 360 }} />
-            <Button variant="contained" size="small" disabled={!dirty || saving} onClick={save}>Save</Button>
+            <Button variant="contained" size="small" disabled={!nameDirty || saving} onClick={() => save({ name: name.trim() }, 'Name updated')}>Save</Button>
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Shown across the UI as "{'{name}'} ({'{email}'})".</Typography>
         </Box>
         <Divider sx={{ my: 2 }} />
         <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" color="text.secondary">Email</Typography>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>{user?.email || '—'}</Typography>
-          <Typography variant="body2" color="text.secondary">Your login identifier.</Typography>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>Email</Typography>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <TextField size="small" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" sx={{ flexGrow: 1, maxWidth: 360 }} />
+            <Button variant="contained" size="small" disabled={!emailDirty || !email.trim() || saving} onClick={() => save({ email: email.trim() }, 'Email updated')}>Save</Button>
+          </Stack>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Your login identifier.</Typography>
         </Box>
         <Divider sx={{ my: 2 }} />
         <Box sx={{ mb: 2 }}>
