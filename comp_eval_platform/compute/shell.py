@@ -19,8 +19,21 @@ def _script_root() -> str:
     return os.getenv("SCRIPT_ROOT") or os.getenv("AWS_SCRIPT_ROOT") or os.getcwd()
 
 
+def _core_script_root() -> str:
+    """Where core ships its own node scripts (generic worker steps every variant reuses).
+    comp_eval_platform/compute/shell.py -> comp_eval_platform/scripts."""
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts")
+
+
 def _path(dir: str, script: str) -> str:
-    return os.path.join(_script_root(), "scripts", dir, script)
+    """Resolve a node script: the active plugin's copy if it ships one, else core's.
+    Lets a variant reuse a generic core script (e.g. install_tool.sh) for free while
+    still overriding it by placing its own under ``SCRIPT_ROOT/scripts/<dir>/``."""
+    plugin = os.path.join(_script_root(), "scripts", dir, script)
+    if os.path.isfile(plugin):
+        return plugin
+    core = os.path.join(_core_script_root(), dir, script)
+    return core if os.path.isfile(core) else plugin
 
 
 def _get(dir: str, script: str, params: dict = None, *, timeout: int = 15) -> str:

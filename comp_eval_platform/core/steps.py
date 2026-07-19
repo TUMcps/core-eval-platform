@@ -86,6 +86,29 @@ class StepHandler:
     def retry_until_success(self) -> bool:
         return False
 
+    def collect_results(self, remote_path: str):
+        """Pull a run's results.csv off the node into a temp dir for ``parse_results``.
+        Read now because the node is torn down before the task ends. Stores the file
+        verbatim on the step (the submission page shows it as-is) and returns the temp
+        dir, or ``None`` when the run produced nothing. The caller removes the dir."""
+        import os
+        import tempfile
+
+        from comp_eval_platform.compute.shell import node_exec
+
+        ip = self.node_ip
+        if ip is None:
+            return None
+        csv_text = node_exec(ip, f"cat {remote_path} 2>/dev/null")
+        if not csv_text.strip():
+            return None
+        self.step.payload = {**(self.step.payload or {}), "results_csv": csv_text}
+        self.step.save(update_fields=["payload"])
+        directory = tempfile.mkdtemp(prefix=f"results_{self.task.id}_")
+        with open(os.path.join(directory, "results.csv"), "w") as fh:
+            fh.write(csv_text)
+        return directory
+
     def on_marked_done(self):
         """Freeze derived state now the step is done (e.g. score result severity)."""
 
