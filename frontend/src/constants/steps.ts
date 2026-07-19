@@ -23,6 +23,7 @@ export const KIND_LABEL: Record<string, string> = {
   vnn_create: 'Create Submission',
   arch_create: 'Create Submission',
   arch_install: 'Install Tool',
+  arch_load: 'Load Benchmarks',
   assign: 'Assign Worker',
   vnn_initialize: 'Initialize Worker',
   vnn_clone: 'Clone Repository',

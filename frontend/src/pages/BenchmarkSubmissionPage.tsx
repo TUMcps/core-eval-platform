@@ -45,9 +45,14 @@ export default function BenchmarkSubmissionPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      // Flat fields: the submit endpoint runs a generate+export task and returns its id.
-      const payload: any = { name, repository, hash, ...fields };
-      if (usesCategories) payload.category = category;  // else the backend files it under 'default'
+      // Flat fields: the submit endpoint runs the benchmark task and returns its id.
+      const payload: any = { repository, hash, ...fields };
+      if (usesCategories) {
+        // A category variant loads a whole category from one repo — no per-benchmark name.
+        payload.category = category;
+      } else {
+        payload.name = name;
+      }
       const { redirect_to } = await benchmarksApi.submit(payload);
       navigate(`/benchmark/submission/${redirect_to}`);
     } catch (error: any) {
@@ -70,18 +75,24 @@ export default function BenchmarkSubmissionPage() {
         {message && <Alert severity="error" sx={{ mb: 3 }}>{message}</Alert>}
         {!schedulerEnabled && <Alert severity="warning" sx={{ mb: 3 }}>Submissions are paused because the scheduler is currently disabled.</Alert>}
         <Box component="form" onSubmit={handleSubmit}>
-          <TextField fullWidth label="Benchmark name" value={name} onChange={(e) => setName(e.target.value)} required sx={{ mb: 3 }} />
+          {/* A category variant (ARCH) submits a whole category from one repo, so there is
+              no per-benchmark name; a name variant (VNN) names the single benchmark. */}
+          {!usesCategories && (
+            <TextField fullWidth label="Benchmark name" value={name} onChange={(e) => setName(e.target.value)} required sx={{ mb: 3 }} />
+          )}
 
           {usesCategories && (
             <TextField fullWidth select label="Category" value={category} onChange={(e) => setCategory(e.target.value)} required sx={{ mb: 3 }}
-              helperText="Benchmarks belong to a category. Create categories on the Toolkit page.">
+              helperText="One submission loads all of the category's benchmarks. Create categories on the Toolkit page.">
               {(data?.categories ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
               {(data?.categories ?? []).length === 0 && <MenuItem disabled value="">No categories yet</MenuItem>}
             </TextField>
           )}
 
           <TextField fullWidth label="Git repository URL" value={repository} onChange={(e) => setRepository(e.target.value)} required sx={{ mb: 3 }}
-            helperText="Any git URL. The benchmark's generator script is run from this repo to produce instances.csv and the instance files. The commit hash below selects the exact revision." />
+            helperText={usesCategories
+              ? "Any git URL. Its instances.csv lists every benchmark and instance in the category. The commit hash below selects the exact revision."
+              : "Any git URL. The benchmark's generator script is run from this repo to produce instances.csv and the instance files. The commit hash below selects the exact revision."} />
 
           <TextField fullWidth label="Commit hash (optional)" value={hash} onChange={(e) => setHash(e.target.value)} sx={{ mb: 3 }}
             helperText="Leave empty to use the latest commit on the repository's default branch." />

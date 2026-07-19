@@ -5,7 +5,7 @@ import PageHeader from '../components/PageHeader';
 import PageTitle from '../components/PageTitle';
 import PageSection from '../components/PageSection';
 import OwnerLabel from '../components/OwnerLabel';
-import { tasksApi } from '../api';
+import { tasksApi, benchmarksApi } from '../api';
 import type { Task } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { statusChip } from '../constants/status';
@@ -32,10 +32,13 @@ export default function BenchmarkSubmissionsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+  // Category variants (ARCH) submit a whole category at once, so a submission is labeled
+  // by its category rather than a per-benchmark name.
+  const [usesCategories, setUsesCategories] = useState(false);
 
   useEffect(() => {
-    // Benchmark submissions are generate/export tasks (one per submission/regeneration).
     tasksApi.list('benchmark').then((d) => setItems(d)).catch((e) => console.error(e)).finally(() => setLoading(false));
+    benchmarksApi.getFormData().then((d) => setUsesCategories(d.uses_categories)).catch(() => {});
   }, []);
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}><CircularProgress /></Box>;
@@ -57,14 +60,14 @@ export default function BenchmarkSubmissionsPage() {
       <PageSection>
         <Typography variant="h4" fontWeight="bold" gutterBottom>Proposed Benchmarks</Typography>
         <Typography variant="body1" sx={{ mb: 4 }} color="text.secondary">
-          Below are all submitted benchmarks. Each is published automatically once its generation run completes, making it available for tools to run against.
+          Below are all submitted benchmarks. Each is published automatically once its submission run completes, making it available for tools to run against.
         </Typography>
         <TableContainer component={Paper} elevation={2}>
           <Table>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>{usesCategories ? 'Category' : 'Name'}</TableCell>
                 {user?.is_admin && <TableCell sx={{ fontWeight: 600 }}>User</TableCell>}
                 <TableCell sx={{ fontWeight: 600 }}>Repository</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600 }}>Status</TableCell>
