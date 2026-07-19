@@ -194,10 +194,14 @@ class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         if kind == "tool":
             qs = qs.filter(tool__isnull=False)
         elif kind == "benchmark":
-            qs = qs.filter(benchmark__isnull=False)
+            # A benchmark submission is a named benchmark (VNN) or a whole-category
+            # load (ARCH, no benchmark FK); the overview shows both.
+            qs = qs.filter(Q(benchmark__isnull=False) | Q(category__isnull=False))
         search = self.request.query_params.get("search")
         if search:
-            qs = qs.filter(Q(tool__name__icontains=search) | Q(benchmark__name__icontains=search))
+            qs = qs.filter(Q(tool__name__icontains=search)
+                           | Q(benchmark__name__icontains=search)
+                           | Q(category__name__icontains=search))
         # Match the overview's grouping (mirrors statusGroupRank in the client):
         # queued first, then running, then finished; newest-first within each group.
         # A stable rank keeps running submissions on the first page under pagination.
