@@ -66,6 +66,9 @@ def benchmark_form_data(request):
         benchmark_fields = comp.presentation().benchmark_fields
     except NotImplementedError:
         benchmark_fields = []
+    # Seed the variant's fixed categories (ARCH) so the dropdown is populated before the
+    # first benchmark load; no-op for variants whose categories arise from submissions.
+    comp.ensure_categories()
     return Response({
         "scheduler_enabled": s.scheduler_enabled,
         "can_submit": s.users_can_submit_benchmarks or getattr(request.user, "is_admin", False),

@@ -68,6 +68,12 @@ class Competition(ABC):
         ``Benchmark``s; a per-benchmark-repo variant loads one. Default: unsupported."""
         raise NotImplementedError
 
+    def ensure_categories(self) -> None:
+        """Create any fixed categories this variant defines (ARCH's AFF/NLN/AINNCS…),
+        so they are selectable before the first submission loads a benchmark. Idempotent.
+        Default: none — categories arise from submissions (VNN's single ``default``)."""
+        return None
+
     # (3) Node scripts + I/O contract -------------------------------------
     def script_root(self) -> str:
         """Filesystem root of this competition's node scripts (install /
