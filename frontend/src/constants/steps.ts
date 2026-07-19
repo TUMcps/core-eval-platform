@@ -21,6 +21,8 @@ export const STEP_STATUS: Record<string, string> = {
  */
 export const KIND_LABEL: Record<string, string> = {
   vnn_create: 'Create submission',
+  arch_create: 'Create submission',
+  arch_install: 'Install tool',
   assign: 'Assign worker',
   vnn_initialize: 'Initialize worker',
   vnn_clone: 'Clone repository',
