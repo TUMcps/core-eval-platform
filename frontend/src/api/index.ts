@@ -30,6 +30,8 @@ export interface TaskStep {
   results: string;
   /** A step's frozen outcome, for steps that compute one (a scoring step's report). */
   summary: StepSummary | null;
+  /** Live run progress while a benchmark's instances execute; null until the first lands. */
+  progress: { processed: number; total: number } | null;
   /** Wall-clock cap this step runs under, in hours; null for the uncapped kinds. */
   timeout_hours: number | null;
   /** Whether caps actually fire — an admin can configure one but leave it off. */

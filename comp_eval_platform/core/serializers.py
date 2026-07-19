@@ -55,13 +55,14 @@ class TaskStepSerializer(serializers.ModelSerializer):
     can_download_results = serializers.SerializerMethodField()
     results = serializers.SerializerMethodField()
     summary = serializers.SerializerMethodField()
+    progress = serializers.SerializerMethodField()
     timeout_hours = serializers.SerializerMethodField()
     timeout_enforced = serializers.SerializerMethodField()
 
     class Meta:
         model = TaskStep
         fields = ["id", "kind", "order", "status", "started_at", "finished_at", "logs",
-                  "has_logs", "can_download_results", "results", "summary",
+                  "has_logs", "can_download_results", "results", "summary", "progress",
                   "timeout_hours", "timeout_enforced"]
 
     def get_timeout_hours(self, obj):
@@ -90,6 +91,11 @@ class TaskStepSerializer(serializers.ModelSerializer):
         if "summary" not in payload:
             return None
         return {"summary": payload["summary"], "severity": payload.get("severity", "unknown")}
+
+    def get_progress(self, obj):
+        """Live run progress ``{processed, total}`` while a benchmark's instances execute,
+        so the timer can show "Processed x/N". Absent until the first instance lands."""
+        return (obj.payload or {}).get("progress")
 
     def get_can_download_results(self, obj):
         """Whether this step pushed artifacts the owner can download. Asking the

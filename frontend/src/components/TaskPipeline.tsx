@@ -142,7 +142,7 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
 
             <Box sx={{ mt: 0.5, mb: 0.5 }}>
               <StepTimer startedAt={s.started_at} finishedAt={s.finished_at} active={s.status === 'active'}
-                timeoutHours={s.timeout_hours} timeoutEnforced={s.timeout_enforced} />
+                timeoutHours={s.timeout_hours} timeoutEnforced={s.timeout_enforced} progress={s.progress} />
             </Box>
 
             {s.has_logs ? (
@@ -178,8 +178,8 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
 
             {s.results && (
               <CollapsibleSection title="Results"
-                open={openResults[s.id] ?? false}
-                onToggle={() => setOpenResults((o) => ({ ...o, [s.id]: !(o[s.id] ?? false) }))}>
+                open={openResults[s.id] ?? active}
+                onToggle={() => setOpenResults((o) => ({ ...o, [s.id]: !(o[s.id] ?? active) }))}>
                 <StepResults csv={s.results} />
               </CollapsibleSection>
             )}

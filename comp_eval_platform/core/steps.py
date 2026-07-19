@@ -109,6 +109,29 @@ class StepHandler:
             fh.write(csv_text)
         return directory
 
+    def refresh_run_progress(self, remote_path: str, benchmark, has_header: bool = False):
+        """While a run is active, tail its partial results.csv into the step payload so the
+        UI shows the file — and a processed-count — as instances land, not only at the end.
+        Stores ``payload['results_csv']`` verbatim and ``payload['progress'] = {processed,
+        total}`` (total = the benchmark's instance count, falling back to the rows seen).
+        No-op until the first row is written."""
+        from comp_eval_platform.compute.shell import node_exec
+        from comp_eval_platform.core.models import Instance
+
+        ip = self.node_ip
+        if ip is None or benchmark is None:
+            return
+        csv_text = node_exec(ip, f"cat {remote_path} 2>/dev/null")
+        rows = [ln for ln in csv_text.splitlines() if ln.strip()]
+        if has_header and rows:
+            rows = rows[1:]  # ARCH's harness writes a header; VNN's rows stand alone
+        if not rows:
+            return
+        total = Instance.objects.filter(benchmark=benchmark).count() or len(rows)
+        self.step.payload = {**(self.step.payload or {}), "results_csv": csv_text,
+                             "progress": {"processed": len(rows), "total": total}}
+        self.step.save(update_fields=["payload"])
+
     def on_marked_done(self):
         """Freeze derived state now the step is done (e.g. score result severity)."""
 
