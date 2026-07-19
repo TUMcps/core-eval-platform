@@ -78,5 +78,7 @@ def fetch_node_log(ip: str, remote_path: str, *, tail_bytes: int = 1_000_000, ti
 
 def service_id() -> str:
     """Stable id tagging the workers this deployment owns (so we never manage
-    someone else's). From ``VNNCOMP_SERVICE_ID`` env, else an ephemeral uuid."""
-    return os.getenv("VNNCOMP_SERVICE_ID") or os.getenv("HOSTNAME") or str(uuid.uuid4())
+    someone else's). From ``EVAL_SERVICE_ID`` env (``VNNCOMP_SERVICE_ID`` still
+    honored for compatibility), else the hostname, else an ephemeral uuid."""
+    return (os.getenv("EVAL_SERVICE_ID") or os.getenv("VNNCOMP_SERVICE_ID")
+            or os.getenv("HOSTNAME") or str(uuid.uuid4()))

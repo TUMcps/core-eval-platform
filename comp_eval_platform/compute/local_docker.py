@@ -18,7 +18,7 @@ from django.utils import timezone
 from .base import ComputeBackend, ImageError, ProvisionError
 from .shell import service_id
 
-SERVICE_LABEL = "VNNCompServiceId"
+SERVICE_LABEL = "CompEvalServiceId"
 READY_MARKER = "/tmp/vnncomp_ready"
 _GPU_TYPES = {"p3.2xlarge", "g5.8xlarge"}
 #: How long a container may exist untracked before it counts as leaked rather than
@@ -79,7 +79,7 @@ class LocalDockerBackend(ComputeBackend):
             run_args = [
                 "run", "-d", "--name", name,
                 "--label", f"{SERVICE_LABEL}={service_id()}",
-                "--label", "VNNCompManaged=true",
+                "--label", "CompEvalManaged=true",
                 "--network", self.network,
                 "--entrypoint", "sleep",
             ]
