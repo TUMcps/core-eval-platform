@@ -4,6 +4,7 @@ import { Box, Typography, Button, CircularProgress, Chip, Stack, Alert } from '@
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
+import PageTitle from '../components/PageTitle';
 import PageSection from '../components/PageSection';
 import LiveIndicator from '../components/LiveIndicator';
 import OwnerLabel from '../components/OwnerLabel';
@@ -83,8 +84,8 @@ export default function BenchmarkDetailsPage() {
       <PageHeader>
         <PageBreadcrumbs items={[{ label: 'Benchmark', to: '/benchmark' }, { label: `${task.name} (#${task.id})` }]} />
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
-          <Box>
-            <Typography variant="h3" fontWeight="bold" gutterBottom>{task.name}</Typography>
+          <Box sx={{ flexGrow: 1, minWidth: 280 }}>
+            <PageTitle variant="h3" mb={1}>{task.name}</PageTitle>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <Chip label={overall.label} color={overall.color} variant={overall.variant} />
               {!task.done && <LiveIndicator label="Live" />}
