@@ -8,7 +8,7 @@ import CollapsibleSection from './CollapsibleSection';
 import StepResults, { ResultsOverview } from './StepResults';
 import StepTimer from './StepTimer';
 import { tasksApi } from '../api';
-import type { TaskStep, BenchmarkProgress, Result } from '../api';
+import type { Task, TaskStep, BenchmarkProgress, Result } from '../api';
 import { statusChip } from '../constants/status';
 import { KIND_LABEL, STEP_STATUS, isPauseKind } from '../constants/steps';
 import { logTail } from '../utils/logTail';
@@ -41,10 +41,12 @@ interface Props {
   results?: Result[];
   /** The task these steps belong to; needed to download a step's exported archive. */
   taskId?: number;
+  /** Called with the refreshed task after a per-stage action (aborting one benchmark). */
+  onTaskChange?: (task: Task) => void;
 }
 
 /** A submission's ordered steps: status, live-tailing logs, per-benchmark results, timings. */
-export default function TaskPipeline({ steps, benchmarkProgress, results = [], taskId }: Props) {
+export default function TaskPipeline({ steps, benchmarkProgress, results = [], taskId, onTaskChange }: Props) {
   const [openLogs, setOpenLogs] = useState<Record<string, boolean>>({});
   const [openResults, setOpenResults] = useState<Record<string, boolean>>({});
   const [openScoring, setOpenScoring] = useState<Record<string, boolean>>({});
@@ -57,6 +59,16 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
   const jumpToTail = (id: string) => {
     const el = logRefs.current[id];
     if (el) el.scrollTop = el.scrollHeight;
+  };
+
+  const abortBenchmark = async () => {
+    if (taskId === undefined) return;
+    if (!window.confirm('Abort the currently-running benchmark and continue with the rest of the submission?')) return;
+    try {
+      onTaskChange?.(await tasksApi.abortBenchmark(taskId));
+    } catch {
+      // A failed abort is rare; the step's own log says why.
+    }
   };
 
   const download = async (step: TaskStep) => {
@@ -138,6 +150,11 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
               <Typography sx={{ fontWeight: 600, flexGrow: 1 }} component="div">{stepName(s)}</Typography>
               {active && !paused && <LiveIndicator label={null} />}
               <Chip size="small" label={chip.label} color={chip.color} variant={chip.variant} />
+              {s.can_abort_benchmark && taskId !== undefined && (
+                <Button color="error" size="small" variant="outlined" onClick={abortBenchmark}>
+                  Abort benchmark
+                </Button>
+              )}
             </Box>
 
             <Box sx={{ mt: 0.5, mb: 0.5 }}>

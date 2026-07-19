@@ -251,6 +251,21 @@ class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         task.refresh_from_db()
         return Response(TaskSerializer(task).data)
 
+    @action(detail=True, methods=["post"], url_path="abort-benchmark")
+    def abort_benchmark(self, request, pk=None):
+        """Abort only the currently-running benchmark and let the rest of the submission
+        continue (the run steps stop their measurement and advance to the next benchmark);
+        the task itself keeps going. Valid only while a benchmark-run step is active."""
+        task = self.get_object()
+        if not self._may_manage(request, task):
+            return Response(status=403)
+        step = task.current_step
+        if task.done or step is None or not step.handler.can_abort_benchmark():
+            return Response({"error": "No benchmark is running to abort."}, status=400)
+        task.abort_benchmark()
+        task.refresh_from_db()
+        return Response(TaskSerializer(task).data)
+
     @action(detail=True, methods=["post"])
     def resume(self, request, pk=None):
         """Continue a paused task by advancing past its held step."""

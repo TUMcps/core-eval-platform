@@ -53,6 +53,7 @@ class TaskStepSerializer(serializers.ModelSerializer):
     logs = serializers.SerializerMethodField()
     has_logs = serializers.SerializerMethodField()
     can_download_results = serializers.SerializerMethodField()
+    can_abort_benchmark = serializers.SerializerMethodField()
     results = serializers.SerializerMethodField()
     summary = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField()
@@ -62,8 +63,8 @@ class TaskStepSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskStep
         fields = ["id", "kind", "order", "status", "started_at", "finished_at", "logs",
-                  "has_logs", "can_download_results", "results", "summary", "progress",
-                  "timeout_hours", "timeout_enforced"]
+                  "has_logs", "can_download_results", "can_abort_benchmark", "results",
+                  "summary", "progress", "timeout_hours", "timeout_enforced"]
 
     def get_timeout_hours(self, obj):
         """The cap this step's timer counts against, or null. Asking the competition
@@ -96,6 +97,16 @@ class TaskStepSerializer(serializers.ModelSerializer):
         """Live run progress ``{processed, total}`` while a benchmark's instances execute,
         so the timer can show "Processed x/N". Absent until the first instance lands."""
         return (obj.payload or {}).get("progress")
+
+    def get_can_abort_benchmark(self, obj):
+        """Whether just this benchmark can be aborted while the rest of the submission
+        continues — only the running benchmark-run step, so the detail page can show a
+        per-stage "Abort benchmark" button beside it."""
+        from comp_eval_platform.core.models.execution import StepStatus
+
+        if obj.status != StepStatus.ACTIVE:
+            return False
+        return obj.handler.can_abort_benchmark()
 
     def get_can_download_results(self, obj):
         """Whether this step pushed artifacts the owner can download. Asking the

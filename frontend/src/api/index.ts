@@ -26,6 +26,8 @@ export interface TaskStep {
   finished_at: string | null; logs: string; has_logs: boolean;
   /** True once this step has exported artifacts to download (the backend decides which do). */
   can_download_results: boolean;
+  /** True only for the running benchmark step — drives the per-stage "Abort benchmark" button. */
+  can_abort_benchmark: boolean;
   /** The raw results file this step's run produced; empty for steps that make none. */
   results: string;
   /** A step's frozen outcome, for steps that compute one (a scoring step's report). */
@@ -169,6 +171,8 @@ export const tasksApi = {
   list: (type?: 'tool' | 'benchmark') => results<Task>(`/api/tasks/${type ? `?type=${type}` : ''}`),
   get: (id: ID) => apiClient.get<Task>(`/api/tasks/${id}/`).then((r) => r.data),
   abort: (id: ID) => apiClient.post<Task>(`/api/tasks/${id}/abort/`).then((r) => r.data),
+  // Abort just the running benchmark; the rest of the submission continues.
+  abortBenchmark: (id: ID) => apiClient.post<Task>(`/api/tasks/${id}/abort-benchmark/`).then((r) => r.data),
   resume: (id: ID) => apiClient.post<Task>(`/api/tasks/${id}/resume/`).then((r) => r.data),
   delete: (id: ID) => apiClient.delete(`/api/tasks/${id}/`).then((r) => r.data),
   changeOwner: (id: ID, owner: string) => apiClient.post<Task>(`/api/tasks/${id}/change_owner/`, { owner }).then((r) => r.data),

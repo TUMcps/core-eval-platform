@@ -176,7 +176,7 @@ export default function ToolkitDetailsPage() {
 
         <Typography variant="h5" fontWeight="bold" gutterBottom>Pipeline</Typography>
         <TaskPipeline steps={task.steps} benchmarkProgress={task.benchmark_progress}
-          results={results} taskId={task.id} />
+          results={results} taskId={task.id} onTaskChange={setTask} />
       </PageSection>
     </>
   );
