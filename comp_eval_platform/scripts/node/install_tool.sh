@@ -55,16 +55,14 @@ else
 fi
 
 install_tool() {
-    log_step 'Cloning ${repository}'
     rm -rf ${tool_dir} || return 1
-    git clone ${repository} ${tool_dir} || return 1
+    log_run 'clone ${repository}' git clone ${repository} ${tool_dir} || return 1
     if [ -n \"${hash}\" ]; then git -C ${tool_dir} checkout ${hash} || return 1; fi
     cd ${tool_dir}/${script_dir} || return 1
     log_info 'checking the tool ships install_tool.sh, prepare_instance.sh, run_instance.sh'
     ls install_tool.sh prepare_instance.sh run_instance.sh || return 1
     chmod +x install_tool.sh prepare_instance.sh run_instance.sh
-    log_step 'RUNNING install_tool.sh ${version}:'
-    ${sudo} /bin/bash install_tool.sh ${version}
+    log_run 'run install_tool.sh ${version}' ${sudo} /bin/bash install_tool.sh ${version}
 }
 
 if install_tool; then
