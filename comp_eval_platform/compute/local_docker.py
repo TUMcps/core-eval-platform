@@ -190,9 +190,21 @@ class LocalDockerBackend(ComputeBackend):
         )
         return proc.returncode == 0
 
+    def _bootstrap_script(self) -> str:
+        """The node bootstrap is generic worker logic shipped by core, so every variant
+        gets an SSH-reachable node for free. A deployment may still override it by placing
+        ``scripts/docker/bootstrap_node.sh`` under ``SCRIPT_ROOT``."""
+        for root in (os.getenv("SCRIPT_ROOT"), os.getenv("AWS_SCRIPT_ROOT")):
+            if root:
+                override = os.path.join(root, "scripts", "docker", "bootstrap_node.sh")
+                if os.path.isfile(override):
+                    return override
+        # comp_eval_platform/compute/local_docker.py -> comp_eval_platform/scripts/docker/…
+        return os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                            "scripts", "docker", "bootstrap_node.sh")
+
     def _start_bootstrap(self, container_id: str) -> None:
-        root = os.getenv("SCRIPT_ROOT") or os.getenv("AWS_SCRIPT_ROOT") or os.getcwd()
-        script = os.path.join(root, "scripts", "docker", "bootstrap_node.sh")
+        script = self._bootstrap_script()
         _docker(["cp", script, f"{container_id}:/tmp/bootstrap_node.sh"], timeout=30)
         _docker([
             "exec", "-d", "-u", "0",
