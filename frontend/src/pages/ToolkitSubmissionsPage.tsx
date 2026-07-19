@@ -7,7 +7,7 @@ import PageSection from '../components/PageSection';
 import LiveIndicator from '../components/LiveIndicator';
 import OwnerLabel from '../components/OwnerLabel';
 import { formatDateTime } from '../utils/datetime';
-import { taskPage } from '../api';
+import { taskPage, toolkitApi } from '../api';
 import type { Task } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { statusChip } from '../constants/status';
@@ -35,6 +35,11 @@ export default function ToolkitSubmissionsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+  // Category variants (ARCH) file each tool under one category; show it as its own column.
+  const [usesCategories, setUsesCategories] = useState(false);
+  useEffect(() => {
+    toolkitApi.getFormData().then((d) => setUsesCategories(d.uses_categories)).catch(() => {});
+  }, []);
 
   // Paint the first page immediately, then backfill the rest in the background, so
   // the table appears at once while search and paging stay instant (client-side)
@@ -110,6 +115,7 @@ export default function ToolkitSubmissionsPage() {
                 <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
                 {user?.is_admin && <TableCell sx={{ fontWeight: 600 }}>User</TableCell>}
+                {usesCategories && <TableCell sx={{ fontWeight: 600 }}>Category</TableCell>}
                 <TableCell sx={{ fontWeight: 600 }}>Benchmarks</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600 }}>Status</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600 }}>Action</TableCell>
@@ -124,6 +130,7 @@ export default function ToolkitSubmissionsPage() {
                     <TableCell>{date}</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>{task.name}</TableCell>
                     {user?.is_admin && <TableCell sx={{ color: 'text.secondary' }}><OwnerLabel stacked name={task.user_name} email={task.user_email} /></TableCell>}
+                    {usesCategories && <TableCell>{task.category_name || '—'}</TableCell>}
                     <TableCell>
                       {task.benchmark_progress?.length ? (
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
@@ -143,7 +150,7 @@ export default function ToolkitSubmissionsPage() {
                   </TableRow>
                 );
               })}
-              {paged.length === 0 && <TableRow><TableCell colSpan={6}><Typography color="text.secondary" sx={{ py: 2 }}>No toolkit submissions yet.</Typography></TableCell></TableRow>}
+              {paged.length === 0 && <TableRow><TableCell colSpan={5 + (user?.is_admin ? 1 : 0) + (usesCategories ? 1 : 0)}><Typography color="text.secondary" sx={{ py: 2 }}>No toolkit submissions yet.</Typography></TableCell></TableRow>}
             </TableBody>
           </Table>
         </TableContainer>

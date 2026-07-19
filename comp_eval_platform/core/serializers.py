@@ -130,6 +130,7 @@ class TaskListSerializer(serializers.ModelSerializer):
     """Overview rows: no per-step data (which would trigger a log query per step)."""
 
     name = serializers.SerializerMethodField()
+    category_name = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
     done = serializers.SerializerMethodField()
     repository = serializers.SerializerMethodField()
@@ -140,10 +141,21 @@ class TaskListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Task
-        fields = ["id", "tool", "benchmark", "category", "outcome", "created_at", "name",
-                  "status", "done", "repository", "hash", "benchmark_progress",
-                  "user_email", "user_name"]
+        fields = ["id", "tool", "benchmark", "category", "category_name", "outcome",
+                  "created_at", "name", "status", "done", "repository", "hash",
+                  "benchmark_progress", "user_email", "user_name"]
         read_only_fields = fields
+
+    def get_category_name(self, obj):
+        """The display name of the submission's category, wherever it lives — on the
+        tool (a toolkit run), the task (an ARCH category load), or the benchmark."""
+        if obj.tool_id:
+            return obj.tool.category.name
+        if obj.category_id:
+            return obj.category.name
+        if obj.benchmark_id:
+            return obj.benchmark.category.name
+        return None
 
     def get_repository(self, obj):
         if obj.benchmark_id:

@@ -51,7 +51,8 @@ export interface StepSummary {
 }
 export interface BenchmarkProgress { name: string; state: string; step_id: number; }
 export interface Task {
-  id: number; tool: number | null; benchmark: number | null; category: string | null; outcome: string;
+  id: number; tool: number | null; benchmark: number | null; category: string | null;
+  category_name: string | null; outcome: string;
   current_step: string | null; total_runtime: number | null; created_at: string;
   steps: TaskStep[]; name: string; status: string; done: boolean; repository: string; hash: string;
   benchmark_progress: BenchmarkProgress[]; user_email: string | null; user_name: string | null;
