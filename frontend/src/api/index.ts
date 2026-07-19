@@ -36,14 +36,16 @@ export interface TaskStep {
   timeout_enforced: boolean;
 }
 
-/** The official scorer's report on one benchmark run. */
+/** A frozen report on one benchmark run — either the VNN scorer's, or a variant's own tally. */
 export interface StepSummary {
   summary: {
     instances: number;
-    /** holds / violated / timeout / error / unknown. */
+    /** Verdict → count. VNN uses holds/violated/…; other variants define their own buckets. */
     verdicts: Record<string, number>;
-    /** valid / valid_with_tolerance / invalid / missing — only when the run had violations. */
-    witnesses: Record<string, number>;
+    /** valid / valid_with_tolerance / invalid / missing — only when a scorer validated witnesses. */
+    witnesses?: Record<string, number>;
+    /** Preferred display order for `verdicts` keys (variants without witness validation). */
+    order?: string[];
   };
   severity: 'success' | 'error' | 'unknown';
 }

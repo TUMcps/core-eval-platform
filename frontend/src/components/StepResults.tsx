@@ -39,10 +39,22 @@ export function ResultsOverview({ summary, results }: { summary: StepSummary | n
     );
   }
 
-  const { verdicts, witnesses } = summary.summary;
-  const sat = n(verdicts, 'violated');  // the scorer's key; shown as sat
+  const { verdicts, witnesses, order } = summary.summary;
   const severity = summary.severity === 'unknown' ? 'info' : summary.severity;
 
+  // Variants without witness validation (e.g. ARCH): a plain verdict tally, coloured
+  // by the step's own severity. The competition supplies the buckets and their order.
+  if (!witnesses) {
+    const keys = order ?? Object.keys(verdicts);
+    const label = (k: string) => k.charAt(0).toUpperCase() + k.slice(1);
+    return (
+      <Alert severity={severity} sx={{ mb: 2 }}>
+        {keys.map((k) => `${label(k)}: ${n(verdicts, k)}`).join(', ') || 'no results'}
+      </Alert>
+    );
+  }
+
+  const sat = n(verdicts, 'violated');  // the scorer's key; shown as sat
   return (
     <Alert severity={severity} sx={{ mb: 2 }}>
       sat: {sat}
