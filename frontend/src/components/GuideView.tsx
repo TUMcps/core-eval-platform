@@ -61,7 +61,7 @@ function PipelineStrip({ steps }: { steps: Guide['pipeline'] }) {
 
   return (
     <Paper elevation={0} sx={{ ...card, mb: 4, bgcolor: 'grey.50' }}>
-      <Typography variant="h6" sx={{ fontWeight: 700 }}>The pipeline</Typography>
+      <Typography variant="h6" sx={{ fontWeight: 700 }}>The Pipeline</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
         In order, under the same names they appear under on a submission's page. Some are
         optional and depend on the options you choose. Pick one to read what it does.
@@ -116,7 +116,7 @@ export default function GuideView({ guide }: { guide: Guide }) {
 
       {guide.pipeline.length > 0 && (
         <>
-          <Typography variant="h5" fontWeight="bold" sx={{ mb: 2 }}>What each step does</Typography>
+          <Typography variant="h5" fontWeight="bold" sx={{ mb: 2 }}>What Each Step Does</Typography>
           <Stack spacing={2.5}>
             {guide.pipeline.map((step, i) => (
               <Paper key={step.title} id={stepId(i)} elevation={0} sx={{ ...card, scrollMarginTop: 16 }}>

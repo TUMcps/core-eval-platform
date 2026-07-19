@@ -25,7 +25,7 @@ export default function BenchmarkInfoPage() {
   return (
     <GuidePage
       guideKey="benchmark"
-      title="How to propose a benchmark"
+      title="How to Propose a Benchmark"
       crumb={{ label: 'Benchmark', to: '/benchmark' }}
       cta={{ label: 'Go to benchmark submissions', to: '/benchmark' }}
       fallback={FALLBACK}

@@ -92,7 +92,7 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
   const shown = steps.filter((s) => s.kind !== SCORING_KIND);
   const stepName = (s: TaskStep): ReactNode => {
     const name = benchmarkOf(s);
-    if (name) return <>Run benchmark: <strong>{name}</strong></>;
+    if (name) return <>Run Benchmark: <strong>{name}</strong></>;
     return KIND_LABEL[s.kind] ?? s.kind;
   };
 
