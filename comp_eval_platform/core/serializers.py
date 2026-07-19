@@ -148,13 +148,17 @@ class TaskListSerializer(serializers.ModelSerializer):
             return (obj.benchmark.extra or {}).get("repository", "")
         if obj.tool_id:
             return obj.tool.repository
-        return ""
+        # A per-category benchmark load carries its repo on the task itself.
+        return (obj.extra or {}).get("repository", "")
 
     def get_name(self, obj):
         if obj.tool_id:
             return obj.tool.name
         if obj.benchmark_id:
             return obj.benchmark.name
+        # A per-category benchmark load (ARCH) is identified by its category, not a name.
+        if obj.category_id:
+            return obj.category.name
         return str(obj.id)[:8]
 
     def get_status(self, obj):

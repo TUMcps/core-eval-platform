@@ -84,9 +84,16 @@ _BENCHMARK_EXTRA_KEYS = ["repository", "hash", "script_dir", "vnnlib_version",
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def benchmark_submit(request):
-    """A benchmark submission = create a Benchmark (config in ``extra``) and run a
-    task that generates its instances from the git repo and exports them. Returns
-    the task id the UI redirects to. Re-submitting the same name regenerates it."""
+    """A benchmark submission runs a task that produces benchmarks on a worker.
+
+    Two shapes, by whether the variant uses categories:
+    - Category variants (ARCH): the submission names ``(category, repository, hash)``
+      and loads that category's whole ``instances.csv`` in one task — no per-benchmark
+      name. Each submission is its own overview row; the benchmarks are overwritten.
+    - Name variants (VNN): the submission creates one named ``Benchmark`` and a task
+      that generates its instances from the repo. Re-submitting the same name
+      regenerates it.
+    """
     from comp_eval_platform.competitions import get_competition
 
     from .models import Benchmark, Category, RuntimeSettings, Task
@@ -97,12 +104,27 @@ def benchmark_submit(request):
     if not s.scheduler_enabled:
         return Response({"error": "Submissions are paused: the scheduler is disabled."}, status=400)
 
+    comp = get_competition()
     d = request.data
+
+    if comp.uses_categories:
+        category = Category.objects.filter(id=d.get("category")).first()
+        if category is None:
+            return Response({"errors": {"category": ["unknown category"]}}, status=400)
+        if not (d.get("repository") or "").strip():
+            return Response({"errors": {"repository": ["required"]}}, status=400)
+        task = Task.objects.create(
+            owner=request.user, category=category,
+            extra={"repository": d.get("repository", ""), "hash": (d.get("hash") or "").strip()},
+        )
+        task.start()
+        task.refresh_from_db()
+        return Response({"redirect_to": str(task.id)}, status=201)
+
     name = (d.get("name") or "").strip()
     if not name or not (d.get("repository") or "").strip():
         return Response({"errors": {"name/repository": ["required"]}}, status=400)
 
-    comp = get_competition()
     cat_id = d.get("category")
     if cat_id and comp.uses_categories:
         category = Category.objects.filter(id=cat_id).first()

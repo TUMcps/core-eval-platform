@@ -183,7 +183,7 @@ class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = (Task.objects.all().order_by("-created_at")
-              .select_related("owner", "tool", "benchmark")
+              .select_related("owner", "tool", "benchmark", "category")
               .prefetch_related("step_set"))
         if self.action == "retrieve":
             # The detail page shows per-step logs; prefetch them (list omits steps).

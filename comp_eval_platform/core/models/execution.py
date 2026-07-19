@@ -51,10 +51,15 @@ class Task(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="tasks",
     )
-    # Exactly one subject is set: a tool-run task iterates the track's benchmarks
-    # into per-benchmark/-instance steps; a benchmark task processes a submission.
+    # A task's subject: a tool-run task (``tool``) iterates the track's benchmarks into
+    # per-benchmark/-instance steps; a per-benchmark task (``benchmark``, VNN) processes
+    # one proposed benchmark; a per-category task (``category``, ARCH) loads a whole
+    # category's benchmarks from one central repo. ``extra`` carries the submission's
+    # config for subjects without their own row (e.g. the category load's repo + hash).
     tool = models.ForeignKey("core.Tool", on_delete=models.CASCADE, null=True, blank=True, related_name="tasks")
     benchmark = models.ForeignKey("core.Benchmark", on_delete=models.CASCADE, null=True, blank=True, related_name="tasks")
+    category = models.ForeignKey("core.Category", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    extra = models.JSONField(default=dict, blank=True)
 
     current_step = models.ForeignKey(
         "core.TaskStep", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
@@ -67,7 +72,7 @@ class Task(models.Model):
         db_table = "core_task"
 
     def __str__(self):
-        subject = self.tool or self.benchmark
+        subject = self.tool or self.benchmark or self.category
         return f"Task #{self.id} [{subject}]"
 
     # --- Queries ---------------------------------------------------------
