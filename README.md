@@ -1,32 +1,39 @@
 # comp-eval-platform
 
-Core engine for a modular **competition-evaluation platform**. Users submit code (tools and
-benchmarks), the code runs on a provisioned worker, results are collected, scored, and displayed.
+Core engine for a modular **competition-evaluation platform**. Users submit tools and
+benchmarks; the code runs on a provisioned worker, and results are collected, scored, and
+displayed. Django REST backend + React/TypeScript (Vite) frontend.
 
-Individual competitions are **plugins**: [`vnn-comp`](https://gitlab.lrz.de/cps/nnv/websites),
-[`arch-comp`](https://gitlab.lrz.de/cps/nnv/websites), and future ones are variants of this one core.
-Each deployment runs exactly one variant.
+Individual competitions are **plugins** in their own repos ([`vnn-comp`](../vnn-comp-new),
+[`arch-comp`](../arch-comp-new), …). This repo is the shared library they all depend on; each
+deployment runs exactly one variant.
 
-## Two orthogonal axes
+## Getting started
 
-- **Competition** — which variant is live (`ACTIVE_COMPETITION`). A plugin registers a `Competition`
-  subclass into the core registry on app startup; the engine stays variant-agnostic.
-- **Compute backend** — *what a worker is* (`EXECUTION_BACKEND = aws | local_docker`). A competition
-  emits steps that "run on a worker"; the backend decides whether that is an EC2 instance or a
-  Docker container. Concurrency is one core setting, `max_parallel_nodes` — a worker runs its
-  benchmarks sequentially; N workers run in parallel.
+You don't run this repo on its own — run a variant, which mounts this one as its core. Clone
+both **side by side** under the same parent directory:
 
-## Repo layout
+```bash
+git clone <this-repo>       comp-eval-platform
+git clone <variant-repo>    vnn-comp-new      # or arch-comp-new
+cd vnn-comp-new && docker compose up --build
+```
 
-This repo is the **core library** (published as the `comp-eval-platform` pip package). A variant is a
-separate repo (e.g. `vnn-comp`) containing its plugin app **plus** its deploy config, depending on
-this package. Core updates are a version bump, never a fork merge.
+See the variant's README (`vnn-comp-new`, `arch-comp-new`) for its port and details.
+
+## Requirements
+
+- Docker + Docker Compose (Docker Desktop on macOS/Windows). The dev backend mounts the host
+  Docker socket to run worker containers.
+- Git.
+
+## Tests
+
+```bash
+docker run --rm -v "$PWD:/core" -w /core python:3.11-slim \
+  sh -c "pip install -q -e '.[dev]' && pytest"
+```
 
 ## Design
 
-See [`docs/unified-platform.md`](docs/unified-platform.md) for the full architecture and the
-decisions behind it.
-
-## Status
-
-Early scaffolding. Built out of the VNN-COMP orchestrator; see the design doc for the migration path.
+Full architecture and rationale in [`docs/unified-platform.md`](docs/unified-platform.md).
