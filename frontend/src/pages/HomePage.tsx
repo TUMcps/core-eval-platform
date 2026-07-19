@@ -10,6 +10,7 @@ import { competitionApi } from '../api';
 import type { CompetitionInfo } from '../api';
 import { bootCompetition } from '../branding';
 import { COMPETITION_YEAR } from '../constants/formOptions';
+import CrescendoWave from '../components/CrescendoWave';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -39,7 +40,8 @@ export default function HomePage() {
                   <Typography variant={user ? 'h2' : 'h1'} sx={{ fontSize: { xs: '2.6rem', md: user ? '3.2rem' : '5rem' }, fontWeight: 800, lineHeight: 1.1, color: '#000' }}>
                     {user ? `Welcome ${user.name || user.email}` : `${name} ${COMPETITION_YEAR}`}
                   </Typography>
-                  <Box aria-hidden sx={{ display: { xs: 'none', lg: 'block' }, flex: 1, minWidth: 24, height: 6, mb: '8px', borderRadius: 999, bgcolor: 'primary.main' }} />
+                  <CrescendoWave height={6} waveHeight={44} strokeWidth={6} mb="10px"
+                    sx={{ display: { xs: 'none', lg: 'block' } }} />
                 </Box>
                 <Typography variant="h5" sx={{ fontSize: { xs: '1.1rem', md: '1.4rem' }, mb: 4, lineHeight: 1.6, color: '#374151', fontWeight: 400 }}>
                   {tagline}

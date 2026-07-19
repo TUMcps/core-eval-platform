@@ -8,6 +8,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import FooterWave from './components/FooterWave';
 import RouteTitle from './components/RouteTitle';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
@@ -81,6 +82,7 @@ export default function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Box>
+            <FooterWave />
             <Footer />
           </Box>
         </Router>
