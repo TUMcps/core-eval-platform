@@ -13,12 +13,12 @@ import DetailRow from '../components/DetailRow';
 import SubmissionDetails from '../components/SubmissionDetails';
 import DeleteSubmissionDialog from '../components/DeleteSubmissionDialog';
 import TaskPipeline from '../components/TaskPipeline';
+import TaskTimer from '../components/TaskTimer';
 import { useAuth } from '../context/AuthContext';
 import { tasksApi, benchmarksApi } from '../api';
 import type { Task, Benchmark } from '../api';
 import { statusChip } from '../constants/status';
 import { isPauseKind } from '../constants/steps';
-import { formatDateTime } from '../utils/datetime';
 import { usePageTitle } from '../hooks/usePageTitle';
 
 const REFRESH_MS = 10000;
@@ -89,7 +89,7 @@ export default function BenchmarkDetailsPage() {
             <Stack direction="row" spacing={1.5} alignItems="center">
               <Chip label={overall.label} color={overall.color} variant={overall.variant} />
               {!task.done && <LiveIndicator label="Live" />}
-              <Typography variant="body2" color="text.secondary">Submitted {formatDateTime(task.created_at)}</Typography>
+              <TaskTimer task={task} />
             </Stack>
           </Box>
           <Stack direction="row" spacing={1.5}>
