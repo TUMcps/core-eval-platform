@@ -11,25 +11,34 @@
 #
 # Params (env, from the step handler): benchmark_ip task_id repository hash script_dir
 # version run_as_root tool_dir. ROOT_URL comes from the backend environment. NODE_SSH_KEY
-# locates the node key. tool_dir is where the tool is cloned (so the variant's run script
-# finds it); defaults to "tool".
+# locates the node key. COMP_LABEL / COMP_LOG_LIB (seeded by shell.py) drive the shared
+# logging. tool_dir is where the tool is cloned (so the variant's run script finds it);
+# defaults to "tool".
 set -eu
 
 ssh_key="${NODE_SSH_KEY:-$HOME/.ssh/vnncomp.pem}"
 tool_dir="${tool_dir:-tool}"
+log_lib="${COMP_LOG_LIB:-$(dirname "$0")/../lib/log.sh}"
+node="ubuntu@${benchmark_ip}"
+ssh_opts="-o StrictHostKeyChecking=accept-new -i ${ssh_key}"
 remote_script_path="/home/ubuntu/install_tool_${task_id}.sh"
 remote_log_path="/home/ubuntu/logs/install.log"
 
 if [ "${run_as_root:-false}" = "true" ]; then sudo="sudo -E"; else sudo=""; fi
 
-ssh -o StrictHostKeyChecking=accept-new -i "${ssh_key}" "ubuntu@${benchmark_ip}" \
+# Ship the shared logging helpers so the remote banners match every other stage.
+ssh $ssh_opts "$node" "mkdir -p /home/ubuntu/logs"
+scp $ssh_opts "${log_lib}" "${node}:/home/ubuntu/comp_log.sh"
+
+ssh $ssh_opts "$node" \
     "cat > ${remote_script_path} <<'REMOTE_SCRIPT'
 #!/bin/bash
+export COMP_LABEL=\"${COMP_LABEL:-COMP-EVAL}\"
+. /home/ubuntu/comp_log.sh
 cd /home/ubuntu || exit 1
 mkdir -p logs
 exec > >(tee ${remote_log_path}) 2>&1
-set -x
-echo '[INFO] tool installation started'
+log_stage 'Start — installing tool'
 
 report() {  # success|failure — POST the log tail so the error survives node teardown
     tail -c 200000 ${remote_log_path} > /tmp/install_${task_id}.tail 2>/dev/null || true
@@ -45,15 +54,26 @@ else
     export PATH=\"/home/ubuntu/anaconda3/bin:\$PATH\"
 fi
 
-rm -rf ${tool_dir} \
-    && git clone ${repository} ${tool_dir} \
-    && if [ -n \"${hash}\" ]; then git -C ${tool_dir} checkout ${hash}; fi \
-    && cd ${tool_dir}/${script_dir} \
-    && ls install_tool.sh prepare_instance.sh run_instance.sh \
-    && chmod +x install_tool.sh prepare_instance.sh run_instance.sh \
-    && ${sudo} env SHELLOPTS=xtrace /bin/bash install_tool.sh ${version} \
-    && report success \
-    || report failure
+install_tool() {
+    log_step 'Cloning ${repository}'
+    rm -rf ${tool_dir} || return 1
+    git clone ${repository} ${tool_dir} || return 1
+    if [ -n \"${hash}\" ]; then git -C ${tool_dir} checkout ${hash} || return 1; fi
+    cd ${tool_dir}/${script_dir} || return 1
+    log_info 'checking the tool ships install_tool.sh, prepare_instance.sh, run_instance.sh'
+    ls install_tool.sh prepare_instance.sh run_instance.sh || return 1
+    chmod +x install_tool.sh prepare_instance.sh run_instance.sh
+    log_step 'RUNNING install_tool.sh ${version}:'
+    ${sudo} /bin/bash install_tool.sh ${version}
+}
+
+if install_tool; then
+    log_stage 'End — tool installed'
+    report success
+else
+    log_stage 'End — tool installation FAILED'
+    report failure
+fi
 REMOTE_SCRIPT
 chmod +x ${remote_script_path}
 tmux kill-session -t installation 2>/dev/null

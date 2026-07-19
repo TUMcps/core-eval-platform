@@ -36,12 +36,32 @@ def _path(dir: str, script: str) -> str:
     return core if os.path.isfile(core) else plugin
 
 
+def _competition_label() -> str:
+    """The active competition's display name, tagged onto every node log line so a
+    reader knows which competition produced it. Falls back if unavailable."""
+    try:
+        from comp_eval_platform.competitions import get_competition
+
+        return get_competition().display_name or "COMP-EVAL"
+    except Exception:
+        return "COMP-EVAL"
+
+
+def _script_env(params: dict) -> dict:
+    """Base environment for a node script: the process env plus the caller's params,
+    with the harmonized-logging knobs seeded once here (``COMP_LABEL`` = competition
+    name for log tags, ``COMP_LOG_LIB`` = the shared log.sh wrappers ship to the node)."""
+    env = dict(os.environ, **(params or {}))
+    env.setdefault("COMP_LABEL", _competition_label())
+    env.setdefault("COMP_LOG_LIB", os.path.join(_core_script_root(), "lib", "log.sh"))
+    return env
+
+
 def _get(dir: str, script: str, params: dict = None, *, timeout: int = 15) -> str:
-    params = params or {}
     try:
         stdout = subprocess.check_output(
             [_path(dir, script)],
-            env=dict(os.environ, **params),
+            env=_script_env(params),
             stderr=subprocess.STDOUT,
             timeout=timeout,
         ).decode("ascii", errors="ignore")
@@ -55,10 +75,9 @@ def _get(dir: str, script: str, params: dict = None, *, timeout: int = 15) -> st
 def _ping(dir: str, script: str, params: dict = None) -> None:
     """Fire-and-forget: start the script, ignore its output (the node reports back
     via the /update/<id>/success|failure callback)."""
-    params = params or {}
     subprocess.Popen(
         [_path(dir, script)],
-        env=dict(os.environ, **params),
+        env=_script_env(params),
         stderr=subprocess.STDOUT,
     )
 
