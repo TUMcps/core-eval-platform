@@ -4,9 +4,10 @@ Core engine for a modular **competition-evaluation platform**. Users submit tool
 benchmarks; the code runs on a provisioned worker, and results are collected, scored, and
 displayed. Django REST backend + React/TypeScript (Vite) frontend.
 
-Individual competitions are **plugins** in their own repos ([`vnn-comp`](../vnn-comp-new),
-[`arch-comp`](../arch-comp-new), …). This repo is the shared library they all depend on; each
-deployment runs exactly one variant.
+Individual competitions are **plugins** in their own repos
+([`vnn-comp`](https://github.com/VNN-COMP/vnn-eval-platform),
+[`arch-comp`](https://github.com/ARCH-COMP/arch-eval-platform), …). This repo is the shared
+library they all depend on; each deployment runs exactly one variant.
 
 ## Getting started
 
@@ -14,8 +15,9 @@ You don't run this repo on its own — run a variant, which mounts this one as i
 both **side by side** under the same parent directory:
 
 ```bash
-git clone <this-repo>       comp-eval-platform
-git clone <variant-repo>    vnn-comp-new      # or arch-comp-new
+git clone https://github.com/TUMcps/core-eval-platform.git   comp-eval-platform
+git clone https://github.com/VNN-COMP/vnn-eval-platform.git  vnn-comp-new
+# ...or the ARCH variant: https://github.com/ARCH-COMP/arch-eval-platform.git  arch-comp-new
 cd vnn-comp-new && docker compose up --build
 ```
 
