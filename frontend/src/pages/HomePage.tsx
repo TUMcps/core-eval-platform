@@ -38,7 +38,7 @@ export default function HomePage() {
                     doesn't fit the centered mobile hero. */}
                 <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, mb: 3 }}>
                   <Typography variant={user ? 'h2' : 'h1'} sx={{ fontSize: { xs: '2.6rem', md: user ? '3.2rem' : '5rem' }, fontWeight: 800, lineHeight: 1.1, color: '#000' }}>
-                    {user ? `Welcome ${user.name || user.email}` : `${name} ${COMPETITION_YEAR}`}
+                    {user ? `Welcome, ${user.name || user.email}` : `${name} ${COMPETITION_YEAR}`}
                   </Typography>
                   <CrescendoWave height={6} waveHeight={44} strokeWidth={6} mb="10px"
                     sx={{ display: { xs: 'none', lg: 'block' } }} />
