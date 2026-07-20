@@ -15,17 +15,17 @@ library they all depend on; each deployment runs exactly one variant.
 
 ## Getting started
 
-You don't run this repo on its own — run a variant, which mounts this one as its core. Clone
-both **side by side** under the same parent directory:
+You don't run this repo on its own — run a variant, which vendors this repo as a pinned
+`./core` git submodule. Clone the variant recursively:
 
 ```bash
-git clone https://github.com/TUMcps/core-eval-platform.git   comp-eval-platform
-git clone https://github.com/VNN-COMP/vnn-eval-platform.git  vnn-comp-new
-# ...or the ARCH variant: https://github.com/ARCH-COMP/arch-eval-platform.git  arch-comp-new
-cd vnn-comp-new && docker compose up --build
+git clone --recurse-submodules https://github.com/VNN-COMP/vnn-eval-platform.git
+# ...or the ARCH variant: https://github.com/ARCH-COMP/arch-eval-platform.git
+cd vnn-eval-platform && docker compose up --build
 ```
 
-See the variant's README (`vnn-comp-new`, `arch-comp-new`) for its port and details.
+See the variant's README for its port and details. A variant moves its core pin with
+[`scripts/bump-core.sh`](scripts/bump-core.sh), shipped here and run as `core/scripts/bump-core.sh`.
 
 ## Requirements
 
