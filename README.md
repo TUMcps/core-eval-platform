@@ -1,4 +1,8 @@
-# comp-eval-platform
+# Core Evaluation Platform
+
+This is the core component powering the evaluation platforms of **[VNN-COMP](https://github.com/VNN-COMP/vnn-eval-platform)**
+and **[ARCH-COMP](https://github.com/ARCH-COMP/arch-eval-platform)** — the shared engine both
+competitions build on.
 
 Core engine for a modular **competition-evaluation platform**. Users submit tools and
 benchmarks; the code runs on a provisioned worker, and results are collected, scored, and
