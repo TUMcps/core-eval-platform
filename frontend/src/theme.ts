@@ -4,6 +4,31 @@ import { createTheme, lighten } from '@mui/material/styles';
 // the near-black slate is the neutral default when a variant sets no color.
 const DEFAULT_PRIMARY = '#111827';
 
+/** Color stops parsed out of a CSS ``linear-gradient(...)`` so SVG strokes (the
+ *  decorative waves) can reuse the same gradient the navbar/buttons paint. */
+export interface WaveGradient { stops: { offset: string; color: string }[]; }
+
+/** Pull the color stops out of a CSS linear-gradient string; null if it isn't one.
+ *  Missing stop offsets are spread evenly, so both `#a, #b` and `#a 0%, #b 100%` work.
+ *  The angle is dropped — the waves are thin horizontal rules, so the gradient always
+ *  runs left→right regardless. */
+export function parseWaveGradient(css?: string): WaveGradient | null {
+  const inner = css?.match(/linear-gradient\(([^)]*)\)/i)?.[1];
+  if (!inner) return null;
+  const parts = inner.split(',').map((s) => s.trim());
+  if (/^[-\d.]+deg$/i.test(parts[0]) || /^to\s/i.test(parts[0])) parts.shift();
+  const raw = parts.map((p) => { const [color, offset] = p.split(/\s+/); return { color, offset }; });
+  if (raw.length < 2) return null;
+  const stops = raw.map((s, i) => ({ color: s.color, offset: s.offset || `${(i / (raw.length - 1)) * 100}%` }));
+  return { stops };
+}
+
+// Expose the parsed gradient on the theme so leaf components (the waves) can read it.
+declare module '@mui/material/styles' {
+  interface Theme { waveGradient: WaveGradient | null; }
+  interface ThemeOptions { waveGradient?: WaveGradient | null; }
+}
+
 // Soft "pill" palette for status chips (Active / Done / Aborted / ...), matching the
 // subtle look from the design mock: pale background + darker text instead of MUI's
 // default saturated filled chips.
@@ -19,12 +44,18 @@ const softChipColors: Record<string, { backgroundColor: string; color: string; h
   info: { backgroundColor: '#e1f5fe', color: '#0277bd', hover: '#cfeefc' },
 };
 
-export const buildTheme = (primaryColor?: string) => {
+export const buildTheme = (primaryColor?: string, navbarGradient?: string, accentColor?: string) => {
 const primary = primaryColor || DEFAULT_PRIMARY;
+const waveGradient = parseWaveGradient(navbarGradient);
+// Color for outlined/secondary buttons: an explicit accent_color if the variant
+// sets one (e.g. the gradient's trailing color), else the gradient's leading
+// (left-edge) color so they match where the navbar gradient starts.
+const accent = accentColor || waveGradient?.stops[0]?.color;
 return createTheme({
+  waveGradient,
   palette: {
     primary: { main: primary, contrastText: '#ffffff' },
-    secondary: { main: '#2563eb' }, // accent blue
+    secondary: { main: accent || '#2563eb' },
     background: { default: '#f7f8fa', paper: '#ffffff' },
     text: { primary: '#1f2937', secondary: '#6b7280' },
     divider: '#e5e7eb',
@@ -64,11 +95,29 @@ return createTheme({
             boxShadow: 'inset 0 0 0 1px currentColor, 0 2px 6px rgba(16,24,40,0.12)',
           },
         },
-        // Dark primaries make MUI's auto-darkened hover invisible and
-        // disableElevation strips the shadow — lift to a lighter shade instead.
-        containedPrimary: {
-          '&:hover': { backgroundColor: lighten(primary, 0.18) },
-        },
+        // Match the navbar: gradient competitions get gradient-filled primary
+        // buttons (brightened on hover, since a gradient has no single shade to
+        // lighten). Solid competitions keep the flat fill — dark primaries make
+        // MUI's auto-darkened hover invisible and disableElevation strips the
+        // shadow, so lift to a lighter shade instead.
+        containedPrimary: navbarGradient
+          ? {
+              // Scope the gradient to enabled buttons so a disabled button keeps
+              // MUI's grey fill (the gradient is a background-image that would
+              // otherwise show through the disabled background-color).
+              '&:not(.Mui-disabled)': { background: navbarGradient },
+              '&:hover': { filter: 'brightness(1.08)' },
+            }
+          : { '&:hover': { backgroundColor: lighten(primary, 0.18) } },
+        // Outlined buttons draw in the accent color (gradient end/start per variant)
+        // so they match the navbar (error/others keep their own color).
+        ...(accent ? {
+          outlinedPrimary: {
+            color: accent,
+            borderColor: accent,
+            '&:hover': { borderColor: accent },
+          },
+        } : {}),
       },
     },
     MuiContainer: {
@@ -83,9 +132,9 @@ return createTheme({
       },
     },
     MuiAppBar: {
-      defaultProps: { elevation: 0, color: 'inherit' },
+      defaultProps: { elevation: 0, color: 'primary' },
       styleOverrides: {
-        root: { borderBottom: '1px solid #e5e7eb', backgroundColor: '#ffffff' },
+        root: { background: navbarGradient || primary, color: '#ffffff' },
       },
     },
     MuiOutlinedInput: {

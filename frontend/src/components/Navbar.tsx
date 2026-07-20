@@ -35,16 +35,16 @@ export default function Navbar() {
   const handleLogout = async () => { close(); await logout(); navigate('/login'); };
 
   return (
-    <AppBar position="static" sx={{ bgcolor: 'white', color: '#2c3e50', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+    <AppBar position="static">
       <Container>
         <Toolbar disableGutters sx={{ gap: 2, py: 2.5 }}>
           <Typography component={Link} to="/" variant="h5"
-            sx={{ fontWeight: 'bold', color: '#2c3e50', mr: 1, textDecoration: 'none' }}>
+            sx={{ fontWeight: 'bold', color: 'inherit', mr: 1, textDecoration: 'none' }}>
             {brand} {COMPETITION_YEAR}
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
           <Button onClick={(e) => setMenuAnchor(e.currentTarget)} aria-haspopup="true"
-            sx={{ color: '#2c3e50', minWidth: 'auto', gap: 1 }}>
+            sx={{ color: 'inherit', minWidth: 'auto', gap: 1 }}>
             {user && <Box component="span" sx={{ fontWeight: 700, fontSize: '1rem' }}>{user.name || user.email}</Box>}
             <Box component="span" sx={{ fontSize: '1.25rem', lineHeight: 1 }}>Ξ</Box>
           </Button>

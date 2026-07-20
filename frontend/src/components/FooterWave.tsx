@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box';
-import { useMemo } from 'react';
+import { useTheme } from '@mui/material/styles';
+import { useId, useMemo } from 'react';
 
 // Wave geometry in the SVG's own viewBox units (stretched to the box width via
 // preserveAspectRatio="none"; the stroke stays crisp through vector-effect below).
@@ -34,6 +35,8 @@ function useDampedWavePath() {
  */
 export default function FooterWave() {
   const d = useDampedWavePath();
+  const gradient = useTheme().waveGradient;
+  const gid = 'fwave-' + useId().replace(/[^a-zA-Z0-9]/g, '');
   return (
     <Box aria-hidden sx={{ display: 'flex', justifyContent: 'flex-start', py: { xs: 3, md: 5 }, color: 'primary.main' }}>
       <Box
@@ -42,10 +45,17 @@ export default function FooterWave() {
         preserveAspectRatio="none"
         sx={{ width: '50%', height: VIEW_H, overflow: 'visible' }}
       >
+        {gradient && (
+          <defs>
+            <linearGradient id={gid} x1="0" y1="0" x2="1" y2="0">
+              {gradient.stops.map((s, i) => <stop key={i} offset={s.offset} stopColor={s.color} />)}
+            </linearGradient>
+          </defs>
+        )}
         <path
           d={d}
           fill="none"
-          stroke="currentColor"
+          stroke={gradient ? `url(#${gid})` : 'currentColor'}
           strokeWidth={4}
           strokeLinecap="round"
           strokeLinejoin="round"

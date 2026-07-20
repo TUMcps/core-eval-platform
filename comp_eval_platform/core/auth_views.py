@@ -143,6 +143,8 @@ def competition_info(request):
                 "hero_image": pres.branding.hero_image,
                 "hero_max_width": pres.branding.hero_max_width,
                 "favicon": pres.branding.favicon,
+                "navbar_gradient": pres.branding.navbar_gradient,
+                "accent_color": pres.branding.accent_color,
             },
             "landing": {
                 "tagline": pres.landing.tagline,

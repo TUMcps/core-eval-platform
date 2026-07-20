@@ -45,7 +45,7 @@ export default function App() {
     competitionApi.cached().then((c) => setBranding(c.presentation?.branding ?? null)).catch(() => {});
   }, []);
   useEffect(() => { if (branding?.favicon) setFavicon(branding.favicon); }, [branding?.favicon]);
-  const theme = useMemo(() => buildTheme(branding?.primary_color), [branding?.primary_color]);
+  const theme = useMemo(() => buildTheme(branding?.primary_color, branding?.navbar_gradient, branding?.accent_color), [branding?.primary_color, branding?.navbar_gradient, branding?.accent_color]);
 
   return (
     <ThemeProvider theme={theme}>

@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { useMemo } from 'react';
+import { useTheme } from '@mui/material/styles';
+import { useId, useMemo } from 'react';
 
 // Wave geometry, in the SVG's own viewBox units (stretched to the leftover width via
 // preserveAspectRatio="none"; the stroke stays crisp through vector-effect below).
@@ -49,6 +50,8 @@ export default function CrescendoWave({
   sx?: SxProps<Theme>;
 }) {
   const path = useWavePath();
+  const gradient = useTheme().waveGradient;
+  const gid = 'cwave-' + useId().replace(/[^a-zA-Z0-9]/g, '');
   return (
     <Box aria-hidden sx={{ position: 'relative', flex: 1, minWidth: 24, height, mb, color: 'primary.main', ...sx }}>
       <Box
@@ -57,10 +60,17 @@ export default function CrescendoWave({
         preserveAspectRatio="none"
         sx={{ position: 'absolute', left: 0, top: '50%', width: '100%', height: waveHeight, transform: 'translateY(-50%)', overflow: 'visible' }}
       >
+        {gradient && (
+          <defs>
+            <linearGradient id={gid} x1="0" y1="0" x2="1" y2="0">
+              {gradient.stops.map((s, i) => <stop key={i} offset={s.offset} stopColor={s.color} />)}
+            </linearGradient>
+          </defs>
+        )}
         <path
           d={path}
           fill="none"
-          stroke="currentColor"
+          stroke={gradient ? `url(#${gid})` : 'currentColor'}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeLinejoin="round"

@@ -70,7 +70,7 @@ export interface ToolkitFormData {
 }
 export interface Track { id: string; name: string; description: string; benchmarks: number[]; created_at: string; }
 export interface FieldSpec { name: string; type: string; options?: string[]; }
-export interface Branding { primary_color: string; hero_image: string; hero_max_width: number; favicon: string; }
+export interface Branding { primary_color: string; hero_image: string; hero_max_width: number; favicon: string; navbar_gradient?: string; accent_color?: string; }
 export interface LandingLink { label: string; url: string; }
 export interface Related { text?: string; label?: string; url?: string; }
 export interface Landing { tagline: string; links: LandingLink[]; contacts: string[]; related: Related; }

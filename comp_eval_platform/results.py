@@ -43,6 +43,13 @@ class Branding:
     hero_max_width: int = 0
     #: Browser-tab icon, same URL rules as ``hero_image``.
     favicon: str = ""
+    #: Optional CSS background for the navbar (e.g. a ``linear-gradient(...)``).
+    #: Empty falls back to a solid fill of ``primary_color``.
+    navbar_gradient: str = ""
+    #: Optional color (hex) for outlined/secondary buttons. Empty derives it from
+    #: the gradient's leading color (or ``primary_color``). Set e.g. to the gradient's
+    #: trailing color to make those buttons match the far end of the ramp.
+    accent_color: str = ""
 
 
 @dataclass
