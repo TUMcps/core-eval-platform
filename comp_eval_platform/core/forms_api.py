@@ -51,6 +51,7 @@ def toolkit_form_data(request):
         ],
         "run_networks_options": [
             {"value": "all", "label": "All instances (final evaluation)"},
+            {"value": "random10", "label": "10 random instances"},
             {"value": "first", "label": "First instance only (test)"},
         ],
         "benchmark_categories": categories,

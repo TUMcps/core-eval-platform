@@ -21,6 +21,13 @@ def test_create_and_run_tool(api, category):
     assert len(body["steps"]) == 3
 
 
+def test_toolkit_form_exposes_the_random10_mode(api):
+    resp = api.get("/api/toolkit/form_data/")
+    assert resp.status_code == 200, resp.content
+    modes = resp.json()["run_networks_options"]
+    assert [m["value"] for m in modes] == ["all", "random10", "first"]
+
+
 def test_run_requires_enabled_user(category):
     from rest_framework.test import APIClient
 
