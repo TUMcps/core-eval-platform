@@ -56,7 +56,7 @@ export default function ToolkitSubmissionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const isDocker = data?.execution_backend === 'local_docker';
+  const isDocker = data?.execution_backend !== 'aws';
   const canSubmit = data?.can_submit ?? true;
   const schedulerEnabled = data?.scheduler_enabled ?? true;
   const usesCategories = data?.uses_categories ?? false;

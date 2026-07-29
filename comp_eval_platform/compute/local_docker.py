@@ -73,7 +73,7 @@ class LocalDockerBackend(ComputeBackend):
         return proc.stdout.strip()
 
     # -- lifecycle --------------------------------------------------------
-    def provision(self, node_type: str, image: str, eni=None) -> None:
+    def provision(self, node_type: str, image: str, eni=None, owner=None) -> None:
         try:
             name = f"{_env('VNNCOMP_DOCKER_NAME_PREFIX', 'eval')}-{uuid.uuid4().hex[:12]}"
             run_args = [

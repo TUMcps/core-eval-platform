@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 #: and register itself (AppConfig.ready). Read by competitions.get_competition().
 ACTIVE_COMPETITION = config("ACTIVE_COMPETITION", default="")
 #: What a worker is, on the (orthogonal) compute axis.
-EXECUTION_BACKEND = config("EXECUTION_BACKEND", default="local_docker")  # aws | local_docker
+EXECUTION_BACKEND = config("EXECUTION_BACKEND", default="local_docker")  # aws | local_docker | remote_docker
 #: How many workers the scheduler keeps busy in parallel. Each worker still runs
 #: its benchmarks sequentially.
 MAX_PARALLEL_NODES = config("MAX_PARALLEL_NODES", default=1, cast=int)
@@ -108,6 +108,10 @@ REST_FRAMEWORK = {
 
 # ROOT_URL must be reachable by the node (it curls callbacks back to us).
 ROOT_URL = config("ROOT_URL", default="http://localhost:8000")
+
+# Remote Docker worker service (used by the website when EXECUTION_BACKEND=remote_docker).
+REMOTE_DOCKER_WORKER_URL = config("REMOTE_DOCKER_WORKER_URL", default="http://localhost")
+REMOTE_DOCKER_WORKER_PORT = config("REMOTE_DOCKER_WORKER_PORT", default=9001, cast=int)
 
 # Bytes of a running step's node log tailed into the DB each tick (and sent to the
 # detail page). Bounded so a progress-bar-spamming generator can't bloat the row or

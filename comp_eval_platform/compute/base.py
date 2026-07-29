@@ -27,7 +27,7 @@ class ComputeBackend(ABC):
         """Reconcile Node rows with reality (create/update/delete, set reachability)."""
 
     @abstractmethod
-    def provision(self, node_type: str, image: str, eni: Optional[str] = None) -> None:
+    def provision(self, node_type: str, image: str, eni: Optional[str] = None, owner=None) -> None:
         """Start a new worker of the given type/image. ``image`` is an AMI id (aws) or
         a Docker image ref (local_docker), already passed through ``resolve_image``.
         Raises ProvisionError (with the backend's own error) if the worker cannot start
@@ -53,8 +53,9 @@ def _registry() -> dict:
     if not _REGISTRY:
         from .aws import AwsBackend
         from .local_docker import LocalDockerBackend
+        from .remote_docker import RemoteDockerBackend
 
-        for cls in (AwsBackend, LocalDockerBackend):
+        for cls in (AwsBackend, LocalDockerBackend, RemoteDockerBackend):
             _REGISTRY[cls.name] = cls
     return _REGISTRY
 

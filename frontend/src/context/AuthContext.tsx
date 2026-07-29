@@ -8,7 +8,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
-  updateProfile: (data: { name?: string; email?: string }) => Promise<void>;
+  updateProfile: (data: { name?: string; email?: string; worker_service_url?: string; worker_service_port?: number | null }) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => { setUser(await authApi.login(email, password)); };
   const signup = async (name: string, email: string, password: string) => { await authApi.signup(name, email, password); };
-  const updateProfile = async (data: { name?: string; email?: string }) => { setUser(await authApi.updateProfile(data)); };
+  const updateProfile = async (data: { name?: string; email?: string; worker_service_url?: string; worker_service_port?: number | null }) => { setUser(await authApi.updateProfile(data)); };
   const logout = async () => { await authApi.logout(); setUser(null); };
 
   return (
