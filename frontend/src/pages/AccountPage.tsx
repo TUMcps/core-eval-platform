@@ -17,12 +17,15 @@ export default function AccountPage() {
   const { user, updateProfile } = useAuth();
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
+  const [workerServiceUrl, setWorkerServiceUrl] = useState(user?.worker_service_url ?? '');
+  const [workerServicePort, setWorkerServicePort] = useState(user?.worker_service_port?.toString() ?? '');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
   const nameDirty = name.trim() !== (user?.name ?? '');
   const emailDirty = email.trim() !== (user?.email ?? '');
+  const workerServiceDirty = workerServiceUrl.trim() !== (user?.worker_service_url ?? '') || workerServicePort.trim() !== (user?.worker_service_port?.toString() ?? '');
 
-  const save = async (patch: { name?: string; email?: string }, label: string) => {
+  const save = async (patch: { name?: string; email?: string; worker_service_url?: string; worker_service_port?: number | null }, label: string) => {
     setSaving(true);
     try { await updateProfile(patch); setToast(label); }
     catch (e: any) { setToast(e?.response?.data?.detail ?? 'Update failed'); }
@@ -53,6 +56,18 @@ export default function AccountPage() {
         </Box>
         <Divider sx={{ my: 2 }} />
         <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>Worker service</Typography>
+          <Stack spacing={1.5}>
+            <TextField size="small" value={workerServiceUrl} onChange={(e) => setWorkerServiceUrl(e.target.value)} placeholder="lab-worker.example.com" label="Worker URL / host" />
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <TextField size="small" type="number" value={workerServicePort} onChange={(e) => setWorkerServicePort(e.target.value)} placeholder="9001" label="Port" sx={{ flexGrow: 1, maxWidth: 180 }} />
+              <Button variant="contained" size="small" disabled={!workerServiceDirty || saving} onClick={() => save({ worker_service_url: workerServiceUrl.trim(), worker_service_port: workerServicePort.trim() ? Number(workerServicePort) : null }, 'Worker service updated')}>Save</Button>
+            </Stack>
+          </Stack>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Leave blank to use the deployment default worker service.</Typography>
+        </Box>
+        <Divider sx={{ my: 2 }} />
+        <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle2" color="text.secondary">Role</Typography>
           <Box sx={{ mt: 0.5 }}><Chip label={user?.role || '—'} color={user?.is_admin ? 'primary' : 'default'} /></Box>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Organizers curate tracks/benchmarks; admins have full control.</Typography>
@@ -64,7 +79,7 @@ export default function AccountPage() {
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Enabled accounts may submit.</Typography>
         </Box>
         {(() => {
-          const isDocker = user?.execution_backend === 'local_docker';
+          const isDocker = user?.execution_backend !== 'aws';
           const showEni = !!user?.aws_eni && !isDocker;  // ENI is an AWS concept only
           if (!user?.aws_mac && !showEni) return null;
           return (

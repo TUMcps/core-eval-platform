@@ -8,7 +8,10 @@ from .models import Benchmark, Category, Instance, Result, Task, TaskStep, Tool,
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email", "name", "role", "enabled", "is_admin", "is_organizer", "created_at"]
+        fields = [
+            "id", "email", "name", "role", "enabled", "is_admin", "is_organizer",
+            "aws_eni", "aws_mac", "worker_service_url", "worker_service_port", "created_at",
+        ]
         read_only_fields = ["id", "email", "name", "is_admin", "is_organizer", "created_at"]
 
 

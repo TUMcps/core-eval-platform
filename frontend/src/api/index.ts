@@ -14,6 +14,8 @@ export interface User {
   created_at: string;
   aws_eni?: string;
   aws_mac?: string;
+  worker_service_url?: string;
+  worker_service_port?: number | null;
   execution_backend?: string;
 }
 
@@ -100,7 +102,7 @@ export const authApi = {
   login: (email: string, password: string) => apiClient.post<User>('/api/auth/login/', { email, password }).then((r) => r.data),
   signup: (name: string, email: string, password: string) => apiClient.post<User>('/api/auth/signup/', { name, email, password }).then((r) => r.data),
   logout: () => apiClient.post('/api/auth/logout/'),
-  updateProfile: (data: { name?: string; email?: string }) => apiClient.patch<User>('/api/auth/profile/', data).then((r) => r.data),
+  updateProfile: (data: { name?: string; email?: string; worker_service_url?: string; worker_service_port?: number | null }) => apiClient.patch<User>('/api/auth/profile/', data).then((r) => r.data),
 };
 
 // Seed from the payload the Vite plugin injected into <head> (window.__COMPETITION__),
