@@ -9,6 +9,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from .evaluation_modes import EVALUATION_MODE_OPTIONS
+
 # Config-option keys carried on a toolkit submission (stored in Tool.extra and read
 # by the competition's build_steps / step handlers).
 _TOOLKIT_EXTRA_KEYS = [
@@ -49,11 +51,7 @@ def toolkit_form_data(request):
             {"value": "ubuntu:22.04", "label": "Ubuntu 22.04 (Docker)"},
             {"value": "ami-0892d3c7ee96c0bf7", "label": "Ubuntu 22.04 base AMI"},
         ],
-        "run_networks_options": [
-            {"value": "all", "label": "All instances (final evaluation)"},
-            {"value": "random10", "label": "10 random instances"},
-            {"value": "first", "label": "First instance only (test)"},
-        ],
+        "run_networks_options": list(EVALUATION_MODE_OPTIONS),
         "benchmark_categories": categories,
         "default_eni": getattr(request.user, "aws_eni", "") or "",
     })
