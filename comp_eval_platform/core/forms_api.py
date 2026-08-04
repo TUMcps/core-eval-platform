@@ -77,6 +77,7 @@ def benchmark_form_data(request):
     return Response({
         "scheduler_enabled": s.scheduler_enabled,
         "can_submit": s.users_can_submit_benchmarks or getattr(request.user, "is_admin", False),
+        "execution_backend": s.execution_backend,
         # Categories are only user-chosen for variants that use them (ARCH); VNN
         # files every benchmark under a single implicit 'default' category.
         "uses_categories": comp.uses_categories,

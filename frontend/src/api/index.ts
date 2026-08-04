@@ -57,7 +57,7 @@ export interface BenchmarkProgress { name: string; state: string; step_id: numbe
 export interface Task {
   id: number; tool: number | null; benchmark: number | null; category: string | null;
   category_name: string | null; outcome: string;
-  current_step: string | null; total_runtime: number | null; created_at: string;
+  execution_backend: string; current_step: string | null; total_runtime: number | null; created_at: string;
   steps: TaskStep[]; name: string; status: string; done: boolean; repository: string; hash: string;
   benchmark_progress: BenchmarkProgress[]; user_email: string | null; user_name: string | null;
 }
@@ -147,7 +147,7 @@ export const resultsApi = {
 };
 
 export interface BenchmarkFormData {
-  scheduler_enabled: boolean; can_submit: boolean;
+  scheduler_enabled: boolean; can_submit: boolean; execution_backend: string;
   uses_categories: boolean; categories: { id: string; name: string }[];
   benchmark_fields: FieldSpec[];
 }
