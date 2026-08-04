@@ -8,8 +8,8 @@ from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.utils import timezone
-
-from .base import ComputeBackend, ImageError, ProvisionError
+# Updated import: Inheriting from BaseDockerBackend
+from .base import BaseDockerBackend
 from .shell import service_id
 
 
@@ -31,15 +31,15 @@ def _json_request(base_url: str, path: str, payload: dict | None = None, *, time
         raise ProvisionError(f"remote worker service {url} failed: {exc}") from exc
 
 
-class RemoteDockerBackend(ComputeBackend):
+class RemoteDockerBackend(BaseDockerBackend):
+    """Remote Docker compute backend, leveraging shared helpers from BaseDockerBackend."""
     name = "remote_docker"
 
-    def resolve_image(self, image: str) -> str:
-        if not image:
-            return "ubuntu:22.04"
-        if image.startswith("ami-"):
-            raise ImageError("AWS AMI ids cannot run on remote Docker; submit a Docker image reference instead.")
-        return image
+    # Overrides the error message generator from BaseDockerBackend.
+    # The common resolve_image logic is now inherited, eliminating code duplication.
+    def image_error_message(self, image: str) -> str:
+        """Remote Docker specific error message when an invalid AWS AMI is requested."""
+        return "AWS AMI ids cannot run on remote Docker; submit a Docker image reference instead."
 
     def worker_service_url_for_user(self, user) -> str:
         host = getattr(user, "worker_service_url", "") or getattr(settings, "REMOTE_DOCKER_WORKER_URL", "localhost")
@@ -60,6 +60,7 @@ class RemoteDockerBackend(ComputeBackend):
         from comp_eval_platform.core.models import Node
 
         base_url = self.worker_service_url_for_user(owner)
+        # Using the inherited _public_key() method from BaseDockerBackend instead of local instantiation workaround
         response = _json_request(base_url, "/provision", {"service_id": service_id(), "node_type": node_type, "image": image, "authorized_key": self._public_key(), "eni": eni})
         Node.objects.create(id=response["id"], created_at=self._parse_timestamp(response.get("created_at")) or timezone.now(), node_type=response.get("node_type") or node_type or "local", image=response.get("image") or image, worker_service_url=base_url, state=response.get("state") or "running", reachability=response.get("reachability") or "none", ip=response.get("ip") or None)
 
@@ -101,8 +102,3 @@ class RemoteDockerBackend(ComputeBackend):
             return datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError:
             return None
-
-    def _public_key(self) -> str:
-        from .local_docker import LocalDockerBackend
-
-        return LocalDockerBackend()._public_key()

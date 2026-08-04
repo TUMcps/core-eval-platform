@@ -4,7 +4,11 @@ A worker is a ``Node`` row (the generic host table). Backends differ only in the
 three lifecycle methods; per-step execution is backend-agnostic (every script
 SSHes to ``ubuntu@<ip>``). Selected by the ``execution_backend`` runtime setting.
 """
+
+# Added os and subprocess modules to handle environment variables and SSH key processing in BaseDockerBackend
 from abc import ABC, abstractmethod
+import os
+import subprocess
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -43,6 +47,49 @@ class ComputeBackend(ABC):
         match on this rather than on the raw request, or a node can never be matched
         back to the task that asked for it."""
         return image
+
+# Introduced BaseDockerBackend to unify shared logic (like SSH keys and image validation) 
+# between LocalDockerBackend and RemoteDockerBackend, preventing code duplication.
+class BaseDockerBackend(ComputeBackend):
+    """Shared base class for Docker-backed compute backends (Local and Remote).
+    Consolidates common helper logic to eliminate code duplication (DRY principle).
+    """
+
+    @property
+    def ssh_key(self) -> str:
+        """Path to the SSH private key used for connecting to Docker worker nodes."""
+        return os.getenv("VNNCOMP_DOCKER_SSH_KEY", "/root/.ssh/vnncomp.pem")
+
+    def default_image(self) -> str:
+        """Default fallback container image if none is explicitly requested."""
+        return "ubuntu:22.04"
+
+    def image_error_message(self, image: str) -> str:
+        """Standardized error message when an invalid AWS AMI is requested in a Docker environment."""
+        return (
+            f"{image!r} is an AWS AMI id, but this deployment runs submissions in Docker. "
+            "Submit a Docker image reference instead, or switch the execution backend to aws."
+        )
+
+    def resolve_image(self, image: str) -> str:
+        """Validates the requested container image and handles fallback or AMI format errors."""
+        if not image:
+            return self.default_image()
+        if image.startswith("ami-"):
+            raise ImageError(self.image_error_message(image))
+        return image
+
+    def _public_key(self) -> str:
+        """Extracts and returns the SSH public key from the configured private key file."""
+        proc = subprocess.run(
+            ["ssh-keygen", "-y", "-f", self.ssh_key],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if proc.returncode != 0:
+            raise ProvisionError(f"Cannot read SSH key {self.ssh_key}: {proc.stderr.strip()}")
+        return proc.stdout.strip()
 
 
 _REGISTRY: dict = {}

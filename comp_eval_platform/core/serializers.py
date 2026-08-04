@@ -133,6 +133,11 @@ class TaskStepSerializer(serializers.ModelSerializer):
 
     def get_has_logs(self, obj):
         return self._latest(obj) is not None
+    def get_execution_backend(self, obj):
+        """Exposes the active execution backend on task steps for frontend warning checks."""
+        from .models import RuntimeSettings
+
+        return RuntimeSettings.get().execution_backend
 
 
 # Our outcomes/step-statuses → VNN's canonical chip labels (constants/status.ts).
