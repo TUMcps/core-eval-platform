@@ -151,6 +151,7 @@ class TaskListSerializer(serializers.ModelSerializer):
 
     name = serializers.SerializerMethodField()
     category_name = serializers.SerializerMethodField()
+    execution_backend = serializers.SerializerMethodField()  # Exposed to pass execution backend info for UI warnings
     status = serializers.SerializerMethodField()
     done = serializers.SerializerMethodField()
     repository = serializers.SerializerMethodField()
@@ -162,7 +163,7 @@ class TaskListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = ["id", "tool", "benchmark", "category", "category_name", "outcome",
-                  "created_at", "name", "status", "done", "repository", "hash",
+                  "created_at", "name", "execution_backend", "status", "done", "repository", "hash",
                   "benchmark_progress", "user_email", "user_name"]
         read_only_fields = fields
 
@@ -191,6 +192,12 @@ class TaskListSerializer(serializers.ModelSerializer):
         if obj.tool_id:
             return obj.tool.hash or ""
         return (obj.extra or {}).get("hash", "")
+
+    def get_execution_backend(self, obj):
+        """Retrieves the active execution backend setting for UI warning checks."""
+        from .models import RuntimeSettings
+
+        return RuntimeSettings.get().execution_backend
 
     def get_name(self, obj):
         if obj.tool_id:

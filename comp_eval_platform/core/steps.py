@@ -198,9 +198,14 @@ class AssignHandler(StepHandler):
         except ImageError as exc:
             self._fail(str(exc))
             return
+            
         backend = get_backend()
+        
+        # Retrieve the user-specific remote worker service URL. 
+        # This ensures the task looks for an available node that is hosted on the user's specific worker instance.
         worker_service_url = getattr(backend, "worker_service_url_for_user", lambda _u: "")(self.task.owner)
         node = Node.get_next_available(self._node_type(), image, worker_service_url=worker_service_url or "")
+        
         if node is not None:
             node.task = self.task
             node.save(update_fields=["task"])
@@ -215,6 +220,8 @@ class AssignHandler(StepHandler):
         if Node.objects.count() >= max_nodes:
             return  # wait for a node to free up; the scheduler retries next tick
         try:
+            # Pass the task owner to the provision method so the backend knows 
+            # which user's remote worker service should create and host the new node.
             backend.provision(self._node_type(), image, self._eni(), owner=self.task.owner)
         except ProvisionError as exc:
             self._fail(str(exc))
