@@ -23,6 +23,7 @@ def _user_data(u):
         "id": str(u.id), "email": u.email, "name": u.name, "role": u.role, "enabled": u.enabled,
         "is_admin": u.is_admin, "is_organizer": u.is_organizer,
         "aws_eni": u.aws_eni or "", "aws_mac": u.aws_mac or "",
+        # Include per-user remote Docker worker settings in the frontend session data
         "worker_service_url": u.worker_service_url or "", "worker_service_port": u.worker_service_port,
         "execution_backend": RuntimeSettings.get().execution_backend,
     }
@@ -95,9 +96,13 @@ def update_profile(request):
             return Response({"detail": "an account with this email already exists"}, status=400)
         request.user.email = email
         fields.append("email")
+        
+    # Allow users to configure their personal remote Docker worker service URL
     if "worker_service_url" in request.data:
         request.user.worker_service_url = (request.data.get("worker_service_url") or "").strip() or None
         fields.append("worker_service_url")
+        
+    # Validate and save the remote Docker worker service port
     if "worker_service_port" in request.data:
         raw_port = request.data.get("worker_service_port")
         if raw_port in (None, "", 0):
@@ -107,10 +112,13 @@ def update_profile(request):
                 port = int(raw_port)
             except (TypeError, ValueError):
                 return Response({"detail": "worker service port must be a number"}, status=400)
+            
+            # Ensure the provided port is within the valid network port range
             if not (1 <= port <= 65535):
                 return Response({"detail": "worker service port must be between 1 and 65535"}, status=400)
             request.user.worker_service_port = port
         fields.append("worker_service_port")
+        
     if fields:
         request.user.save(update_fields=fields)
     return Response(_user_data(request.user))

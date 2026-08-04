@@ -110,7 +110,7 @@ REST_FRAMEWORK = {
 ROOT_URL = config("ROOT_URL", default="http://localhost:8000")
 
 # Remote Docker worker service (used by the website when EXECUTION_BACKEND=remote_docker).
-REMOTE_DOCKER_WORKER_URL = config("REMOTE_DOCKER_WORKER_URL", default="localhost")
+REMOTE_DOCKER_WORKER_URL = config("REMOTE_DOCKER_WORKER_URL", default="http://localhost")
 REMOTE_DOCKER_WORKER_PORT = config("REMOTE_DOCKER_WORKER_PORT", default=9001, cast=int)
 
 # Bytes of a running step's node log tailed into the DB each tick (and sent to the

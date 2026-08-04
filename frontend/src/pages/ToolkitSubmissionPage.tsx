@@ -57,6 +57,7 @@ export default function ToolkitSubmissionPage() {
   }, []);
 
   const isDocker = data?.execution_backend !== 'aws';
+  const isRemoteDocker = data?.execution_backend === 'remote_docker';
   const canSubmit = data?.can_submit ?? true;
   const isRemoteDocker = data?.execution_backend === 'remote_docker';
   const schedulerEnabled = data?.scheduler_enabled ?? true;
