@@ -9,7 +9,7 @@ from urllib.request import Request, urlopen
 from django.conf import settings
 from django.utils import timezone
 # Updated import: Inheriting from BaseDockerBackend
-from .base import BaseDockerBackend
+from .base import BaseDockerBackend, ProvisionError
 from .shell import service_id
 
 
