@@ -38,6 +38,7 @@ export default function AdminSettingsPage() {
                 <Stack spacing={2.5}>
                   <TextField select label="Execution backend" value={s.execution_backend ?? 'local_docker'} onChange={(e) => set('execution_backend', e.target.value)}>
                     <MenuItem value="local_docker">local_docker</MenuItem>
+                    <MenuItem value="remote_docker">remote_docker</MenuItem>
                     <MenuItem value="aws">aws</MenuItem>
                   </TextField>
                   <Divider>Timeouts (hours)</Divider>

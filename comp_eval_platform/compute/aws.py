@@ -72,7 +72,7 @@ class AwsBackend(ComputeBackend):
         for node in seen:
             node.save()
 
-    def provision(self, node_type: str, image: str, eni: Optional[str] = None) -> None:
+    def provision(self, node_type: str, image: str, eni: Optional[str] = None, owner=None) -> None:
         params = {"type": node_type, "ami": image, "vnncomp_service_id": service_id()}
         try:
             if eni is None:

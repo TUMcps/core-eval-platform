@@ -38,7 +38,7 @@ def toolkit_form_data(request):
     return Response({
         "can_submit": s.users_can_submit_tools or is_admin,
         "scheduler_enabled": s.scheduler_enabled,
-        "execution_backend": s.execution_backend,
+        "execution_backend": s.execution_backend, # Exposed for frontend warning banners regarding remote_docker submissions
         # Categories are user-chosen for variants that use them (ARCH); the form then
         # filters benchmarks to one category and drops the VNN-only VNNLIB version.
         "uses_categories": get_competition().uses_categories,
@@ -76,6 +76,7 @@ def benchmark_form_data(request):
     return Response({
         "scheduler_enabled": s.scheduler_enabled,
         "can_submit": s.users_can_submit_benchmarks or getattr(request.user, "is_admin", False),
+        "execution_backend": s.execution_backend, # Exposed for frontend warning banners regarding remote_docker submissions
         # Categories are only user-chosen for variants that use them (ARCH); VNN
         # files every benchmark under a single implicit 'default' category.
         "uses_categories": comp.uses_categories,

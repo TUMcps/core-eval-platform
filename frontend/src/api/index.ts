@@ -14,6 +14,8 @@ export interface User {
   created_at: string;
   aws_eni?: string;
   aws_mac?: string;
+  worker_service_url?: string;
+  worker_service_port?: number | null;
   execution_backend?: string;
 }
 
@@ -57,7 +59,7 @@ export interface BenchmarkProgress { name: string; state: string; step_id: numbe
 export interface Task {
   id: number; tool: number | null; benchmark: number | null; category: string | null;
   category_name: string | null; outcome: string;
-  current_step: string | null; total_runtime: number | null; created_at: string;
+  execution_backend: string; current_step: string | null; total_runtime: number | null; created_at: string;
   steps: TaskStep[]; name: string; status: string; done: boolean; repository: string; hash: string;
   benchmark_progress: BenchmarkProgress[]; user_email: string | null; user_name: string | null;
 }
@@ -100,7 +102,7 @@ export const authApi = {
   login: (email: string, password: string) => apiClient.post<User>('/api/auth/login/', { email, password }).then((r) => r.data),
   signup: (name: string, email: string, password: string) => apiClient.post<User>('/api/auth/signup/', { name, email, password }).then((r) => r.data),
   logout: () => apiClient.post('/api/auth/logout/'),
-  updateProfile: (data: { name?: string; email?: string }) => apiClient.patch<User>('/api/auth/profile/', data).then((r) => r.data),
+  updateProfile: (data: { name?: string; email?: string; worker_service_url?: string; worker_service_port?: number | null }) => apiClient.patch<User>('/api/auth/profile/', data).then((r) => r.data),
 };
 
 // Seed from the payload the Vite plugin injected into <head> (window.__COMPETITION__),
@@ -147,7 +149,7 @@ export const resultsApi = {
 };
 
 export interface BenchmarkFormData {
-  scheduler_enabled: boolean; can_submit: boolean;
+  scheduler_enabled: boolean; can_submit: boolean; execution_backend: string;
   uses_categories: boolean; categories: { id: string; name: string }[];
   benchmark_fields: FieldSpec[];
 }
