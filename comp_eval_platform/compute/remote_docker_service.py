@@ -28,6 +28,7 @@ class NodeInfo:
     def to_dict(self) -> dict:
         return asdict(self)
     
+
 def _env(name: str, default: str) -> str:
     """Fetch an environment variable with a fallback default value."""
     return os.getenv(name, default)

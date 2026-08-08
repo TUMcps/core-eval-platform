@@ -1,4 +1,4 @@
-"""DB-backed runtime feature flags — the clean ``VNNCompSettings`` analog.
+"""DB-backed runtime feature flags — the clean ``CompSettings`` analog.
 
 Singleton row (pk=1). These are admin-toggleable at runtime, unlike the static
 Django settings ``ACTIVE_COMPETITION`` (a deployment runs one variant) and

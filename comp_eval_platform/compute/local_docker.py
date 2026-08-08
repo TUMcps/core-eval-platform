@@ -3,7 +3,7 @@
 A container is made to look exactly like an EC2 node (SSH-reachable ``ubuntu``
 user with our key) so every per-step script works unchanged. Only the lifecycle
 (run / inspect / rm) is Docker-specific. Requires the host Docker socket mounted
-and the ``docker`` CLI on PATH. Ported from VNN onto the ``Node`` model.
+and the ``docker`` CLI on PATH.
 """
 import os
 import re

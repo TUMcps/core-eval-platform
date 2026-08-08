@@ -1,4 +1,5 @@
 """Run the remote Docker worker service."""
+from dataclasses import asdict, is_dataclass
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -6,6 +7,17 @@ from urllib.parse import parse_qs, urlparse
 from django.core.management.base import BaseCommand
 
 from comp_eval_platform.compute import remote_docker_service as service
+
+
+def _json_default(value):
+    """
+    Custom JSON serializer for objects not serializable by default json code.
+    Specifically handles Python 'dataclass' instances by converting them 
+    into standard dictionaries using asdict(), otherwise raises a TypeError.
+    """
+    if is_dataclass(value):
+        return asdict(value)
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -17,7 +29,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     def _send(self, status: int, payload: dict):
         """Helper method to format and send a JSON HTTP response."""
-        body = json.dumps(payload).encode("utf-8")
+        body = json.dumps(payload, default=_json_default).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
