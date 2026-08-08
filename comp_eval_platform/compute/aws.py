@@ -73,7 +73,7 @@ class AwsBackend(ComputeBackend):
             node.save()
 
     def provision(self, node_type: str, image: str, eni: Optional[str] = None, owner=None) -> None:
-        params = {"type": node_type, "ami": image, "vnncomp_service_id": service_id()}
+        params = {"type": node_type, "ami": image, "comp_service_id": service_id()}
         try:
             if eni is None:
                 _get("toolkit", "create_new_instance.sh", params)

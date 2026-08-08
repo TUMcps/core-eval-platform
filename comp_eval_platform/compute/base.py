@@ -58,7 +58,7 @@ class BaseDockerBackend(ComputeBackend):
     @property
     def ssh_key(self) -> str:
         """Path to the SSH private key used for connecting to Docker worker nodes."""
-        return os.getenv("VNNCOMP_DOCKER_SSH_KEY", "/root/.ssh/vnncomp.pem")
+        return os.getenv("COMP_DOCKER_SSH_KEY", "/root/.ssh/comp.pem")
 
     def default_image(self) -> str:
         """Default fallback container image if none is explicitly requested."""
