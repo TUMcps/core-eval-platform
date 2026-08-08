@@ -16,18 +16,29 @@ class Command(BaseCommand):
         parser.add_argument("--reset", action="store_true", help="Re-seed defaults for the current backend.")
 
     def handle(self, *args, **opts):
-        s = RuntimeSettings.get()
+        s, created = RuntimeSettings.objects.get_or_create(pk=1)
         backend = getattr(settings, "EXECUTION_BACKEND", "local_docker")
-        s.execution_backend = backend
-        if backend == "local_docker":
-            # Local dev: ready to run.
-            s.scheduler_enabled = True
-            s.users_can_submit_benchmarks = True
-            s.users_can_submit_tools = True
+        if created:
+            s.execution_backend = backend
+            if backend == "local_docker":
+                # Local dev: ready to run.
+                s.scheduler_enabled = True
+                s.users_can_submit_benchmarks = True
+                s.users_can_submit_tools = True
+            elif opts["reset"]:
+                # AWS: conservative — nothing on until an admin flips it.
+                s.scheduler_enabled = False
+                s.users_can_submit_benchmarks = False
+                s.users_can_submit_tools = False
         elif opts["reset"]:
-            # AWS: conservative — nothing on until an admin flips it.
-            s.scheduler_enabled = False
-            s.users_can_submit_benchmarks = False
-            s.users_can_submit_tools = False
+            # Preserve the UI-selected backend; reset only the runtime toggles.
+            if backend == "local_docker":
+                s.scheduler_enabled = True
+                s.users_can_submit_benchmarks = True
+                s.users_can_submit_tools = True
+            else:
+                s.scheduler_enabled = False
+                s.users_can_submit_benchmarks = False
+                s.users_can_submit_tools = False
         s.save()
-        self.stdout.write(self.style.SUCCESS(f"RuntimeSettings seeded (execution_backend={backend})."))
+        self.stdout.write(self.style.SUCCESS(f"RuntimeSettings ready (execution_backend={s.execution_backend})."))

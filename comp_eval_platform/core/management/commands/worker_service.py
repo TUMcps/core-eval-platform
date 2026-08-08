@@ -47,7 +47,10 @@ class _Handler(BaseHTTPRequestHandler):
         # Fetch the list of running nodes associated with a specific service ID
         if parsed.path == "/nodes":
             query = parse_qs(parsed.query)
-            self._send(200, {"nodes": service.list_nodes(service_id=query.get("service_id", [""])[0])})
+            # Fetch the list of running nodes associated with a specific service ID,
+            # extract the target node, and serialize its details into a dictionary format for the API response.
+            nodes = service.list_nodes(service_id=query.get("service_id", [""])[0])
+            self._send(200, {"nodes": [n.to_dict() for n in nodes]})
             return
             
         # Fallback for undefined endpoints
@@ -60,13 +63,17 @@ class _Handler(BaseHTTPRequestHandler):
         
         # Start a new worker container
         if parsed.path == "/provision":
-            self._send(200, service.provision(
-                service_id=data.get("service_id", ""), 
-                node_type=data.get("node_type", "local"), 
-                image=data.get("image", ""), 
-                authorized_key=data.get("authorized_key", ""), 
+            # Handle the '/provision' endpoint to start a new worker container
+            # using the parameters provided in the request body (service ID, node type, image, key, and eni),
+            # then serialize and return the resulting container details as a dictionary.
+            result = service.provision(
+                service_id=data.get("service_id", ""),
+                node_type=data.get("node_type", "local"),
+                image=data.get("image", ""),
+                authorized_key=data.get("authorized_key", ""),
                 eni=data.get("eni")
-            ))
+            )
+            self._send(200, result.to_dict())
             return
             
         # Stop and remove a specific worker container
