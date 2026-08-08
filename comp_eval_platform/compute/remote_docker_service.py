@@ -1,5 +1,5 @@
 """Worker-server side helpers for remote_docker."""
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import json
 import os
 import re
@@ -25,6 +25,9 @@ class NodeInfo:
     ip: str | None
     created_at: str
 
+    def to_dict(self) -> dict:
+        return asdict(self)
+    
 
 def _env(name: str, default: str) -> str:
     """Fetch an environment variable with a fallback default value."""
@@ -107,7 +110,7 @@ def _is_ready(container_id: str) -> bool:
     return proc.returncode == 0
 
 
-def provision(*, service_id: str, node_type: str, image: str, authorized_key: str, eni: str | None = None) -> dict:
+def provision(*, service_id: str, node_type: str, image: str, authorized_key: str, eni: str | None = None) -> NodeInfo:
     """
     Create, start, and bootstrap a new Docker container to serve as a worker node.
     
