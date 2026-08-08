@@ -3,7 +3,7 @@
 A container is made to look exactly like an EC2 node (SSH-reachable ``ubuntu``
 user with our key) so every per-step script works unchanged. Only the lifecycle
 (run / inspect / rm) is Docker-specific. Requires the host Docker socket mounted
-and the ``docker`` CLI on PATH. Ported from VNN onto the ``Node`` model.
+and the ``docker`` CLI on PATH.
 """
 import os
 import re
@@ -20,7 +20,7 @@ from .base import BaseDockerBackend, ProvisionError
 from .shell import service_id
 
 SERVICE_LABEL = "CompEvalServiceId"
-READY_MARKER = "/tmp/vnncomp_ready"
+READY_MARKER = "/tmp/comp_ready"
 _GPU_TYPES = {"p3.2xlarge", "g5.8xlarge"}
 #: How long a container may exist untracked before it counts as leaked rather than
 #: as one a concurrent provision() has not finished recording.
@@ -48,11 +48,11 @@ class LocalDockerBackend(BaseDockerBackend):
 
     @property
     def network(self) -> str:
-        return _env("VNNCOMP_DOCKER_NETWORK", "eval-platform_default")
+        return _env("COMP_DOCKER_NETWORK", "eval-platform_default")
 
     def default_image(self) -> str:
         """Overrides base default image with local Docker environment settings."""
-        return _env("VNNCOMP_DEFAULT_DOCKER_IMAGE", "ubuntu:22.04")
+        return _env("COMP_DEFAULT_DOCKER_IMAGE", "ubuntu:22.04")
 
     def image_error_message(self, image: str) -> str:
         """Local Docker specific error message when an invalid AWS AMI is requested."""
@@ -65,7 +65,7 @@ class LocalDockerBackend(BaseDockerBackend):
     # -- lifecycle --------------------------------------------------------
     def provision(self, node_type: str, image: str, eni=None, owner=None) -> None:
         try:
-            name = f"{_env('VNNCOMP_DOCKER_NAME_PREFIX', 'eval')}-{uuid.uuid4().hex[:12]}"
+            name = f"{_env('COMP_DOCKER_NAME_PREFIX', 'eval')}-{uuid.uuid4().hex[:12]}"
             run_args = [
                 "run", "-d", "--name", name,
                 "--label", f"{SERVICE_LABEL}={service_id()}",
@@ -73,7 +73,7 @@ class LocalDockerBackend(BaseDockerBackend):
                 "--network", self.network,
                 "--entrypoint", "sleep",
             ]
-            gpu_env = _env("VNNCOMP_DOCKER_GPU", "").lower() in ("1", "true", "all", "yes")
+            gpu_env = _env("COMP_DOCKER_GPU", "").lower() in ("1", "true", "all", "yes")
             if gpu_env or node_type in _GPU_TYPES:
                 run_args += ["--gpus", "all"]
             run_args += [image, "infinity"]
