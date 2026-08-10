@@ -57,6 +57,7 @@ export default function BenchmarkDetailsPage() {
   const overall = statusChip(task.status || (task.done ? 'Done' : 'Running'));
   const active = task.steps.find((s) => s.status === 'active');
   const isPaused = !!active && isPauseKind(active.kind);
+  const isRemoteDocker = task.execution_backend === 'remote_docker';
   const extra = (benchmark?.extra ?? {}) as Record<string, string>;
   // The submission's inputs live on the task (a per-category load has no Benchmark row);
   // the serializer already resolves these across task shapes.
@@ -124,6 +125,7 @@ export default function BenchmarkDetailsPage() {
 
       <PageSection>
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+        {isRemoteDocker && !task.done && active?.kind === 'assign' && <Alert severity="warning" sx={{ mb: 3 }}>This submission is running on remote_docker. If it appears to stall while assigning a worker, the worker service may still be provisioning or syncing the container.</Alert>}
         <Typography variant="h5" fontWeight="bold" gutterBottom>Pipeline</Typography>
         <TaskPipeline steps={task.steps} benchmarkProgress={task.benchmark_progress} />
 

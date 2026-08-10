@@ -83,8 +83,8 @@ def _ping(dir: str, script: str, params: dict = None) -> None:
 
 
 def _node_ssh_key() -> str:
-    return (os.getenv("NODE_SSH_KEY") or os.getenv("VNNCOMP_DOCKER_SSH_KEY")
-            or os.path.join(os.path.expanduser("~"), ".ssh", "vnncomp.pem"))
+    return (os.getenv("NODE_SSH_KEY") or os.getenv("COMP_DOCKER_SSH_KEY")
+            or os.path.join(os.path.expanduser("~"), ".ssh", "comp.pem"))
 
 
 def node_exec(ip: str, cmd: str, *, timeout: int = 15) -> str:
@@ -110,7 +110,7 @@ def fetch_node_log(ip: str, remote_path: str, *, tail_bytes: int = 1_000_000, ti
 
 def service_id() -> str:
     """Stable id tagging the workers this deployment owns (so we never manage
-    someone else's). From ``EVAL_SERVICE_ID`` env (``VNNCOMP_SERVICE_ID`` still
+    someone else's). From ``EVAL_SERVICE_ID`` env (``COMP_SERVICE_ID`` still
     honored for compatibility), else the hostname, else an ephemeral uuid."""
-    return (os.getenv("EVAL_SERVICE_ID") or os.getenv("VNNCOMP_SERVICE_ID")
+    return (os.getenv("EVAL_SERVICE_ID") or os.getenv("COMP_SERVICE_ID")
             or os.getenv("HOSTNAME") or str(uuid.uuid4()))

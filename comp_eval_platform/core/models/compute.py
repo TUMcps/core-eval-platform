@@ -17,6 +17,8 @@ class Node(models.Model):
     node_type = models.CharField(max_length=64, default="local")
     #: Base image: AMI id (aws) or Docker image ref (local_docker).
     image = models.CharField(max_length=255, blank=True)
+    #: Remote Docker worker service base URL used for this node, if any.
+    worker_service_url = models.CharField(max_length=255, blank=True, default="")
     state = models.CharField(max_length=50, blank=True)
     reachability = models.CharField(max_length=50, blank=True)
     ip = models.GenericIPAddressField(null=True, blank=True)
@@ -44,7 +46,7 @@ class Node(models.Model):
         get_backend().terminate(self)
 
     @classmethod
-    def get_next_available(cls, node_type: str, image: str):
+    def get_next_available(cls, node_type: str, image: str, worker_service_url: str = ""):
         """A free, reachable node of the given type (and image, if one was
         requested). ``image`` must already be backend-resolved (see
         ``ComputeBackend.resolve_image``) to match what provision() stored."""
@@ -53,4 +55,6 @@ class Node(models.Model):
         ).exclude(ip__isnull=True)
         if image:
             qs = qs.filter(image=image)
+        if worker_service_url:
+            qs = qs.filter(worker_service_url=worker_service_url)
         return qs.first()

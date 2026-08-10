@@ -53,6 +53,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     # AWS compute-backend only (unused when EXECUTION_BACKEND=local_docker).
     aws_eni = models.CharField(max_length=255, null=True, blank=True)
     aws_mac = models.CharField(max_length=255, null=True, blank=True)
+    #: Optional worker-service override for remote_docker submissions.
+    worker_service_url = models.CharField(max_length=255, null=True, blank=True)
+    worker_service_port = models.PositiveIntegerField(null=True, blank=True)
     #: Runtime banked from deleted submissions, so usage tables keep counting it.
     deleted_runtime = models.PositiveIntegerField(default=0)
 
