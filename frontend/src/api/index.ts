@@ -67,7 +67,9 @@ export interface FormOption { value: string; label: string; hardware?: string; g
 export interface ToolkitFormData {
   can_submit: boolean; scheduler_enabled: boolean; execution_backend: string;
   instance_types: FormOption[]; ami_options: FormOption[]; run_networks_options: FormOption[];
-  benchmark_categories: Record<string, { label: string; benchmarks: { id: string; name: string }[] }>;
+  benchmark_categories: Record<string, { label: string; benchmarks: { id: string; name: string; group?: string }[] }>;
+  /** Display sub-groups within a category, in order; empty for a flat list. */
+  benchmark_groups: string[];
   default_eni: string; uses_categories: boolean;
 }
 export interface Track { id: string; name: string; description: string; benchmarks: number[]; created_at: string; }

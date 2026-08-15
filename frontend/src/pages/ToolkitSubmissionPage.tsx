@@ -64,6 +64,18 @@ export default function ToolkitSubmissionPage() {
 
   const toggleBenchmark = (id: string) => set({ benchmarks: form.benchmarks.includes(id) ? form.benchmarks.filter((b: string) => b !== id) : [...form.benchmarks, id] });
 
+  // A category's benchmarks, split into the variant's display groups; anything
+  // ungrouped trails in one unlabelled block. No groups declared = one flat list.
+  const inGroups = (benchmarks: { id: string; name: string; group?: string }[]) => {
+    const groups = data?.benchmark_groups ?? [];
+    const sorted = [...benchmarks].sort((a, b) => a.name.localeCompare(b.name));
+    if (!groups.length) return [{ label: '', benchmarks: sorted }];
+    return [
+      ...groups.map((label) => ({ label, benchmarks: sorted.filter((b) => b.group === label) })),
+      { label: '', benchmarks: sorted.filter((b) => !groups.includes(b.group ?? '')) },
+    ].filter((g) => g.benchmarks.length);
+  };
+
   // Switching category drops any selected benchmarks that aren't in the new one, so a
   // tool never carries benchmarks from two categories.
   const changeCategory = (cat: string) => {
@@ -221,11 +233,16 @@ export default function ToolkitSubmissionPage() {
             ).map(([key, cat]) => (
               <Box key={key} sx={{ mt: 2 }}>
                 {!usesCategories && <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>{cat.label}</Typography>}
-                <FormGroup>
-                  {[...cat.benchmarks].sort((a, b) => a.name.localeCompare(b.name)).map((b) => (
-                    <FormControlLabel key={b.id} control={<Checkbox checked={form.benchmarks.includes(b.id)} onChange={() => toggleBenchmark(b.id)} />} label={b.name} />
-                  ))}
-                </FormGroup>
+                {inGroups(cat.benchmarks).map((g) => (
+                  <Box key={g.label} sx={{ mt: g.label ? 1.5 : 0 }}>
+                    {g.label && <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'bold' }}>{g.label}</Typography>}
+                    <FormGroup sx={{ pl: g.label ? 1.5 : 0 }}>
+                      {g.benchmarks.map((b) => (
+                        <FormControlLabel key={b.id} control={<Checkbox checked={form.benchmarks.includes(b.id)} onChange={() => toggleBenchmark(b.id)} />} label={b.name} />
+                      ))}
+                    </FormGroup>
+                  </Box>
+                ))}
               </Box>
             ))}
             {Object.keys(data?.benchmark_categories ?? {}).length === 0 && (

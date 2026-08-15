@@ -68,6 +68,12 @@ class Competition(ABC):
         ``Benchmark``s; a per-benchmark-repo variant loads one. Default: unsupported."""
         raise NotImplementedError
 
+    def benchmark_groups(self) -> list[str]:
+        """Display sub-groups within a category, in order, which benchmarks name in
+        ``extra["group"]``. The submission form renders one subheading per group.
+        Default: none, i.e. a category's benchmarks are one flat list."""
+        return []
+
     def ensure_categories(self) -> None:
         """Create any fixed categories this variant defines (ARCH's AFF/NLN/AINNCS…),
         so they are selectable before the first submission loads a benchmark. Idempotent.

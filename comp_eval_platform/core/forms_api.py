@@ -30,10 +30,16 @@ def toolkit_form_data(request):
     from .models import Benchmark, RuntimeSettings
 
     s = RuntimeSettings.get()
+    comp = get_competition()
+    # A benchmark may name a display group within its category (see benchmark_groups);
+    # the form renders those as subheadings, in the order the variant gives.
+    groups = comp.benchmark_groups()
     categories: dict = {}
     for b in Benchmark.objects.filter(published=True).select_related("category").order_by("category__name", "name"):
         categories.setdefault(b.category.name, {"label": b.category.name, "benchmarks": []})
-        categories[b.category.name]["benchmarks"].append({"id": str(b.id), "name": b.name})
+        categories[b.category.name]["benchmarks"].append({
+            "id": str(b.id), "name": b.name, "group": (b.extra or {}).get("group", ""),
+        })
     is_admin = getattr(request.user, "is_admin", False)
     return Response({
         "can_submit": s.users_can_submit_tools or is_admin,
@@ -41,7 +47,8 @@ def toolkit_form_data(request):
         "execution_backend": s.execution_backend, # Exposed for frontend warning banners regarding remote_docker submissions
         # Categories are user-chosen for variants that use them (ARCH); the form then
         # filters benchmarks to one category and drops the VNN-only VNNLIB version.
-        "uses_categories": get_competition().uses_categories,
+        "uses_categories": comp.uses_categories,
+        "benchmark_groups": groups,
         "instance_types": [
             {"value": "t2.large", "label": "t2.large", "hardware": "CPU", "guidance": "general purpose"},
             {"value": "m5.16xlarge", "label": "m5.16xlarge", "hardware": "CPU", "guidance": "large CPU"},
