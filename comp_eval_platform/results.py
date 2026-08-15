@@ -59,8 +59,9 @@ class Landing:
 
     #: Hero subtitle under the "<display_name> <year>" title.
     tagline: str = ""
-    #: Outbound buttons beside the primary actions, e.g. main site / GitHub.
-    links: list[dict] = field(default_factory=list)  # [{"label", "url"}]
+    #: Buttons beside the primary actions, e.g. main site / GitHub. ``primary`` renders
+    #: one contained rather than outlined; a relative ``url`` opens in the same tab.
+    links: list[dict] = field(default_factory=list)  # [{"label", "url", "primary"?}]
     #: Contact emails shown as "Questions? Contact …".
     contacts: list[str] = field(default_factory=list)
     #: Cross-promo box for a sibling competition.
