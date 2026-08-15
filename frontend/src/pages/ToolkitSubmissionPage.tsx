@@ -29,6 +29,10 @@ export default function ToolkitSubmissionPage() {
     ...prefill,
     // A tool submitted outside this form may carry no benchmark list; the checkboxes need an array.
     benchmarks: Array.isArray(prefill?.benchmarks) ? prefill.benchmarks : [],
+    // Stored as a dict, edited as KEY=VALUE lines.
+    env: prefill?.env && typeof prefill.env === 'object'
+      ? Object.entries(prefill.env).map(([k, v]) => `${k}=${v}`).join('\n')
+      : (prefill?.env ?? ''),
   });
   const set = (patch: any) => setForm((f: any) => ({ ...f, ...patch }));
   const [message, setMessage] = useState('');
@@ -102,6 +106,7 @@ export default function ToolkitSubmissionPage() {
       if (!usesCategories) payload.vnnlib_version = form.vnnlib_version;
       if (!form.use_own_eni && form.eni) payload.eni = form.eni;
       if (form.post_install_tool) payload.post_install_tool = form.post_install_tool;
+      if (form.env.trim()) payload.env = form.env;
       if (form.pause_after_postinstallation) payload.pause_after_postinstallation = true;
       if (form.restart_after_postinstallation) payload.restart_after_postinstallation = true;
       if (user?.is_admin) {
@@ -175,6 +180,10 @@ export default function ToolkitSubmissionPage() {
                 <FormControlLabel control={<Checkbox checked={form.restart_after_postinstallation} onChange={(e) => set({ restart_after_postinstallation: e.target.checked })} />} label="Restart the instance after the post-installation script is run (e.g. to reload GPU drivers)." />
                 <FormControlLabel control={<Checkbox checked={form.run_toolkit_as_root} onChange={(e) => set({ run_toolkit_as_root: e.target.checked })} />} label="Run toolkit benchmark execution as root." />
                 {help('Unusual — enable only when benchmark execution cannot run correctly as the default user.')}
+                <TextField fullWidth label="Environment variables" margin="normal" multiline rows={3}
+                  value={form.env} onChange={(e) => set({ env: e.target.value })}
+                  placeholder="KEY=VALUE"
+                  helperText="One KEY=VALUE per line, exported before the toolkit's scripts run. Use this to enter the same toolkit twice in different configurations — each submission keeps its own results." />
               </FormGroup>
             </AccordionDetails>
           </Accordion>

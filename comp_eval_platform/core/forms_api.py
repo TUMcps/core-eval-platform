@@ -22,6 +22,24 @@ _TOOLKIT_EXTRA_KEYS = [
 ]
 
 
+def _parse_env(text) -> dict:
+    """The form's ``KEY=VALUE`` lines as a dict, stored on ``Tool.extra["env"]``.
+
+    What a variant does with it — and what the names mean — is the variant's business;
+    core only records what the submission asked for. Lets one tool be entered twice in
+    configurations it defines itself, as two catalog entries with their own results.
+    """
+    env = {}
+    for line in (text or "").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        if name.strip():
+            env[name.strip()] = value.strip()
+    return env
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def toolkit_form_data(request):
@@ -198,6 +216,11 @@ def toolkit_submit(request):
         category, _ = Category.objects.get_or_create(name="default")
 
     extra = {k: d.get(k) for k in _TOOLKIT_EXTRA_KEYS if k in d}
+    # The form sends the environment as text; extra keeps it as the dict the step
+    # handlers read. Sending it back already parsed (a repopulated form) also works.
+    env = d.get("env")
+    if env:
+        extra["env"] = env if isinstance(env, dict) else _parse_env(env)
     tool = Tool.objects.create(
         owner=request.user, category=category, name=d.get("name"),
         repository=d.get("repository", ""), hash=d.get("hash", ""),
