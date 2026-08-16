@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import type { FormEvent } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import type { DragEvent, FormEvent } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { benchmarksApi } from '../api';
 import type { BenchmarkFormData } from '../api';
@@ -18,8 +18,43 @@ import PageSection from '../components/PageSection';
 // Turn a field name (e.g. vnnlib_version) into a readable label.
 const labelFor = (name: string) => name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
+type ImportNotice = {
+  severity: 'success' | 'error';
+  text: string;
+};
+
+function parseDataJson(text: string) {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error('The file is not valid JSON.');
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('The file must contain a JSON object.');
+  }
+
+  const data = parsed as Record<string, unknown>;
+  for (const field of ['name', 'repository', 'hash', 'seed']) {
+    if (typeof data[field] !== 'string' || !data[field].trim()) {
+      throw new Error(`The file is missing the required "${field}" field.`);
+    }
+  }
+
+  const typed = data as Record<'name' | 'repository' | 'hash' | 'seed', string>;
+
+  return {
+    name: typed.name.trim(),
+    repository: typed.repository.trim(),
+    hash: typed.hash.trim(),
+    seed: typed.seed.trim(),
+  };
+}
+
 export default function BenchmarkSubmissionPage() {
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   // A details page's "Populate new submission form" button routes here with prefill.
   const prefill = (useLocation().state as { prefillData?: any } | null)?.prefillData;
   const [name, setName] = useState(prefill?.name ?? '');
@@ -28,6 +63,8 @@ export default function BenchmarkSubmissionPage() {
   const [hash, setHash] = useState(prefill?.hash ?? '');
   const [fields, setFields] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
+  const [importNotice, setImportNotice] = useState<ImportNotice | null>(null);
+  const [isDropActive, setIsDropActive] = useState(false);
   const [data, setData] = useState<BenchmarkFormData | null>(null);
 
   useEffect(() => {
@@ -42,6 +79,36 @@ export default function BenchmarkSubmissionPage() {
   const schedulerEnabled = data?.scheduler_enabled ?? true;
   const usesCategories = data?.uses_categories ?? true;
   const isRemoteDocker = data?.execution_backend === 'remote_docker';
+
+  const importDataJson = async (file: File) => {
+    const parsed = parseDataJson(await file.text());
+    setName(parsed.name);
+    setRepository(parsed.repository);
+    setHash(parsed.hash);
+    setImportNotice({ severity: 'success', text: `Imported ${file.name} successfully.` });
+  };
+
+  const handleFiles = async (files: FileList | File[]) => {
+    const file = Array.from(files)[0];
+    if (!file) {
+      setImportNotice({ severity: 'error', text: 'Drop a data.json file to import benchmark metadata.' });
+      return;
+    }
+    try {
+      await importDataJson(file);
+    } catch (error: any) {
+      setImportNotice({ severity: 'error', text: error?.message || 'Could not import the file.' });
+    }
+  };
+
+  const openFilePicker = () => fileInputRef.current?.click();
+
+  const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDropActive(false);
+    await handleFiles(e.dataTransfer.files);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -77,6 +144,64 @@ export default function BenchmarkSubmissionPage() {
         {!schedulerEnabled && <Alert severity="warning" sx={{ mb: 3 }}>Submissions are paused because the scheduler is currently disabled.</Alert>}
       {isRemoteDocker && <Alert severity="warning" sx={{ mb: 3 }}>This deployment uses remote_docker for submissions. The task may spend longer in worker assignment while the worker service provisions and boots your container.</Alert>}
         <Box component="form" onSubmit={handleSubmit}>
+          <Box
+            role="button"
+            tabIndex={0}
+            onClick={openFilePicker}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openFilePicker();
+              }
+            }}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setIsDropActive(true);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+              setIsDropActive(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              setIsDropActive(false);
+            }}
+            onDrop={handleDrop}
+            sx={{
+              mb: 3,
+              p: 2,
+              border: '1px dashed',
+              borderColor: isDropActive ? 'primary.main' : 'divider',
+              borderRadius: 2,
+              bgcolor: isDropActive ? 'action.hover' : 'background.paper',
+              cursor: 'pointer',
+              transition: 'border-color 120ms ease, background-color 120ms ease',
+            }}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              hidden
+              onChange={(e) => {
+                void handleFiles(e.target.files || []);
+                e.currentTarget.value = '';
+              }}
+            />
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              Drop data.json here or click to import benchmark metadata
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Expected fields: name, repository, hash, seed.
+            </Typography>
+            {importNotice && (
+              <Alert severity={importNotice.severity} variant="outlined" sx={{ mt: 1.5 }}>
+                {importNotice.text}
+              </Alert>
+            )}
+          </Box>
+
           {/* A category variant (ARCH) submits a whole category from one repo, so there is
               no per-benchmark name; a name variant (VNN) names the single benchmark. */}
           {!usesCategories && (
