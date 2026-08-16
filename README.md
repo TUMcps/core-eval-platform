@@ -32,6 +32,12 @@ docker run --rm -v "$PWD:/core" -w /core python:3.11-slim \
   sh -c "pip install -q -e '.[dev]' && pytest"
 ```
 
+## Continuous integration
+
+The GitHub Actions workflow in `.github/workflows/ci.yml` runs for pushes to every branch, pull
+requests, and manual dispatches. It runs the core Python tests and tests and builds the shared
+frontend.
+
 ## Design
 
 Full architecture and rationale in [`docs/unified-platform.md`](docs/unified-platform.md).
