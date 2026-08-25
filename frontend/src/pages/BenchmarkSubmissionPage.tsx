@@ -204,11 +204,11 @@ export default function BenchmarkSubmissionPage() {
 
           {/* A category variant (ARCH) submits a whole category from one repo, so there is
               no per-benchmark name; a name variant (VNN) names the single benchmark. */}
-          {!usesCategories && (
+          {data && !usesCategories && (
             <TextField fullWidth label="Benchmark name" value={name} onChange={(e) => setName(e.target.value)} required sx={{ mb: 3 }} />
           )}
 
-          {usesCategories && (
+          {data && usesCategories && (
             <TextField fullWidth select label="Category" value={category} onChange={(e) => setCategory(e.target.value)} required sx={{ mb: 3 }}
               helperText="One submission loads all of the category's benchmarks. Create categories on the Toolkit page.">
               {(data?.categories ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}

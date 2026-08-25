@@ -209,9 +209,11 @@ export default function ToolkitSubmissionPage() {
               {Object.keys(data?.benchmark_categories ?? {}).length === 0 && <MenuItem disabled value="">No categories with published benchmarks yet</MenuItem>}
             </TextField>
           )}
-          <TextField fullWidth select label="Evaluation mode" required margin="normal" value={form.run_networks} onChange={(e) => set({ run_networks: e.target.value })}>
-            {(data?.run_networks_options ?? []).map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
-          </TextField>
+          {data && (
+            <TextField fullWidth select label="Evaluation mode" required margin="normal" value={form.run_networks} onChange={(e) => set({ run_networks: e.target.value })}>
+              {data.run_networks_options.map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+            </TextField>
+          )}
 
           <Box sx={{ mt: 3, mb: 2 }}>
             {/* ARCH: only the selected category's benchmarks; VNN: all, grouped by category. */}
