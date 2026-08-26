@@ -27,10 +27,27 @@ Don't hesitate to reach out for any questions regarding this!
 
 ## Tests
 
+Frontend tests cover shared status/result formatting, API list handling, authentication state,
+protected-route access, and toolkit and benchmark submission workflows:
+
+```bash
+cd frontend
+npm ci
+npm test
+```
+
+Backend tests can be run with:
+
 ```bash
 docker run --rm -v "$PWD:/core" -w /core python:3.11-slim \
   sh -c "pip install -q -e '.[dev]' && pytest"
 ```
+
+## Continuous integration
+
+The GitHub Actions workflow in `.github/workflows/ci.yml` runs for pushes to every branch, pull
+requests, and manual dispatches. It runs the core Python tests and tests and builds the shared
+frontend.
 
 ## Design
 
