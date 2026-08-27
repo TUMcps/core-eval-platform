@@ -40,7 +40,7 @@ def test_local_backend_provision_creates_assignable_node():
     assert node is not None
     assert node.state == "running"
     assert node.reachability == "ok"
-    assert node.ip == "localhost"
+    assert node.ip == "127.0.0.1"
 
 
 def test_register_rejects_nameless():
