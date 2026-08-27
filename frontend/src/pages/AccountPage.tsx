@@ -17,12 +17,25 @@ export default function AccountPage() {
   const { user, updateProfile } = useAuth();
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
+  
+  // Added state variables to manage the custom worker service URL and port inputs in the UI.
+  // It initializes with the user's current settings from the backend.
+  const [workerServiceUrl, setWorkerServiceUrl] = useState(user?.worker_service_url ?? '');
+  const [workerServicePort, setWorkerServicePort] = useState(user?.worker_service_port?.toString() ?? '');
+  
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
+  
   const nameDirty = name.trim() !== (user?.name ?? '');
   const emailDirty = email.trim() !== (user?.email ?? '');
+  
+  // Added a check to see if the user modified the worker service fields. 
+  // This boolean is used to enable/disable the 'Save' button.
+  const workerServiceDirty = workerServiceUrl.trim() !== (user?.worker_service_url ?? '') || workerServicePort.trim() !== (user?.worker_service_port?.toString() ?? '');
 
-  const save = async (patch: { name?: string; email?: string }, label: string) => {
+  // Expanded the TypeScript patch interface to include the new worker_service fields 
+  // so they can be sent to the backend during the update profile API call.
+  const save = async (patch: { name?: string; email?: string; worker_service_url?: string; worker_service_port?: number | null }, label: string) => {
     setSaving(true);
     try { await updateProfile(patch); setToast(label); }
     catch (e: any) { setToast(e?.response?.data?.detail ?? 'Update failed'); }
@@ -52,6 +65,23 @@ export default function AccountPage() {
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Your login identifier.</Typography>
         </Box>
         <Divider sx={{ my: 2 }} />
+        
+        {/* Added the Worker Service UI section. 
+            This provides the form fields for the user to input their remote Docker configuration, 
+            and a save button to persist these settings to the backend. */}
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>Worker service</Typography>
+          <Stack spacing={1.5}>
+            <TextField size="small" value={workerServiceUrl} onChange={(e) => setWorkerServiceUrl(e.target.value)} placeholder="lab-worker.example.com" label="Worker URL / host" />
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <TextField size="small" type="number" value={workerServicePort} onChange={(e) => setWorkerServicePort(e.target.value)} placeholder="9001" label="Port" sx={{ flexGrow: 1, maxWidth: 180 }} />
+              <Button variant="contained" size="small" disabled={!workerServiceDirty || saving} onClick={() => save({ worker_service_url: workerServiceUrl.trim(), worker_service_port: workerServicePort.trim() ? Number(workerServicePort) : null }, 'Worker service updated')}>Save</Button>
+            </Stack>
+          </Stack>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Leave blank to use the deployment default worker service.</Typography>
+        </Box>
+        
+        <Divider sx={{ my: 2 }} />
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle2" color="text.secondary">Role</Typography>
           <Box sx={{ mt: 0.5 }}><Chip label={user?.role || '—'} color={user?.is_admin ? 'primary' : 'default'} /></Box>
@@ -64,7 +94,10 @@ export default function AccountPage() {
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Enabled accounts may submit.</Typography>
         </Box>
         {(() => {
-          const isDocker = user?.execution_backend === 'local_docker';
+          // Updated the isDocker check. Instead of strictly matching 'local_docker', 
+          // it now treats everything that is NOT 'aws' as a Docker environment.
+          // This ensures that the new 'remote_docker' backend also displays the correct Docker-specific UI text below.
+          const isDocker = user?.execution_backend !== 'aws';
           const showEni = !!user?.aws_eni && !isDocker;  // ENI is an AWS concept only
           if (!user?.aws_mac && !showEni) return null;
           return (

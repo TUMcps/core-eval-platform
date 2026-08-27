@@ -3,7 +3,7 @@
 A container is made to look exactly like an EC2 node (SSH-reachable ``ubuntu``
 user with our key) so every per-step script works unchanged. Only the lifecycle
 (run / inspect / rm) is Docker-specific. Requires the host Docker socket mounted
-and the ``docker`` CLI on PATH. Ported from VNN onto the ``Node`` model.
+and the ``docker`` CLI on PATH.
 """
 import os
 import re
@@ -15,11 +15,12 @@ from typing import List, Optional
 
 from django.utils import timezone
 
-from .base import ComputeBackend, ImageError, ProvisionError
+# Updated imports: Inheriting from the shared BaseDockerBackend instead of raw ComputeBackend
+from .base import BaseDockerBackend, ProvisionError
 from .shell import service_id
 
 SERVICE_LABEL = "CompEvalServiceId"
-READY_MARKER = "/tmp/vnncomp_ready"
+READY_MARKER = "/tmp/comp_ready"
 _GPU_TYPES = {"p3.2xlarge", "g5.8xlarge"}
 #: How long a container may exist untracked before it counts as leaked rather than
 #: as one a concurrent provision() has not finished recording.
@@ -41,41 +42,30 @@ def _docker(args: List[str], *, timeout: int = 60, check: bool = True) -> str:
     return proc.stdout
 
 
-class LocalDockerBackend(ComputeBackend):
+class LocalDockerBackend(BaseDockerBackend):
+    """Local Docker compute backend, inheriting common Docker helpers from BaseDockerBackend."""
     name = "local_docker"
 
     @property
     def network(self) -> str:
-        return _env("VNNCOMP_DOCKER_NETWORK", "eval-platform_default")
+        return _env("COMP_DOCKER_NETWORK", "eval-platform_default")
 
-    @property
-    def ssh_key(self) -> str:
-        return _env("VNNCOMP_DOCKER_SSH_KEY", "/root/.ssh/vnncomp.pem")
+    def default_image(self) -> str:
+        """Overrides base default image with local Docker environment settings."""
+        return _env("COMP_DEFAULT_DOCKER_IMAGE", "ubuntu:22.04")
 
-    def resolve_image(self, image: str) -> str:
-        """No image requested -> the platform default. An AMI id is an EC2 image and
-        cannot be booted here: reject it instead of silently substituting the default,
-        which would run the submission against an image nobody asked for."""
-        if not image:
-            return _env("VNNCOMP_DEFAULT_DOCKER_IMAGE", "ubuntu:22.04")
-        if image.startswith("ami-"):
-            raise ImageError(
-                f"{image!r} is an AWS AMI id, but this deployment runs submissions in "
-                f"local Docker. Submit a Docker image reference (e.g. 'ubuntu:22.04') "
-                f"instead, or switch the execution backend to aws."
-            )
-        return image
-
-    def _public_key(self) -> str:
-        proc = subprocess.run(["ssh-keygen", "-y", "-f", self.ssh_key], capture_output=True, text=True, timeout=15)
-        if proc.returncode != 0:
-            raise DockerError(f"Cannot read SSH key {self.ssh_key}: {proc.stderr.strip()}")
-        return proc.stdout.strip()
+    def image_error_message(self, image: str) -> str:
+        """Local Docker specific error message when an invalid AWS AMI is requested."""
+        return (
+            f"{image!r} is an AWS AMI id, but this deployment runs submissions in "
+            f"local Docker. Submit a Docker image reference (e.g. 'ubuntu:22.04') "
+            f"instead, or switch the execution backend to aws."
+        )
 
     # -- lifecycle --------------------------------------------------------
-    def provision(self, node_type: str, image: str, eni=None) -> None:
+    def provision(self, node_type: str, image: str, eni=None, owner=None) -> None:
         try:
-            name = f"{_env('VNNCOMP_DOCKER_NAME_PREFIX', 'eval')}-{uuid.uuid4().hex[:12]}"
+            name = f"{_env('COMP_DOCKER_NAME_PREFIX', 'eval')}-{uuid.uuid4().hex[:12]}"
             run_args = [
                 "run", "-d", "--name", name,
                 "--label", f"{SERVICE_LABEL}={service_id()}",
@@ -83,7 +73,7 @@ class LocalDockerBackend(ComputeBackend):
                 "--network", self.network,
                 "--entrypoint", "sleep",
             ]
-            gpu_env = _env("VNNCOMP_DOCKER_GPU", "").lower() in ("1", "true", "all", "yes")
+            gpu_env = _env("COMP_DOCKER_GPU", "").lower() in ("1", "true", "all", "yes")
             if gpu_env or node_type in _GPU_TYPES:
                 run_args += ["--gpus", "all"]
             run_args += [image, "infinity"]
@@ -101,7 +91,8 @@ class LocalDockerBackend(ComputeBackend):
                 id=container_id, created_at=timezone.now(), node_type=node_type or "local",
                 image=image, state="running", reachability="none", ip=ip or None,
             )
-        except (DockerError, subprocess.SubprocessError) as exc:
+        except (ProvisionError, DockerError, subprocess.SubprocessError) as exc:
+            # Catching ProvisionError alongside Docker/Subprocess errors for robust failure handling
             raise ProvisionError(f"could not start a container from image {image!r}: {exc}") from exc
 
     def sync_instances(self) -> None:
@@ -193,7 +184,7 @@ class LocalDockerBackend(ComputeBackend):
     def _bootstrap_script(self) -> str:
         """The node bootstrap is generic worker logic shipped by core, so every variant
         gets an SSH-reachable node for free. A deployment may still override it by placing
-        ``scripts/docker/bootstrap_node.sh`` under ``SCRIPT_ROOT``."""
+        scripts/docker/bootstrap_node.sh under SCRIPT_ROOT."""
         for root in (os.getenv("SCRIPT_ROOT"), os.getenv("AWS_SCRIPT_ROOT")):
             if root:
                 override = os.path.join(root, "scripts", "docker", "bootstrap_node.sh")

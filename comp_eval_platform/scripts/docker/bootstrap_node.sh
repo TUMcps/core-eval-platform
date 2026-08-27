@@ -4,7 +4,7 @@
 #
 # Generic worker bootstrap shipped by core, used by every variant's local_docker
 # stack. Run as root by LocalDockerBackend (docker exec -d -u 0) with $AUTHORIZED_KEY
-# set to the backend's public key. Writes /tmp/vnncomp_ready once sshd is up, which is
+# set to the backend's public key. Writes /tmp/comp_ready once sshd is up, which is
 # how sync_instances marks the node reachable.
 set -eu
 
@@ -34,4 +34,4 @@ ssh-keygen -A
 sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 /usr/sbin/sshd
 
-touch /tmp/vnncomp_ready
+touch /tmp/comp_ready

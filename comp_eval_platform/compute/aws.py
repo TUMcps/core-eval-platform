@@ -1,5 +1,5 @@
 """AWS EC2 backend. Lifecycle shells out to the aws-cli scripts; per-step
-execution is untouched (steps SSH to the node IP). Ported from VNN onto ``Node``;
+execution is untouched (steps SSH to the node IP). Ported from COMP onto ``Node``;
 ``node_type`` is now the EC2 type string directly (e.g. "t2.large").
 """
 import json
@@ -10,7 +10,7 @@ from django.utils import timezone
 from .base import ComputeBackend, ProvisionError
 from .shell import ScriptError, _get, service_id
 
-SERVICE_ID_TAG = "VNNCompServiceId"
+SERVICE_ID_TAG = "CompServiceId"
 
 
 def _tags(instance: dict) -> dict:
@@ -31,7 +31,7 @@ class AwsBackend(ComputeBackend):
             if state == "terminated":
                 continue
             tags = _tags(instance)
-            if "IgnoreForVNNComp" in tags:
+            if "IgnoreForComp" in tags:
                 continue
             try:
                 node = Node.objects.get(id=instance["Id"])
@@ -72,8 +72,8 @@ class AwsBackend(ComputeBackend):
         for node in seen:
             node.save()
 
-    def provision(self, node_type: str, image: str, eni: Optional[str] = None) -> None:
-        params = {"type": node_type, "ami": image, "vnncomp_service_id": service_id()}
+    def provision(self, node_type: str, image: str, eni: Optional[str] = None, owner=None) -> None:
+        params = {"type": node_type, "ami": image, "comp_service_id": service_id()}
         try:
             if eni is None:
                 _get("toolkit", "create_new_instance.sh", params)

@@ -29,6 +29,20 @@ def test_unknown_handler_raises():
         get_step_handler("does-not-exist")
 
 
+@pytest.mark.django_db
+def test_local_backend_provision_creates_assignable_node():
+    from comp_eval_platform.compute.local import LocalBackend
+    from comp_eval_platform.core.models import Node
+
+    LocalBackend().provision("local", "local")
+
+    node = Node.get_next_available("local", "local")
+    assert node is not None
+    assert node.state == "running"
+    assert node.reachability == "ok"
+    assert node.ip == "localhost"
+
+
 def test_register_rejects_nameless():
     from comp_eval_platform.competitions import Competition, register
 

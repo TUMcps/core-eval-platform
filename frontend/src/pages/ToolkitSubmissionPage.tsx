@@ -56,7 +56,8 @@ export default function ToolkitSubmissionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const isDocker = data?.execution_backend === 'local_docker';
+  const isDocker = data?.execution_backend !== 'aws';
+  const isRemoteDocker = data?.execution_backend === 'remote_docker';
   const canSubmit = data?.can_submit ?? true;
   const schedulerEnabled = data?.scheduler_enabled ?? true;
   const usesCategories = data?.uses_categories ?? false;
@@ -125,6 +126,7 @@ export default function ToolkitSubmissionPage() {
         {message && <Alert severity="error" sx={{ mb: 3 }}>{message}</Alert>}
         {!canSubmit && <Alert severity="warning" sx={{ mb: 3 }}>Submission is currently closed</Alert>}
         {canSubmit && !schedulerEnabled && <Alert severity="warning" sx={{ mb: 3 }}>Submissions are paused because the scheduler is currently disabled.</Alert>}
+        {isRemoteDocker && <Alert severity="warning" sx={{ mb: 3 }}>This deployment uses remote_docker for submissions. The task may spend longer in worker assignment while the worker service provisions and boots your container.</Alert>}
 
         <Box component="form" onSubmit={handleSubmit}>
           <TextField fullWidth label="Toolkit name" value={form.name} onChange={(e) => set({ name: e.target.value })} required margin="normal" />

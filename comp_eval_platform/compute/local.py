@@ -1,6 +1,5 @@
 import uuid
 import uuid as _uuid
-
 from .base import ComputeBackend
 
 
@@ -20,7 +19,7 @@ class LocalBackend(ComputeBackend):
             image=image or "local",
             state="running",
             reachability="ok",
-            ip="localhost",
+            ip="127.0.0.1",
             created_at=timezone.now(),
         )
 
