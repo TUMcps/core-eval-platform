@@ -19,7 +19,7 @@ class Command(BaseCommand):
         s = RuntimeSettings.get()
         backend = getattr(settings, "EXECUTION_BACKEND", "local_docker")
         s.execution_backend = backend
-        if backend == "local_docker":
+        if backend in {"local", "local_docker"}:
             # Local dev: ready to run.
             s.scheduler_enabled = True
             s.users_can_submit_benchmarks = True

@@ -54,6 +54,10 @@ def _script_env(params: dict) -> dict:
     env = dict(os.environ, **(params or {}))
     env.setdefault("COMP_LABEL", _competition_label())
     env.setdefault("COMP_LOG_LIB", os.path.join(_core_script_root(), "lib", "log.sh"))
+    
+    if not env.get("ROOT_URL"):
+        env["ROOT_URL"] = "http://127.0.0.1:8000"
+        
     return env
 
 
@@ -75,6 +79,14 @@ def _get(dir: str, script: str, params: dict = None, *, timeout: int = 15) -> st
 def _ping(dir: str, script: str, params: dict = None) -> None:
     """Fire-and-forget: start the script, ignore its output (the node reports back
     via the /update/<id>/success|failure callback)."""
+    _LOCAL_IP_KEYS = ("benchmark_ip", "NODE_IP", "IP")
+    if any((params or {}).get(k) == "localhost" for k in _LOCAL_IP_KEYS):
+        subprocess.Popen(
+            [_path(dir, script)],
+            env=_script_env(params),
+            stderr=subprocess.STDOUT,
+        )
+        return
     subprocess.Popen(
         [_path(dir, script)],
         env=_script_env(params),
@@ -90,6 +102,9 @@ def _node_ssh_key() -> str:
 def node_exec(ip: str, cmd: str, *, timeout: int = 15) -> str:
     """Run a command on a node over SSH and return its raw stdout. Best-effort:
     returns "" on any SSH/timeout error (node not up yet, torn down, transient)."""
+    if ip == "localhost":
+        out = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+        return out.stdout
     try:
         out = subprocess.run(
             ["ssh", "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=10",

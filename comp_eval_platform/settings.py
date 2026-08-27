@@ -117,6 +117,8 @@ LIVE_LOG_TAIL_BYTES = config("LIVE_LOG_TAIL_BYTES", default=1_000_000, cast=int)
 # Persistent host dir holding the local git repos artifacts default to.
 DATA_DIR = config("DATA_DIR", default=str(BASE_DIR / "data"))
 LOCAL_REPOS_DIR = config("LOCAL_REPOS_DIR", default=str(Path(DATA_DIR) / "repos"))
+LOCAL_TOOL_DIR = config("LOCAL_TOOL_DIR", default="/app/tool")
+LOCAL_BENCHMARK_DIR = config("LOCAL_BENCHMARK_DIR", default="/app/benchmarks_repo")
 
 # Benchmark generation + export.
 # Seed passed to every generator (generate_properties.py <seed>).

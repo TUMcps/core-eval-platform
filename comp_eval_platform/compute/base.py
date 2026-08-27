@@ -52,9 +52,10 @@ def _registry() -> dict:
     # Lazy import so Django apps are loaded before backends touch models.
     if not _REGISTRY:
         from .aws import AwsBackend
+        from .local import LocalBackend
         from .local_docker import LocalDockerBackend
 
-        for cls in (AwsBackend, LocalDockerBackend):
+        for cls in (AwsBackend, LocalBackend, LocalDockerBackend):
             _REGISTRY[cls.name] = cls
     return _REGISTRY
 
