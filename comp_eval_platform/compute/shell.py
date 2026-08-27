@@ -58,6 +58,16 @@ def _script_env(params: dict) -> dict:
 
 
 def _get(dir: str, script: str, params: dict = None, *, timeout: int = 15) -> str:
+    params = params or {}
+    node_ip = params.get("benchmark_ip") or params.get("NODE_IP") or params.get("IP") or "127.0.0.1"
+    
+    if node_ip == "127.0.0.1" or node_ip == "localhost":
+        try:
+            res = subprocess.run([_path(dir, script)], env=_script_env(params), capture_output=True, text=True, timeout=timeout)
+            return res.stdout
+        except (subprocess.SubprocessError, subprocess.TimeoutExpired) as exc:
+            raise ScriptError(f"{script} failed locally: {exc}")
+
     try:
         stdout = subprocess.check_output(
             [_path(dir, script)],
@@ -73,14 +83,23 @@ def _get(dir: str, script: str, params: dict = None, *, timeout: int = 15) -> st
 
 
 def _ping(dir: str, script: str, params: dict = None) -> None:
-    """Fire-and-forget: start the script, ignore its output (the node reports back
-    via the /update/<id>/success|failure callback)."""
+    """Fire-and-forget: start the script, ignore its output locally if IP is local."""
+    params = params or {}
+    node_ip = params.get("benchmark_ip") or params.get("NODE_IP") or params.get("IP") or "127.0.0.1"
+    
+    if node_ip == "127.0.0.1" or node_ip == "localhost":
+        subprocess.Popen(
+            [_path(dir, script)],
+            env=_script_env(params),
+            stderr=subprocess.STDOUT,
+        )
+        return
+
     subprocess.Popen(
         [_path(dir, script)],
         env=_script_env(params),
         stderr=subprocess.STDOUT,
     )
-
 
 def _node_ssh_key() -> str:
     return (os.getenv("NODE_SSH_KEY") or os.getenv("COMP_DOCKER_SSH_KEY")
@@ -88,8 +107,13 @@ def _node_ssh_key() -> str:
 
 
 def node_exec(ip: str, cmd: str, *, timeout: int = 15) -> str:
-    """Run a command on a node over SSH and return its raw stdout. Best-effort:
-    returns "" on any SSH/timeout error (node not up yet, torn down, transient)."""
+    """Run a command locally if IP is localhost, else over SSH."""
+    if ip == "127.0.0.1" or ip == "localhost":
+        try:
+            out = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+            return out.stdout
+        except (subprocess.SubprocessError, OSError):
+            return ""
     try:
         out = subprocess.run(
             ["ssh", "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=10",
