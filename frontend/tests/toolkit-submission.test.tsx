@@ -7,9 +7,13 @@ const toolkitApi = vi.hoisted(() => ({
   getFormData: vi.fn(),
   submit: vi.fn(),
 }));
+const apiErrorData = vi.hoisted(() => (error: unknown): unknown => {
+  if (!error || typeof error !== 'object' || !('response' in error)) return undefined;
+  return (error as { response?: { data?: unknown } }).response?.data;
+});
 const useAuth = vi.hoisted(() => vi.fn());
 
-vi.mock('../src/api', () => ({ toolkitApi }));
+vi.mock('../src/api', () => ({ toolkitApi, apiErrorData }));
 vi.mock('../src/context/AuthContext', () => ({ useAuth }));
 
 import ToolkitSubmissionPage from '../src/pages/ToolkitSubmissionPage';

@@ -16,7 +16,7 @@ const BOOLS = [
 const INTS = ['submission_timeout', 'benchmark_timeout'];
 
 export default function AdminSettingsPage() {
-  const [s, setS] = useState<Record<string, any>>({});
+  const [s, setS] = useState<Record<string, unknown>>({});
   const [toast, setToast] = useState('');
   useEffect(() => { settingsApi.get().then(setS).catch(() => {}); }, []);
   const set = (k: string, v: unknown) => setS((x) => ({ ...x, [k]: v }));
