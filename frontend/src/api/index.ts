@@ -1,4 +1,5 @@
 import apiClient from './client';
+export { apiErrorData, apiErrorMessage } from './client';
 
 // Task/Benchmark/Tool use integer ids; callers also pass useParams() strings.
 type ID = number | string;
@@ -89,8 +90,8 @@ export interface CompetitionInfo { name: string; display_name: string; presentat
 export interface Scoreboard { columns: string[]; rows: Record<string, unknown>[]; }
 
 const results = <T,>(url: string) => apiClient.get<{ results?: T[] } | T[]>(url).then((r) => {
-  const d = r.data as any;
-  return (d.results ?? d) as T[];
+  const data = r.data;
+  return Array.isArray(data) ? data : (data.results ?? []);
 });
 
 /** One page of a paginated (DRF) list endpoint. */

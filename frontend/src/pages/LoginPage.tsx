@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useAuth } from '../context/AuthContext';
+import { apiErrorMessage } from '../api';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -21,8 +22,8 @@ export default function LoginPage() {
     try {
       await login(email, password);
       navigate('/');
-    } catch (err: any) {
-      setError(err?.response?.data?.detail ?? 'Login failed. Please try again.');
+    } catch (error: unknown) {
+      setError(apiErrorMessage(error, 'Login failed. Please try again.'));
     } finally {
       setLoading(false);
     }
