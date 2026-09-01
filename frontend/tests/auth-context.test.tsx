@@ -12,7 +12,8 @@ const authApi = vi.hoisted(() => ({
 
 vi.mock('../src/api', () => ({ authApi }));
 
-import { AuthProvider, useAuth } from '../src/context/AuthContext';
+import { useAuth } from '../src/context/AuthContext';
+import { AuthProvider } from '../src/context/AuthProvider';
 
 const currentUser: User = {
   id: '1', email: 'ada@example.com', name: 'Ada', role: 'user', enabled: true,
