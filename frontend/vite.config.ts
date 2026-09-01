@@ -2,6 +2,11 @@ import { defineConfig, type Plugin, type HtmlTagDescriptor } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+interface CompetitionPayload {
+  display_name?: string
+  presentation?: { branding?: { favicon?: string } } | null
+}
+
 // Inject the active competition's branding into index.html at serve/build time so
 // the first paint already has the correct title, favicon, and theme color — no flash
 // of the neutral defaults before the runtime /api/competition/ fetch resolves. The
@@ -11,10 +16,10 @@ function brandingInjector(): Plugin {
   return {
     name: 'branding-injector',
     async transformIndexHtml(html) {
-      let data: any = null
+      let data: CompetitionPayload | null = null
       try {
         const res = await fetch(`${apiBase}/api/competition/`)
-        if (res.ok) data = await res.json()
+        if (res.ok) data = await res.json() as CompetitionPayload
       } catch {
         return html // backend not reachable at this moment; client hydrates it
       }
