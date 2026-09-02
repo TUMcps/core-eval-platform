@@ -7,8 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:staged": "lint-staged",
     "test": "vitest run",
-    "preview": "vite preview"
+    "check": "npm run lint && npm test && npm run build",
+    "preview": "vite preview",
+    "prepare": "node .husky/install.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -19,6 +23,9 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.6"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": "eslint --fix"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -32,7 +39,9 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "husky": "^9.1.7",
     "jsdom": "^29.1.1",
+    "lint-staged": "^17.3.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",

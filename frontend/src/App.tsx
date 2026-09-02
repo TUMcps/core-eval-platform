@@ -4,7 +4,7 @@ import { ThemeProvider, CssBaseline, Box } from '@mui/material';
 import { buildTheme } from './theme';
 import { competitionApi, type Branding } from './api';
 import { bootBranding } from './branding';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider } from './context/AuthProvider';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';

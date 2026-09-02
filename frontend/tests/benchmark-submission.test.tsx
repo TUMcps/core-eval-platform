@@ -7,8 +7,12 @@ const benchmarksApi = vi.hoisted(() => ({
   getFormData: vi.fn(),
   submit: vi.fn(),
 }));
+const apiErrorData = vi.hoisted(() => (error: unknown): unknown => {
+  if (!error || typeof error !== 'object' || !('response' in error)) return undefined;
+  return (error as { response?: { data?: unknown } }).response?.data;
+});
 
-vi.mock('../src/api', () => ({ benchmarksApi }));
+vi.mock('../src/api', () => ({ benchmarksApi, apiErrorData }));
 
 import BenchmarkSubmissionPage from '../src/pages/BenchmarkSubmissionPage';
 
