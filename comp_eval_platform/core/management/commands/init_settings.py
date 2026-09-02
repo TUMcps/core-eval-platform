@@ -20,7 +20,7 @@ class Command(BaseCommand):
         backend = getattr(settings, "EXECUTION_BACKEND", "local_docker")
         if created:
             s.execution_backend = backend
-            if backend == "local_docker":
+            if backend in {"local", "local_docker"}:
                 # Local dev: ready to run.
                 s.scheduler_enabled = True
                 s.users_can_submit_benchmarks = True
@@ -32,7 +32,7 @@ class Command(BaseCommand):
                 s.users_can_submit_tools = False
         elif opts["reset"]:
             # Preserve the UI-selected backend; reset only the runtime toggles.
-            if backend == "local_docker":
+            if backend in {"local", "local_docker"}:
                 s.scheduler_enabled = True
                 s.users_can_submit_benchmarks = True
                 s.users_can_submit_tools = True
