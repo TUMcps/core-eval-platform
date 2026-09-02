@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Button, CircularProgress, Chip, Stack, Alert } from '@mui/material';
+import { Box, Typography, Button, Chip, Stack, Alert } from '@mui/material';
+import Skeleton from '@mui/material/Skeleton';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
@@ -22,6 +23,72 @@ import { isPauseKind } from '../constants/steps';
 import { usePageTitle } from '../hooks/usePageTitle';
 
 const REFRESH_MS = 10000;
+
+function BenchmarkDetailsSkeleton() {
+  return (
+    <>
+      <PageHeader>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ flexGrow: 1, minWidth: 280 }}>
+            <Skeleton variant="text" width="42%" height={68} />
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Skeleton variant="rounded" width={92} height={28} />
+              <Skeleton variant="rounded" width={56} height={24} />
+              <Skeleton variant="rounded" width={92} height={24} />
+            </Stack>
+          </Box>
+          <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap' }}>
+            <Skeleton variant="rounded" width={118} height={36} />
+            <Skeleton variant="rounded" width={236} height={36} />
+            <Skeleton variant="rounded" width={148} height={36} />
+          </Stack>
+        </Box>
+
+        <Box sx={{ mt: 3, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper' }}>
+          <Box sx={{ px: 2.5, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Skeleton variant="text" width={180} height={28} />
+          </Box>
+          <Box sx={{ px: 2.5, py: 2.5 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 2, rowGap: 1, alignItems: 'baseline' }}>
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Fragment key={index}>
+                  <Skeleton variant="text" width={index === 0 ? 96 : 72} height={24} />
+                  <Skeleton variant="text" width={index === 0 ? '68%' : '52%'} height={24} />
+                </Fragment>
+              ))}
+            </Box>
+          </Box>
+        </Box>
+      </PageHeader>
+
+      <PageSection>
+        <Skeleton variant="text" width={120} height={40} sx={{ mb: 2 }} />
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Box
+            key={index}
+            sx={{
+              p: 3,
+              mb: 2,
+              bgcolor: 'grey.50',
+              border: '1px solid',
+              borderColor: 'grey.300',
+              borderRadius: 1,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+              <Skeleton variant="text" width={20} height={28} />
+              <Skeleton variant="text" width="38%" height={28} sx={{ flexGrow: 1 }} />
+              <Skeleton variant="rounded" width={72} height={24} />
+              <Skeleton variant="rounded" width={56} height={24} />
+            </Box>
+            <Skeleton variant="rectangular" width="42%" height={18} sx={{ mt: 1 }} />
+            <Skeleton variant="rectangular" width="100%" height={72} sx={{ mt: 2, borderRadius: 1 }} />
+          </Box>
+        ))}
+      </PageSection>
+    </>
+  );
+}
 
 export default function BenchmarkDetailsPage() {
   const { id } = useParams();
@@ -51,7 +118,7 @@ export default function BenchmarkDetailsPage() {
     // eslint-disable-next-line
   }, [task?.done, id]);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box>;
+  if (loading) return <BenchmarkDetailsSkeleton />;
   if (!task) return <PageSection><Typography>Task not found.</Typography></PageSection>;
 
   const overall = statusChip(task.status || (task.done ? 'Done' : 'Running'));

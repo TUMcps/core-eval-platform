@@ -14,7 +14,6 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import MuiLink from '@mui/material/Link';
-import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
@@ -25,6 +24,61 @@ import TableHead from '@mui/material/TableHead';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
+import Skeleton from '@mui/material/Skeleton';
+
+function BenchmarkSubmissionsSkeleton({ showUserColumn }: { showUserColumn: boolean }) {
+  return (
+    <>
+      <PageHeader>
+        <PageBreadcrumbs items={[{ label: 'Benchmark' }]} />
+        <PageTitle>Benchmark Submissions</PageTitle>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+          Use this page to submit benchmarks and review proposed benchmark entries.
+        </Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 3 }}>
+          <Button component={Link} to="/benchmark/submit" variant="contained" size="large">Propose a new benchmark</Button>
+          <Button component={Link} to="/benchmark/info" variant="outlined" size="large" sx={{ fontSize: '1rem', px: 4 }}>Read how the system works</Button>
+        </Stack>
+      </PageHeader>
+
+      <PageSection>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>Proposed Benchmarks</Typography>
+        <Typography variant="body1" sx={{ mb: 4 }} color="text.secondary">
+          Below are all submitted benchmarks. Each is published automatically once its submission run completes, making it available for tools to run against.
+        </Typography>
+        <TableContainer component={Paper} elevation={2}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                {showUserColumn && <TableCell sx={{ fontWeight: 600 }}>User</TableCell>}
+                <TableCell sx={{ fontWeight: 600 }}>Repository</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>Status</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>Action</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {Array.from({ length: 6 }).map((_, index) => (
+                <TableRow key={index} hover>
+                  <TableCell><Skeleton variant="text" width="72%" /></TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}><Skeleton variant="text" width="68%" /></TableCell>
+                  {showUserColumn && <TableCell><Skeleton variant="text" width="84%" /></TableCell>}
+                  <TableCell sx={{ maxWidth: 260 }}><Skeleton variant="text" width="100%" /></TableCell>
+                  <TableCell align="center"><Skeleton variant="rounded" width={72} height={24} sx={{ mx: 'auto' }} /></TableCell>
+                  <TableCell align="center"><Skeleton variant="rounded" width={86} height={36} sx={{ mx: 'auto' }} /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+          <Skeleton variant="rectangular" width={300} height={52} />
+        </Box>
+      </PageSection>
+    </>
+  );
+}
 
 export default function BenchmarkSubmissionsPage() {
   const { user } = useAuth();
@@ -41,7 +95,7 @@ export default function BenchmarkSubmissionsPage() {
     benchmarksApi.getFormData().then((d) => setUsesCategories(d.uses_categories)).catch(() => {});
   }, []);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}><CircularProgress /></Box>;
+  if (loading) return <BenchmarkSubmissionsSkeleton showUserColumn={!!user?.is_admin} />;
 
   return (
     <>

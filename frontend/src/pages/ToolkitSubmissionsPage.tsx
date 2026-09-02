@@ -15,7 +15,6 @@ import { benchmarkStateColor, BENCHMARK_STATE_LEGEND } from '../constants/benchm
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
@@ -27,6 +26,76 @@ import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import Skeleton from '@mui/material/Skeleton';
+
+function ToolkitSubmissionsSkeleton({ showUserColumn, showCategoryColumn }: { showUserColumn: boolean; showCategoryColumn: boolean }) {
+  return (
+    <>
+      <PageHeader>
+        <PageBreadcrumbs items={[{ label: 'Toolkit' }]} />
+        <PageTitle>Toolkit Submissions</PageTitle>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+          Use this page to submit a toolkit and review current toolkit submissions.
+        </Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 3 }}>
+          <Button component={Link} to="/toolkit/submit" variant="contained" size="large">Submit a new toolkit</Button>
+          <Button component={Link} to="/toolkit/info" variant="outlined" size="large" sx={{ fontSize: '1rem', px: 4 }}>Read how the system works</Button>
+        </Stack>
+      </PageHeader>
+
+      <PageSection>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>Your Submitted Toolkits</Typography>
+        {showUserColumn && <Skeleton variant="rounded" width={220} height={40} sx={{ mb: 3, borderRadius: '20px' }} />}
+
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 2 }}>
+          <Typography variant="body2" color="text.secondary">Benchmark progress:</Typography>
+          {BENCHMARK_STATE_LEGEND.map((item) => (
+            <Chip key={item.state} label={item.label} color={benchmarkStateColor(item.state)} size="small" />
+          ))}
+          <Skeleton variant="rounded" width={56} height={24} />
+        </Box>
+
+        <TableContainer component={Paper} elevation={2}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                {showUserColumn && <TableCell sx={{ fontWeight: 600 }}>User</TableCell>}
+                {showCategoryColumn && <TableCell sx={{ fontWeight: 600 }}>Category</TableCell>}
+                <TableCell sx={{ fontWeight: 600 }}>Benchmarks</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>Status</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>Action</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {Array.from({ length: 6 }).map((_, index) => (
+                <TableRow key={index} hover>
+                  <TableCell><Skeleton variant="text" width="72%" /></TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}><Skeleton variant="text" width="68%" /></TableCell>
+                  {showUserColumn && <TableCell><Skeleton variant="text" width="84%" /></TableCell>}
+                  {showCategoryColumn && <TableCell><Skeleton variant="text" width="64%" /></TableCell>}
+                  <TableCell>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
+                      <Skeleton variant="rounded" width={66} height={24} />
+                      <Skeleton variant="rounded" width={66} height={24} />
+                      <Skeleton variant="rounded" width={66} height={24} />
+                    </Box>
+                  </TableCell>
+                  <TableCell align="center"><Skeleton variant="rounded" width={72} height={24} sx={{ mx: 'auto' }} /></TableCell>
+                  <TableCell align="center"><Skeleton variant="rounded" width={86} height={36} sx={{ mx: 'auto' }} /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+          <Skeleton variant="rectangular" width={300} height={52} />
+        </Box>
+      </PageSection>
+    </>
+  );
+}
 
 export default function ToolkitSubmissionsPage() {
   const { user } = useAuth();
@@ -76,7 +145,7 @@ export default function ToolkitSubmissionsPage() {
   useEffect(() => { setPage(0); }, [searchTerm]);
   const paged = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}><CircularProgress /></Box>;
+  if (loading) return <ToolkitSubmissionsSkeleton showUserColumn={!!user?.is_admin} showCategoryColumn={usesCategories} />;
 
   return (
     <>
