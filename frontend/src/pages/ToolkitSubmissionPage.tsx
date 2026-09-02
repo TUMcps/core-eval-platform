@@ -6,7 +6,7 @@ import {
   Checkbox, Alert, Divider, FormGroup, Accordion, AccordionDetails, AccordionSummary,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { toolkitApi } from '../api';
+import { apiErrorData, toolkitApi } from '../api';
 import type { ToolkitFormData } from '../api';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
@@ -14,12 +14,39 @@ import PageTitle from '../components/PageTitle';
 import PageSection from '../components/PageSection';
 import { useAuth } from '../context/AuthContext';
 
+interface ToolkitSubmissionForm {
+  name: string;
+  repository: string;
+  hash: string;
+  ami: string;
+  aws_instance_type: string;
+  eni: string;
+  use_own_eni: boolean;
+  scripts_dir: string;
+  manual_installation_step: boolean;
+  run_installation_script_as_root: boolean;
+  run_post_installation_script_as_root: boolean;
+  run_toolkit_as_root: boolean;
+  post_install_tool: string;
+  vnnlib_version: string;
+  run_networks: string;
+  pause_after_postinstallation: boolean;
+  restart_after_postinstallation: boolean;
+  reverse_order: boolean;
+  split: number;
+  export_results: boolean;
+  force_pause: boolean;
+  force_no_pause: boolean;
+  local_execution: boolean;
+  benchmarks: string[];
+}
+
 export default function ToolkitSubmissionPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   // The details page's "Populate new submission form" button routes here with prefill.
-  const prefill = (useLocation().state as { prefillData?: any } | null)?.prefillData;
-  const [form, setForm] = useState<any>({
+  const prefill = (useLocation().state as { prefillData?: Partial<ToolkitSubmissionForm> } | null)?.prefillData;
+  const [form, setForm] = useState<ToolkitSubmissionForm>({
     name: '', repository: '', hash: '', ami: '', aws_instance_type: 't2.large', eni: '', use_own_eni: false,
     scripts_dir: '', manual_installation_step: false, run_installation_script_as_root: false,
     run_post_installation_script_as_root: false, run_toolkit_as_root: false, post_install_tool: '',
@@ -30,7 +57,7 @@ export default function ToolkitSubmissionPage() {
     // A tool submitted outside this form may carry no benchmark list; the checkboxes need an array.
     benchmarks: Array.isArray(prefill?.benchmarks) ? prefill.benchmarks : [],
   });
-  const set = (patch: any) => setForm((f: any) => ({ ...f, ...patch }));
+  const set = (patch: Partial<ToolkitSubmissionForm>) => setForm((current) => ({ ...current, ...patch }));
   const [message, setMessage] = useState('');
   const [data, setData] = useState<ToolkitFormData | null>(null);
   const [useRepoRoot, setUseRepoRoot] = useState(!prefill?.scripts_dir);
@@ -77,7 +104,7 @@ export default function ToolkitSubmissionPage() {
     if (!canSubmit) return setMessage('Submission is currently closed');
     if (!schedulerEnabled) return setMessage('Submissions are paused: the scheduler is currently disabled.');
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         name: form.name, repository: form.repository, hash: form.hash, ami: form.ami,
         aws_instance_type: form.aws_instance_type, scripts_dir: useRepoRoot ? '.' : form.scripts_dir.trim(),
         manual_installation_step: form.manual_installation_step,
@@ -102,10 +129,13 @@ export default function ToolkitSubmissionPage() {
       }
       const result = await toolkitApi.submit(payload);
       navigate(`/toolkit/submission/${result.redirect_to}`);
-    } catch (error: any) {
-      const errors = error.response?.data?.errors;
+    } catch (error: unknown) {
+      const data = apiErrorData(error);
+      const response = data && typeof data === 'object' ? data as Record<string, unknown> : undefined;
+      const errors = response?.errors;
       const details = errors ? Object.entries(errors).map(([f, e]) => `${f}: ${Array.isArray(e) ? e.join(', ') : String(e)}`).join(' ') : '';
-      setMessage(details || error.response?.data?.error || 'Submission failed');
+      const message = typeof response?.error === 'string' ? response.error : undefined;
+      setMessage(details || message || 'Submission failed');
     }
   };
 
