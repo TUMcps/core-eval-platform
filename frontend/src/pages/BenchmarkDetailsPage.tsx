@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useRef } from 'react';
+import { Fragment, useCallback, useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, Button, Chip, Stack, Alert } from '@mui/material';
 import Skeleton from '@mui/material/Skeleton';
@@ -16,7 +16,7 @@ import DeleteSubmissionDialog from '../components/DeleteSubmissionDialog';
 import TaskPipeline from '../components/TaskPipeline';
 import TaskTimer from '../components/TaskTimer';
 import { useAuth } from '../context/AuthContext';
-import { tasksApi, benchmarksApi, downloadTaskResults } from '../api';
+import { apiErrorMessage, tasksApi, benchmarksApi, downloadTaskResults } from '../api';
 import type { Task, Benchmark } from '../api';
 import { statusChip } from '../constants/status';
 import { isPauseKind } from '../constants/steps';
@@ -101,9 +101,7 @@ export default function BenchmarkDetailsPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   usePageTitle(task ? `${task.name} (#${task.id})` : 'Benchmark');
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!id) return;
     try {
       const t = await tasksApi.get(id);
@@ -111,12 +109,17 @@ export default function BenchmarkDetailsPage() {
       // Refetched each poll: the export step records the resolved commit and publishes.
       if (t.benchmark) setBenchmark(await benchmarksApi.get(t.benchmark).catch(() => null));
     } catch { /* ignore */ } finally { setLoading(false); }
-  };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+  }, [id]);
   useEffect(() => {
-    if (task && !task.done) { timer.current = setInterval(load, REFRESH_MS); return () => { if (timer.current) clearInterval(timer.current); }; }
-    // eslint-disable-next-line
-  }, [task?.done, id]);
+    const timer = setTimeout(() => { void load(); }, 0);
+    return () => clearTimeout(timer);
+  }, [load]);
+  const done = task?.done ?? true;
+  useEffect(() => {
+    if (done) return;
+    const timer = setInterval(() => { void load(); }, REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [done, load]);
 
   if (loading) return <BenchmarkDetailsSkeleton />;
   if (!task) return <PageSection><Typography>Task not found.</Typography></PageSection>;
@@ -145,7 +148,7 @@ export default function BenchmarkDetailsPage() {
   const doDelete = async () => {
     setDeleting(true);
     try { await tasksApi.delete(task.id); navigate('/benchmark'); }
-    catch (err: any) { setDeleting(false); setDeleteOpen(false); setError(err?.response?.data?.error ?? 'Delete failed'); }
+    catch (error: unknown) { setDeleting(false); setDeleteOpen(false); setError(apiErrorMessage(error, 'Delete failed', 'error')); }
   };
   // Re-open the submission form with this submission's inputs prefilled. (The ARCH form
   // ignores `name`; the VNN form ignores `category`.)
