@@ -245,7 +245,9 @@ class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=["get"], url_path="download")
     def download_results(self, request, pk=None):
-        """Download all benchmark results for a task as a ZIP."""
+        """Download all benchmark results for a task as a ZIP.
+        Unified version supporting both VNN (payloads, name-based logs) 
+        and ARCH (figures, id-based logs, robust fallbacks)."""
         task = self.get_object()
         if not self._may_manage(request, task):
             return Response(status=403)
@@ -253,44 +255,114 @@ class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
             return Response({"error": "task not finished yet"}, status=409)
 
         buf = io.BytesIO()
+        files_added = 0
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
             for step in task.step_set.all():
-                benchmark_name = step.payload.get("benchmark_name")
+                if "run_benchmark" not in step.kind:
+                    continue
+
+                payload = step.payload or {}
+                benchmark_name = payload.get("benchmark_name")
+                benchmark_id = payload.get("benchmark_id")
+
+                # ID Cast, Name-ID Verification
+                if benchmark_id:
+                    try:
+                        benchmark_id = int(benchmark_id)
+                    except (ValueError, TypeError):
+                        pass
+
+                if benchmark_name and not benchmark_id:
+                    try:
+                        benchmark_id = Benchmark.objects.get(name=benchmark_name).id
+                    except Benchmark.DoesNotExist:
+                        pass
+                elif benchmark_id and not benchmark_name:
+                    try:
+                        benchmark = Benchmark.objects.get(id=benchmark_id)
+                        benchmark_name = benchmark.name
+                    except Benchmark.DoesNotExist:
+                        benchmark_name = f"benchmark_{benchmark_id}"
+
                 if not benchmark_name:
                     continue
 
-                results = Result.objects.filter(
-                    task=task,
-                    benchmark__name=benchmark_name,
-                ).select_related("instance")
-                if results.exists():
-                    lines = ["benchmark,instance,result,time"]
-                    for result in results:
-                        instance_name = result.instance.name if result.instance else ""
-                        lines.append(
-                            f"{benchmark_name},{instance_name},"
-                            f"{result.result},{result.time or ''}"
-                        )
-                    zf.writestr(
-                        f"{benchmark_name}/results.csv",
-                        "\n".join(lines),
-                    )
+                # 1. Read from Payload 
+                results_csv_str = payload.get("results_csv")
 
+                # 2. Read from Inside the Database 
+                if not results_csv_str:
+                    results = Result.objects.filter(
+                        Q(task=task) & (Q(benchmark__name=benchmark_name) | Q(benchmark_id=benchmark_id))
+                    ).select_related("instance")
+                    
+                    if results.exists():
+                        lines = ["benchmark,instance,result,time"]
+                        for result in results:
+                            instance_name = result.instance.name if result.instance else ""
+                            lines.append(f"{benchmark_name},{instance_name},{result.result},{result.time or ''}")
+                        results_csv_str = "\n".join(lines)
+
+                #3. Read from Physical Logs
+                if not results_csv_str:
+                    possible_paths = []
+                    if benchmark_id:
+                        possible_paths.extend([
+                            f"/app/logs/results_{benchmark_id}.csv",
+                            os.path.join(settings.BASE_DIR, "logs", f"results_{benchmark_id}.csv"),
+                            os.path.join(settings.BASE_DIR, "..", "logs", f"results_{benchmark_id}.csv")
+                        ])
+                    if benchmark_name:
+                        possible_paths.append(os.path.join(settings.BASE_DIR, "logs", f"results_{benchmark_name}.csv"))
+
+                    for csv_path in possible_paths:
+                        if os.path.exists(csv_path):
+                            with open(csv_path, "r", encoding="utf-8") as f:
+                                results_csv_str = f.read()
+                            break
+
+                # CSV Writing
+                if results_csv_str:
+                    zf.writestr(f"{benchmark_name}/results.csv", results_csv_str)
+                    files_added += 1
+
+                # Log Writing
                 log_text = getattr(step, "logs", "")
                 if log_text:
                     zf.writestr(f"{benchmark_name}/run.log", log_text)
+                    files_added += 1
 
-                figures_dir = os.path.join(settings.DATA_DIR, "figures", benchmark_name)
-                if os.path.isdir(figures_dir):
+                # 4. Collecting Figures 
+                # Since these folders will not be found in the VNN, os.path.isdir() will be silently skipped and will not give an error.
+                possible_fig_dirs = [
+                    os.path.join(settings.BASE_DIR, "logs", "figures", benchmark_name),
+                    os.path.join(settings.DATA_DIR, "figures", benchmark_name),
+                    f"/app/logs/figures/{benchmark_name}"
+                ]
+                
+                figures_dir = None
+                for d in possible_fig_dirs:
+                    if os.path.isdir(d):
+                        figures_dir = d
+                        break
+
+                if figures_dir:
                     for root, _dirs, files in os.walk(figures_dir):
                         for fname in files:
                             fpath = os.path.join(root, fname)
-                            arcname = os.path.join(
-                                benchmark_name,
-                                "figures",
-                                os.path.relpath(fpath, figures_dir),
-                            )
+                            rel_path = os.path.relpath(fpath, figures_dir)
+                            arcname = os.path.join(benchmark_name, "figures", rel_path)
                             zf.write(fpath, arcname)
+                            files_added += 1
+
+            # If no files are created during the task, the system will issue an error report instead of crashing.
+            if files_added == 0:
+                summary_info = f"Task ID: {task.id}\nName: {getattr(task, 'name', 'N/A')}\nOutcome: {getattr(task, 'outcome', 'unknown')}\nCreated At: {getattr(task, 'created_at', 'unknown')}\n"
+                zf.writestr("task_summary.txt", summary_info)
+                for step in task.step_set.all():
+                    step_log = getattr(step, "logs", "")
+                    if step_log:
+                        zf.writestr(f"steps/step_{step.order}_{step.kind}.log", step_log)
 
         buf.seek(0)
         response = HttpResponse(buf.read(), content_type="application/zip")
