@@ -3,6 +3,20 @@ import apiClient from './client';
 // Task/Benchmark/Tool use integer ids; callers also pass useParams() strings.
 type ID = number | string;
 
+export async function downloadTaskResults(taskId: number): Promise<void> {
+  const res = await fetch(`/api/tasks/${taskId}/download/`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Download failed');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `task_${taskId}_results.zip`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export interface User {
   id: string;
   email: string;

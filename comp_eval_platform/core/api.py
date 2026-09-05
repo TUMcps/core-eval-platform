@@ -7,6 +7,7 @@ import io
 import os
 import zipfile
 
+from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Case, IntegerField, Q, When
 from django.http import HttpResponse
@@ -240,6 +241,60 @@ class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         name = f"task{task.id}_{os.path.basename(directory)}"
         response = HttpResponse(_zip_dir(directory), content_type="application/zip")
         response["Content-Disposition"] = f'attachment; filename="{name}.zip"'
+        return response
+
+    @action(detail=True, methods=["get"], url_path="download")
+    def download_results(self, request, pk=None):
+        """Download all benchmark results for a task as a ZIP."""
+        task = self.get_object()
+        if not self._may_manage(request, task):
+            return Response(status=403)
+        if not task.done:
+            return Response({"error": "task not finished yet"}, status=409)
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            for step in task.step_set.all():
+                benchmark_name = step.payload.get("benchmark_name")
+                if not benchmark_name:
+                    continue
+
+                results = Result.objects.filter(
+                    task=task,
+                    benchmark__name=benchmark_name,
+                ).select_related("instance")
+                if results.exists():
+                    lines = ["benchmark,instance,result,time"]
+                    for result in results:
+                        instance_name = result.instance.name if result.instance else ""
+                        lines.append(
+                            f"{benchmark_name},{instance_name},"
+                            f"{result.result},{result.time or ''}"
+                        )
+                    zf.writestr(
+                        f"{benchmark_name}/results.csv",
+                        "\n".join(lines),
+                    )
+
+                log_text = getattr(step, "logs", "")
+                if log_text:
+                    zf.writestr(f"{benchmark_name}/run.log", log_text)
+
+                figures_dir = os.path.join(settings.DATA_DIR, "figures", benchmark_name)
+                if os.path.isdir(figures_dir):
+                    for root, _dirs, files in os.walk(figures_dir):
+                        for fname in files:
+                            fpath = os.path.join(root, fname)
+                            arcname = os.path.join(
+                                benchmark_name,
+                                "figures",
+                                os.path.relpath(fpath, figures_dir),
+                            )
+                            zf.write(fpath, arcname)
+
+        buf.seek(0)
+        response = HttpResponse(buf.read(), content_type="application/zip")
+        response["Content-Disposition"] = f'attachment; filename="task_{task.id}_results.zip"'
         return response
 
     @action(detail=True, methods=["post"])
