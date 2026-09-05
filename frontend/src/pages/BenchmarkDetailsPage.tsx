@@ -126,7 +126,6 @@ export default function BenchmarkDetailsPage() {
   const isPaused = !!active && isPauseKind(active.kind);
   const isRemoteDocker = task.execution_backend === 'remote_docker';
   const canDownloadResults = task.done || ['done', 'success', 'succeeded', 'failed', 'timed_out', 'error', 'aborted'].includes((task as any).status || (task as any).outcome);
-  const tool = (task as any).tool || (benchmark as any)?.tool;
   const extra = (task as any).extra || (task as any).payload || {};
   // the serializer already resolves these across task shapes.
   const repository = task.repository || '';
