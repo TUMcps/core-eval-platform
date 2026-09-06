@@ -256,16 +256,32 @@ class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
 
         buf = io.BytesIO()
         files_added = 0
+
+        # Precompute (N+1 Optimization): Execute database queries once before the loop
+        # 1. Create maps for ID-to-Name and Name-to-ID matching
+        all_benchmarks = Benchmark.objects.all()
+        bench_id_to_name = {b.id: b.name for b in all_benchmarks}
+        bench_name_to_id = {b.name: b.id for b in all_benchmarks}
+
+        # 2. Fetch and group all Result rows for this task in a single query
+        all_results = Result.objects.filter(task=task).select_related("instance")
+        results_by_bench_id = {}
+        for r in all_results:
+            b_id = r.benchmark_id
+            if b_id not in results_by_bench_id:
+                results_by_bench_id[b_id] = []
+            results_by_bench_id[b_id].append(r)
+
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            for step in task.step_set.all():
-                if "run_benchmark" not in step.kind:
+            for step in task.steps:
+                if step.kind != "run_benchmark":
                     continue
 
                 payload = step.payload or {}
                 benchmark_name = payload.get("benchmark_name")
                 benchmark_id = payload.get("benchmark_id")
 
-                # ID Cast, Name-ID Verification
+                # ID Cast, Name-ID Verification using precomputed maps instead of queries
                 if benchmark_id:
                     try:
                         benchmark_id = int(benchmark_id)
@@ -273,37 +289,36 @@ class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
                         pass
 
                 if benchmark_name and not benchmark_id:
-                    try:
-                        benchmark_id = Benchmark.objects.get(name=benchmark_name).id
-                    except Benchmark.DoesNotExist:
-                        pass
+                    benchmark_id = bench_name_to_id.get(benchmark_name)
                 elif benchmark_id and not benchmark_name:
-                    try:
-                        benchmark = Benchmark.objects.get(id=benchmark_id)
-                        benchmark_name = benchmark.name
-                    except Benchmark.DoesNotExist:
-                        benchmark_name = f"benchmark_{benchmark_id}"
+                    benchmark_name = bench_id_to_name.get(benchmark_id, f"benchmark_{benchmark_id}")
 
                 if not benchmark_name:
                     continue
 
+                # Zip Slip protection: remove dangerous characters
+                safe_benchmark_name = str(benchmark_name).replace("/", "_").replace("\\", "_").replace("..", "")
+                if not safe_benchmark_name.strip():
+                    safe_benchmark_name = f"benchmark_{benchmark_id or 'unknown'}"
+
                 # 1. Read from Payload 
                 results_csv_str = payload.get("results_csv")
 
-                # 2. Read from Inside the Database 
+                # 2. Read from Precomputed Database Results 
                 if not results_csv_str:
-                    results = Result.objects.filter(
-                        Q(task=task) & (Q(benchmark__name=benchmark_name) | Q(benchmark_id=benchmark_id))
-                    ).select_related("instance")
-                    
-                    if results.exists():
+                    step_results = results_by_bench_id.get(benchmark_id, [])
+                    if not step_results and benchmark_name:
+                        b_id_from_name = bench_name_to_id.get(benchmark_name)
+                        step_results = results_by_bench_id.get(b_id_from_name, [])
+
+                    if step_results:
                         lines = ["benchmark,instance,result,time"]
-                        for result in results:
+                        for result in step_results:
                             instance_name = result.instance.name if result.instance else ""
-                            lines.append(f"{benchmark_name},{instance_name},{result.result},{result.time or ''}")
+                            lines.append(f"{safe_benchmark_name},{instance_name},{result.result},{result.time or ''}")
                         results_csv_str = "\n".join(lines)
 
-                #3. Read from Physical Logs
+                # 3. Read from Physical Logs
                 if not results_csv_str:
                     possible_paths = []
                     if benchmark_id:
@@ -323,13 +338,13 @@ class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
 
                 # CSV Writing
                 if results_csv_str:
-                    zf.writestr(f"{benchmark_name}/results.csv", results_csv_str)
+                    zf.writestr(f"{safe_benchmark_name}/results.csv", results_csv_str)
                     files_added += 1
 
                 # Log Writing
                 log_text = getattr(step, "logs", "")
                 if log_text:
-                    zf.writestr(f"{benchmark_name}/run.log", log_text)
+                    zf.writestr(f"{safe_benchmark_name}/run.log", log_text)
                     files_added += 1
 
                 # 4. Collecting Figures 
@@ -351,7 +366,7 @@ class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
                         for fname in files:
                             fpath = os.path.join(root, fname)
                             rel_path = os.path.relpath(fpath, figures_dir)
-                            arcname = os.path.join(benchmark_name, "figures", rel_path)
+                            arcname = os.path.join(safe_benchmark_name, "figures", rel_path)
                             zf.write(fpath, arcname)
                             files_added += 1
 
@@ -359,7 +374,7 @@ class TaskViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
             if files_added == 0:
                 summary_info = f"Task ID: {task.id}\nName: {getattr(task, 'name', 'N/A')}\nOutcome: {getattr(task, 'outcome', 'unknown')}\nCreated At: {getattr(task, 'created_at', 'unknown')}\n"
                 zf.writestr("task_summary.txt", summary_info)
-                for step in task.step_set.all():
+                for step in task.steps:
                     step_log = getattr(step, "logs", "")
                     if step_log:
                         zf.writestr(f"steps/step_{step.order}_{step.kind}.log", step_log)

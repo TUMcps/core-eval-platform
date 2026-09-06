@@ -130,10 +130,10 @@ export default function ToolkitDetailsPage() {
   const active = task.steps.find((s) => s.status === 'active');
   const isPaused = !!active && isPauseKind(active.kind);
   const isRemoteDocker = task.execution_backend === 'remote_docker';
-  const canDownloadResults = task.done || ['done', 'success', 'succeeded', 'failed', 'timed_out', 'error', 'aborted'].includes((task as any).status || (task as any).outcome);  const scriptDir = tool?.script_dir === '.' ? 'Repository root' : (tool?.script_dir || '—');
-
-  const extra = (task as any).extra || {};
-  const benchmarkNames: string[] = [];
+  const canDownloadResults = task.done || ['done', 'success', 'succeeded', 'failed', 'timed_out', 'error', 'aborted'].includes((task as any).status || (task as any).outcome);
+  const extra = (tool?.extra ?? {}) as Record<string, any>;
+  const benchmarkNames = task.benchmark_progress.map((p) => p.name);
+  const scriptDir = tool?.script_dir === '.' ? 'Repository root' : (tool?.script_dir || '—');
 
   // Imported tasks carry the old system's key names for the same options; take whichever is set.
   const opt = (...names: string[]) => names.map((n) => extra[n]).find((v) => v !== undefined);
