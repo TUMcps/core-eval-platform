@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Box, Typography, Paper, Chip, Button } from '@mui/material';
+import { Box, Typography, Paper, Chip, Button, IconButton } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import LiveIndicator from './LiveIndicator';
 import CollapsibleSection from './CollapsibleSection';
@@ -90,6 +90,24 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
     }
   };
 
+  const downloadLog = (step: TaskStep) => {
+    if (taskId === undefined) return;
+    setDownloading((d) => ({ ...d, [step.id]: true }));
+    try {
+      const blob = new Blob([step.logs], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `task${taskId}_step${step.order}_${step.kind}.log`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // The step already has its loaded log text, so a failure here is local/browser-side.
+    } finally {
+      setDownloading((d) => ({ ...d, [step.id]: false }));
+    }
+  };
+
   const benchmarkAt = new Map((benchmarkProgress ?? []).map((p) => [p.step_id, p.name]));
   /** The benchmark a run step ran, or undefined for every other kind. */
   const benchmarkOf = (s: TaskStep) => (s.kind === 'run_benchmark' ? benchmarkAt.get(s.order) : undefined);
@@ -164,6 +182,12 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
 
             {s.has_logs ? (
               <CollapsibleSection title="Logs" open={logsOpen}
+                actions={(
+                  <IconButton size="small" title="Download log" disabled={!!downloading[s.id]}
+                    onClick={() => downloadLog(s)}>
+                    <DownloadIcon fontSize="small" />
+                  </IconButton>
+                )}
                 onToggle={() => {
                   const next = !logsOpen;
                   setOpenLogs((o) => ({ ...o, [s.id]: next }));
@@ -204,6 +228,12 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
             {scoring && (scoring.has_logs || scoring.status === 'active') && (
               <CollapsibleSection title="Scoring logs"
                 open={openScoring[s.id] ?? false}
+                actions={scoring.has_logs ? (
+                  <IconButton size="small" title="Download log" disabled={!!downloading[scoring.id]}
+                    onClick={() => downloadLog(scoring)}>
+                    <DownloadIcon fontSize="small" />
+                  </IconButton>
+                ) : undefined}
                 onToggle={() => setOpenScoring((o) => ({ ...o, [s.id]: !(o[s.id] ?? false) }))}>
                 <Box className="console_log">
                   {scoring.has_logs

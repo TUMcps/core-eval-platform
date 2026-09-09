@@ -201,7 +201,7 @@ export default function BenchmarkDetailsPage() {
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
         {isRemoteDocker && !task.done && active?.kind === 'assign' && <Alert severity="warning" sx={{ mb: 3 }}>This submission is running on remote_docker. If it appears to stall while assigning a worker, the worker service may still be provisioning or syncing the container.</Alert>}
         <Typography variant="h5" fontWeight="bold" gutterBottom>Pipeline</Typography>
-        <TaskPipeline steps={task.steps} benchmarkProgress={task.benchmark_progress} />
+        <TaskPipeline steps={task.steps} benchmarkProgress={task.benchmark_progress} taskId={task.id} />
 
         {benchmark && task.done && task.status === 'Done' && (
           <Alert severity="success" sx={{ mt: 3 }}>
