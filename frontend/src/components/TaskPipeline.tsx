@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
+import JSZip from 'jszip';
 import { Box, Typography, Paper, Chip, Button, IconButton } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import LiveIndicator from './LiveIndicator';
@@ -90,23 +91,27 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
     }
   };
 
-  const downloadLog = (step: TaskStep) => {
-    if (taskId === undefined) return;
-    setDownloading((d) => ({ ...d, [step.id]: true }));
-    try {
-      const blob = new Blob([step.logs], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `task${taskId}_step${step.order}_${step.kind}.log`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      // The step already has its loaded log text, so a failure here is local/browser-side.
-    } finally {
-      setDownloading((d) => ({ ...d, [step.id]: false }));
-    }
-  };
+  const downloadStepBundle = async (step: TaskStep, scoring?: TaskStep) => {
+  if (taskId === undefined) return;
+  setDownloading((d) => ({ ...d, [step.id]: true }));
+  try {
+    const zip = new JSZip();
+    if (step.logs) zip.file('logs.txt', step.logs);
+    if (step.results) zip.file('results.csv', step.results);
+    if (scoring?.logs) zip.file('scoring_logs.txt', scoring.logs);
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `task${taskId}_step${step.order}_${step.kind}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    // The step already has its loaded data client-side, so a failure here is local/browser-side.
+  } finally {
+    setDownloading((d) => ({ ...d, [step.id]: false }));
+  }
+};
 
   const benchmarkAt = new Map((benchmarkProgress ?? []).map((p) => [p.step_id, p.name]));
   /** The benchmark a run step ran, or undefined for every other kind. */
@@ -168,6 +173,12 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
               <Typography sx={{ fontWeight: 600, flexGrow: 1 }} component="div">{stepName(s)}</Typography>
               {active && !paused && <LiveIndicator label={null} />}
               <Chip size="small" label={chip.label} color={chip.color} variant={chip.variant} />
+              {(s.has_logs || !!s.results || !!scoring?.has_logs) && taskId !== undefined && (
+                <IconButton size="small" title="Download this step's logs, results & scoring"
+                  disabled={!!downloading[s.id]} onClick={() => downloadStepBundle(s, scoring)}>
+                  <DownloadIcon fontSize="small" />
+                </IconButton>
+              )}
               {s.can_abort_benchmark && taskId !== undefined && (
                 <Button color="error" size="small" variant="outlined" onClick={abortBenchmark}>
                   Abort benchmark
@@ -182,12 +193,6 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
 
             {s.has_logs ? (
               <CollapsibleSection title="Logs" open={logsOpen}
-                actions={(
-                  <IconButton size="small" title="Download log" disabled={!!downloading[s.id]}
-                    onClick={() => downloadLog(s)}>
-                    <DownloadIcon fontSize="small" />
-                  </IconButton>
-                )}
                 onToggle={() => {
                   const next = !logsOpen;
                   setOpenLogs((o) => ({ ...o, [s.id]: next }));
@@ -228,12 +233,6 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
             {scoring && (scoring.has_logs || scoring.status === 'active') && (
               <CollapsibleSection title="Scoring logs"
                 open={openScoring[s.id] ?? false}
-                actions={scoring.has_logs ? (
-                  <IconButton size="small" title="Download log" disabled={!!downloading[scoring.id]}
-                    onClick={() => downloadLog(scoring)}>
-                    <DownloadIcon fontSize="small" />
-                  </IconButton>
-                ) : undefined}
                 onToggle={() => setOpenScoring((o) => ({ ...o, [s.id]: !(o[s.id] ?? false) }))}>
                 <Box className="console_log">
                   {scoring.has_logs
