@@ -172,13 +172,13 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
               <Typography sx={{ fontWeight: 600, minWidth: 24, color: 'text.secondary' }}>{index + 1}.</Typography>
               <Typography sx={{ fontWeight: 600, flexGrow: 1 }} component="div">{stepName(s)}</Typography>
               {active && !paused && <LiveIndicator label={null} />}
-              <Chip size="small" label={chip.label} color={chip.color} variant={chip.variant} />
               {(s.has_logs || !!s.results || !!scoring?.has_logs) && taskId !== undefined && (
                 <IconButton size="small" title="Download this step's logs, results & scoring"
                   disabled={!!downloading[s.id]} onClick={() => downloadStepBundle(s, scoring)}>
                   <DownloadIcon fontSize="small" />
                 </IconButton>
               )}
+              <Chip size="small" label={chip.label} color={chip.color} variant={chip.variant} />
               {s.can_abort_benchmark && taskId !== undefined && (
                 <Button color="error" size="small" variant="outlined" onClick={abortBenchmark}>
                   Abort benchmark
