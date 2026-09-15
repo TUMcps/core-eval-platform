@@ -1,5 +1,6 @@
 """DRF serializers for the shared domain. Competition-specific fields ride in the
 ``extra``/``spec``/``payload`` JSON, so these stay variant-agnostic."""
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from .models import Benchmark, Category, Instance, Result, Task, TaskStep, Tool, Track, User
@@ -40,9 +41,17 @@ class BenchmarkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Benchmark
-        fields = ["id", "owner", "category", "name", "repository", "hash", "extra",
+        fields = ["id", "owner", "category", "name", "group", "repository", "hash", "extra",
                   "published", "created_at", "instances"]
         read_only_fields = ["owner", "created_at"]
+
+    def validate_group(self, value):
+        from comp_eval_platform.competitions import get_competition
+
+        try:
+            return get_competition().validate_benchmark_group(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages)
 
 
 class TrackSerializer(serializers.ModelSerializer):
@@ -235,11 +244,14 @@ class TaskListSerializer(serializers.ModelSerializer):
         if not steps:
             return []
         ids = [s.payload.get("benchmark_id") for s in steps if s.payload.get("benchmark_id")]
-        names = ({str(k): v for k, v in Benchmark.objects.filter(id__in=ids).values_list("id", "name")}
-                 if ids else {})
+        catalog = ({str(row[0]): {"name": row[1], "group": row[2]}
+                    for row in Benchmark.objects.filter(id__in=ids).values_list("id", "name", "group")}
+                   if ids else {})
         return [
             {"name": (s.payload.get("benchmark_name")
-                      or names.get(str(s.payload.get("benchmark_id")), "benchmark")),
+                      or catalog.get(str(s.payload.get("benchmark_id")), {}).get("name", "benchmark")),
+             "group": (s.payload.get("benchmark_group")
+                       or catalog.get(str(s.payload.get("benchmark_id")), {}).get("group", "default")),
              "state": _STEP_TO_STATE.get(s.status, "pending"), "step_id": s.order}
             for s in steps
         ]

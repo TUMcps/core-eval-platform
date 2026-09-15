@@ -53,7 +53,7 @@ export interface User {
 export interface Category { id: string; name: string; result_fields: string[]; spec: Record<string, unknown>; }
 export interface Tool { id: number; name: string; category: string; repository: string; hash: string; base_image: string; script_dir: string; extra: Record<string, unknown>; published: boolean; created_at: string; }
 export interface Instance { id: string; name: string; }
-export interface Benchmark { id: number; name: string; category: string; extra: Record<string, unknown>; published: boolean; instances: Instance[]; created_at: string; }
+export interface Benchmark { id: number; name: string; category: string; group: string; extra: Record<string, unknown>; published: boolean; instances: Instance[]; created_at: string; }
 export interface TaskStep {
   id: string; kind: string; order: number; status: string; started_at: string | null;
   finished_at: string | null; logs: string; has_logs: boolean;
@@ -86,7 +86,7 @@ export interface StepSummary {
   };
   severity: 'success' | 'error' | 'unknown';
 }
-export interface BenchmarkProgress { name: string; state: string; step_id: number; }
+export interface BenchmarkProgress { name: string; group: string; state: string; step_id: number; }
 export interface Task {
   id: number; tool: number | null; benchmark: number | null; category: string | null;
   category_name: string | null; outcome: string;
@@ -98,7 +98,8 @@ export interface FormOption { value: string; label: string; hardware?: string; g
 export interface ToolkitFormData {
   can_submit: boolean; scheduler_enabled: boolean; execution_backend: string;
   instance_types: FormOption[]; ami_options: FormOption[]; run_networks_options: FormOption[];
-  benchmark_categories: Record<string, { label: string; benchmarks: { id: string; name: string }[] }>;
+  benchmark_categories: Record<string, { label: string; benchmarks: { id: string; name: string; group: string }[] }>;
+  benchmark_groups: string[];
   default_eni: string; uses_categories: boolean;
 }
 export interface Track { id: string; name: string; description: string; benchmarks: number[]; created_at: string; }
@@ -117,7 +118,8 @@ export interface GuideSection { heading: string; blocks: GuideBlock[]; }
 export interface Guide { intro: string; pipeline: GuideStep[]; sections: GuideSection[]; }
 
 export interface CompetitionInfo { name: string; display_name: string; presentation: { result_columns: string[]; submission_fields: FieldSpec[]; score_columns: string[]; branding: Branding; landing: Landing; guides?: Record<string, Guide>; } | null; }
-export interface Scoreboard { columns: string[]; rows: Record<string, unknown>[]; }
+export interface ScoreboardGroup { name: string; columns: string[]; rows: Record<string, unknown>[]; }
+export interface Scoreboard { columns: string[]; rows: Record<string, unknown>[]; groups: ScoreboardGroup[]; }
 
 const results = <T,>(url: string) => apiClient.get<{ results?: T[] } | T[]>(url).then((r) => {
   const data = r.data;
@@ -182,6 +184,7 @@ export const resultsApi = {
 export interface BenchmarkFormData {
   scheduler_enabled: boolean; can_submit: boolean; execution_backend: string;
   uses_categories: boolean; categories: { id: string; name: string }[];
+  benchmark_groups: string[];
   benchmark_fields: FieldSpec[];
 }
 

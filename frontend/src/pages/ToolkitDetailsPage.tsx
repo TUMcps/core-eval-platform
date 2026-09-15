@@ -135,7 +135,7 @@ export default function ToolkitDetailsPage() {
   const isRemoteDocker = task.execution_backend === 'remote_docker';
   const canDownloadResults = task.done || ['done', 'success', 'succeeded', 'failed', 'timed_out', 'error', 'aborted'].includes((task as any).status || (task as any).outcome);
   const extra = (tool?.extra ?? {}) as Record<string, string | number | boolean | string[] | null | undefined>;
-  const benchmarkNames = task.benchmark_progress.map((p) => p.name);
+  const benchmarkNames = task.benchmark_progress;
   const scriptDir = tool?.script_dir === '.' ? 'Repository root' : (tool?.script_dir || '—');
 
   // Imported tasks carry the old system's key names for the same options; take whichever is set.
@@ -218,7 +218,14 @@ export default function ToolkitDetailsPage() {
           </DetailRow>
           <DetailRow label="VNNLIB version"><code>{extra.vnnlib_version || '—'}</code></DetailRow>
           <DetailRow label="Evaluation mode"><code>{extra.run_networks || '—'}</code></DetailRow>
-          <DetailRow label="Benchmarks">{benchmarkNames.join(', ') || '—'}</DetailRow>
+          <DetailRow label="Benchmarks">
+            {benchmarkNames.length ? benchmarkNames.map((benchmark, index) => (
+              <span key={`${benchmark.name}-${index}`}>
+                {index > 0 && benchmarkNames[index - 1].group !== benchmark.group ? ' | ' : index > 0 ? ', ' : ''}
+                {benchmark.name}
+              </span>
+            )) : '—'}
+          </DetailRow>
           {known(rootFlags) && (
             <DetailRow label="Run as root">
               install: <code>{yn(rootFlags[0])}</code>, post-install: <code>{yn(rootFlags[1])}</code>,{' '}

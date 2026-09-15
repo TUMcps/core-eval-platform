@@ -153,7 +153,7 @@ export default function BenchmarkDetailsPage() {
   // Re-open the submission form with this submission's inputs prefilled. (The ARCH form
   // ignores `name`; the VNN form ignores `category`.)
   const repopulate = () => navigate('/benchmark/submit', {
-    state: { prefillData: { name: task.name, repository, hash, category: categoryId, fields: extra } },
+    state: { prefillData: { name: task.name, group: benchmark?.group, repository, hash, category: categoryId, fields: extra } },
   });
 
   return (
@@ -185,6 +185,7 @@ export default function BenchmarkDetailsPage() {
           {isCategoryLoad && <DetailRow label="Category"><code>{task.name}</code></DetailRow>}
           <DetailRow label="Repository"><code>{repository || '—'}</code></DetailRow>
           <DetailRow label="Hash"><code>{hash || '—'}</code></DetailRow>
+          {!isCategoryLoad && benchmark?.group !== 'default' && <DetailRow label="Group"><code>{benchmark?.group || '—'}</code></DetailRow>}
           {!isCategoryLoad && <DetailRow label="VNNLIB version"><code>{extra.vnnlib_version || '—'}</code></DetailRow>}
           <DetailRow label="Owner">
             {user?.is_admin ? (

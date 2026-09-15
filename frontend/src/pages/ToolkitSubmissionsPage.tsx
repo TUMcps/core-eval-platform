@@ -207,6 +207,9 @@ export default function ToolkitSubmissionsPage() {
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
                           {task.benchmark_progress.map((b, i) => (
                             <Fragment key={`${b.name}-${i}`}>
+                              {i > 0 && task.benchmark_progress[i - 1].group !== b.group && (
+                                <Typography component="span" color="text.secondary" sx={{ px: 0.5 }}>|</Typography>
+                              )}
                               <Chip component={Link} to={`/toolkit/submission/${task.id}#step-${b.step_id}`}
                                 label={b.name} title={b.state} color={benchmarkStateColor(b.state)} size="small" clickable />
                             </Fragment>

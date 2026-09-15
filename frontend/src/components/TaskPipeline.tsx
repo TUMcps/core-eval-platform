@@ -1,8 +1,8 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import JSZip from 'jszip';
-import { Box, Typography, Paper, Chip, Button, IconButton } from '@mui/material';
+import { Box, Typography, Paper, Chip, Button, Divider, IconButton } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import LiveIndicator from './LiveIndicator';
 import CollapsibleSection from './CollapsibleSection';
@@ -126,8 +126,8 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
         && between.order > s.order && between.order < c.order));
   const shown = steps.filter((s) => s.kind !== SCORING_KIND);
   const stepName = (s: TaskStep): ReactNode => {
-    const name = benchmarkOf(s);
-    if (name) return <>Run Benchmark: <strong>{name}</strong></>;
+    const benchmark = benchmarkOf(s);
+    if (benchmark) return <>Run Benchmark: <strong>{benchmark.name}</strong></>;
     return KIND_LABEL[s.kind] ?? s.kind;
   };
 
@@ -160,10 +160,22 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
         const paused = s.status === 'active' && isPauseKind(s.kind);
         const chip = statusChip(paused ? 'Paused' : (STEP_STATUS[status] ?? 'Pending'));
         const logsOpen = openLogs[s.id] ?? active;  // the running step's logs start expanded
-        const name = benchmarkOf(s);
+        const benchmark = benchmarkOf(s);
+        const name = benchmark?.name;
+        const previousGroup = shown.slice(0, index).reverse()
+          .map((previous) => benchmarkOf(previous)?.group).find(Boolean);
+        const startsGroup = !!benchmark && benchmark.group !== 'default' && benchmark.group !== previousGroup;
         const stepResults = name ? results.filter((r) => r.benchmark_name === name) : [];
         return (
-          <Paper key={s.id} id={`step-${s.order}`} elevation={active ? 3 : 0}
+          <Fragment key={s.id}>
+          {startsGroup && (
+            <Divider textAlign="left" sx={{ mt: 3, mb: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 700 }}>
+                {benchmark.group}
+              </Typography>
+            </Divider>
+          )}
+          <Paper id={`step-${s.order}`} elevation={active ? 3 : 0}
             sx={{ p: 3, mb: 2, bgcolor: 'grey.50', border: '1px solid', scrollMarginTop: 16,
               borderColor: active ? 'secondary.main' : 'grey.300' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
@@ -253,6 +265,7 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
               </Box>
             )}
           </Paper>
+          </Fragment>
         );
       })}
     </>

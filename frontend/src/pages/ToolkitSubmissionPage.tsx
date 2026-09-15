@@ -13,6 +13,7 @@ import PageHeader from '../components/PageHeader';
 import PageTitle from '../components/PageTitle';
 import PageSection from '../components/PageSection';
 import { useAuth } from '../context/AuthContext';
+import { groupBenchmarks, showGroupLabels } from '../utils/benchmarkGroups';
 
 interface ToolkitSubmissionForm {
   name: string;
@@ -90,6 +91,9 @@ export default function ToolkitSubmissionPage() {
   const usesCategories = data?.uses_categories ?? false;
 
   const toggleBenchmark = (id: string) => set({ benchmarks: form.benchmarks.includes(id) ? form.benchmarks.filter((b: string) => b !== id) : [...form.benchmarks, id] });
+
+  const grouped = (benchmarks: { id: string; name: string; group: string }[]) =>
+    groupBenchmarks(benchmarks, data?.benchmark_groups ?? []);
 
   // Switching category drops any selected benchmarks that aren't in the new one, so a
   // tool never carries benchmarks from two categories.
@@ -253,11 +257,20 @@ export default function ToolkitSubmissionPage() {
             ).map(([key, cat]) => (
               <Box key={key} sx={{ mt: 2 }}>
                 {!usesCategories && <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>{cat.label}</Typography>}
-                <FormGroup>
-                  {[...cat.benchmarks].sort((a, b) => a.name.localeCompare(b.name)).map((b) => (
-                    <FormControlLabel key={b.id} control={<Checkbox checked={form.benchmarks.includes(b.id)} onChange={() => toggleBenchmark(b.id)} />} label={b.name} />
-                  ))}
-                </FormGroup>
+                {grouped(cat.benchmarks).map((group) => (
+                  <Box key={group.label} sx={{ mt: showGroupLabels(data?.benchmark_groups ?? []) ? 1.5 : 0 }}>
+                    {showGroupLabels(data?.benchmark_groups ?? []) && (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'bold' }}>
+                        {group.label}
+                      </Typography>
+                    )}
+                    <FormGroup sx={{ pl: showGroupLabels(data?.benchmark_groups ?? []) ? 1.5 : 0 }}>
+                      {group.benchmarks.map((b) => (
+                        <FormControlLabel key={b.id} control={<Checkbox checked={form.benchmarks.includes(b.id)} onChange={() => toggleBenchmark(b.id)} />} label={b.name} />
+                      ))}
+                    </FormGroup>
+                  </Box>
+                ))}
               </Box>
             ))}
             {Object.keys(data?.benchmark_categories ?? {}).length === 0 && (

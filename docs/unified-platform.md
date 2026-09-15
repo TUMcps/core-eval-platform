@@ -66,8 +66,9 @@ script at cutover. No `_db_` legacy in the new package.
 
 ### Shared core nouns
 - **Tool** — a submission (repo/base-image + scripts).
-- **Benchmark** — a submission that **defines a list of named instances**. Users submit benchmarks in
-  both VNN and ARCH. (ARCH benchmark = a category's instance list.)
+- **Benchmark** — a submission that **defines a list of named instances**. Each benchmark belongs to
+  one ordered **group** within its category (for example test/regular/extended); the group is a
+  first-class indexed field, while variant-specific metadata stays in `extra`.
 - **Instance** — a single case; passed to the node as `run_instance(version, benchmark, instance)`.
   Same shape in VNN and ARCH.
 - **Run** — result of tool × benchmark (× instance). Normalized result record + competition-specific
@@ -76,9 +77,9 @@ script at cutover. No `_db_` legacy in the new package.
   run interface, parser, and scorer (generalizes ARCH's `parser_factory[category][tool]`). VNN =
   one implicit default category; `arch_comp` registers AINNCS/AFF/NLN/… each with their own
   spec/parser/scorer. A single `arch-comp` plugin covers all its categories.
-- **Track** — **organizer-managed DB rows** (e.g. test/main/extended), created and named per
-  deployment. An organizer assigns submitted benchmarks into tracks via the UI. Replaces VNN's
-  hardcoded, inflexible track assignment.
+- **Track** — **organizer-managed DB rows** defining a scoring selection, created and named per
+  deployment. A track may contain benchmarks from several groups; scoreboards retain the group
+  partition inside that selection.
 
 ### Roles
 `user | organizer | admin`. **Organizer** = curate tracks & select benchmarks (no infra/user power);

@@ -29,15 +29,16 @@ const formData = (overrides: Partial<ToolkitFormData> = {}): ToolkitFormData => 
     alpha: {
       label: 'Alpha category',
       benchmarks: [
-        { id: 'benchmark-b', name: 'Beta benchmark' },
-        { id: 'benchmark-a', name: 'Alpha benchmark' },
+        { id: 'benchmark-b', name: 'Beta benchmark', group: 'default' },
+        { id: 'benchmark-a', name: 'Alpha benchmark', group: 'default' },
       ],
     },
     beta: {
       label: 'Beta category',
-      benchmarks: [{ id: 'benchmark-c', name: 'Gamma benchmark' }],
+      benchmarks: [{ id: 'benchmark-c', name: 'Gamma benchmark', group: 'default' }],
     },
   },
+  benchmark_groups: ['default'],
   default_eni: 'eni-default',
   uses_categories: false,
   ...overrides,
@@ -128,6 +129,28 @@ describe('ToolkitSubmissionPage', () => {
       benchmarks: ['benchmark-c'],
     });
     expect(payload).not.toHaveProperty('vnnlib_version');
+  });
+
+  it('renders benchmarks under configured groups in configured order', async () => {
+    toolkitApi.getFormData.mockResolvedValue(formData({
+      benchmark_groups: ['test', 'regular', 'extended'],
+      benchmark_categories: {
+        alpha: {
+          label: 'Alpha category',
+          benchmarks: [
+            { id: 'extended', name: 'Extended B', group: 'extended' },
+            { id: 'regular', name: 'Regular B', group: 'regular' },
+            { id: 'test', name: 'Test B', group: 'test' },
+          ],
+        },
+      },
+    }));
+
+    renderPage();
+
+    await screen.findByText('Test B');
+    const headings = screen.getAllByText(/^(test|regular|extended)$/).map((node) => node.textContent);
+    expect(headings).toEqual(['test', 'regular', 'extended']);
   });
 
   it('includes enabled admin-only options in the payload', async () => {

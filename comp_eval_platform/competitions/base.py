@@ -68,6 +68,49 @@ class Competition(ABC):
         ``Benchmark``s; a per-benchmark-repo variant loads one. Default: unsupported."""
         raise NotImplementedError
 
+    def benchmark_groups(self) -> tuple[str, ...]:
+        """Ordered benchmark groups within each category.
+
+        A single ``default`` group keeps simple competitions flat in the UI while
+        still giving every benchmark a real, queryable group in the catalog.
+        Variants with multiple logical partitions override this order.
+        """
+        return ("default",)
+
+    def validate_benchmark_group(self, group: str) -> str:
+        """Return a normalized group name or raise Django ``ValidationError``.
+
+        Group choices are deployment-specific, so they cannot be static model
+        ``choices``. Keeping the check here gives serializers, forms, and bulk
+        loaders one authoritative validator.
+        """
+        from django.core.exceptions import ValidationError
+
+        value = (group or "").strip()
+        groups = self.benchmark_groups()
+        if not groups or len(groups) != len(set(groups)) or any(not g for g in groups):
+            raise ValidationError("Competition benchmark groups must be unique and non-empty.")
+        if value not in groups:
+            raise ValidationError(
+                f"Unknown benchmark group {value!r}; expected one of {list(groups)}."
+            )
+        return value
+
+    def order_benchmarks(self, queryset, *, category_first: bool = False):
+        """Order a Benchmark queryset by configured group order, then name."""
+        from django.db.models import Case, IntegerField, Value, When
+
+        groups = self.benchmark_groups()
+        rank = Case(
+            *(When(group=group, then=Value(index)) for index, group in enumerate(groups)),
+            default=Value(len(groups)),
+            output_field=IntegerField(),
+        )
+        fields = ["category__name"] if category_first else []
+        return queryset.annotate(_benchmark_group_rank=rank).order_by(
+            *fields, "_benchmark_group_rank", "name"
+        )
+
     def ensure_categories(self) -> None:
         """Create any fixed categories this variant defines (ARCH's AFF/NLN/AINNCS…),
         so they are selectable before the first submission loads a benchmark. Idempotent.
@@ -92,6 +135,16 @@ class Competition(ABC):
     def score(self, track: "Track") -> "Scoreboard":
         """Compute the scoreboard for a track. Per-competition/-category; the
         core imposes no scoring formula."""
+
+    def score_group(self, track: "Track", group: str) -> "Scoreboard":
+        """Compute one group's scoreboard.
+
+        Single-group competitions inherit the existing scoreboard unchanged.
+        Multi-group variants override this and restrict their result query to
+        benchmarks in ``group``.
+        """
+        self.validate_benchmark_group(group)
+        return self.score(track)
 
     # (6) Presentation / export -------------------------------------------
     def presentation(self) -> "Presentation":

@@ -69,6 +69,20 @@ def test_result_store_links_instances():
     assert Result.objects.get(result="unknown").instance is None
 
 
+def test_benchmark_model_validates_competition_group(category, user, monkeypatch):
+    from django.core.exceptions import ValidationError
+
+    from comp_eval_platform.competitions import get_competition
+    from comp_eval_platform.core.models import Benchmark
+
+    comp = get_competition()
+    monkeypatch.setattr(type(comp), "benchmark_groups", lambda self: ("test", "regular"))
+
+    benchmark = Benchmark(owner=user, category=category, name="b", group="unknown")
+    with pytest.raises(ValidationError, match="Unknown benchmark group"):
+        benchmark.full_clean()
+
+
 def test_user_roles():
     from comp_eval_platform.core.models import Role, User
 
