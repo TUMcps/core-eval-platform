@@ -10,11 +10,12 @@ interface Props {
   open: boolean;
   onToggle: () => void;
   children: ReactNode;
+  actions?: ReactNode;
 }
 
 /** One expandable block inside a step (its logs, its results): shared header so the
  *  blocks stay identical, body is the caller's. */
-export default function CollapsibleSection({ title, open, onToggle, children }: Props) {
+export default function CollapsibleSection({ title, open, onToggle, children, actions }: Props) {
   return (
     <Box sx={{ mt: 1.5 }}>
       <Box onClick={onToggle}
@@ -22,7 +23,12 @@ export default function CollapsibleSection({ title, open, onToggle, children }: 
         <IconButton size="small" sx={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
           <ExpandMoreIcon />
         </IconButton>
-        <Typography variant="body2" fontWeight="medium">{title}</Typography>
+        <Typography variant="body2" fontWeight="medium" sx={{ flexGrow: 1 }}>{title}</Typography>
+        {actions && (
+          <Box onClick={(e) => e.stopPropagation()}>
+            {actions}
+          </Box>
+        )}
       </Box>
       <Collapse in={open}>{children}</Collapse>
     </Box>

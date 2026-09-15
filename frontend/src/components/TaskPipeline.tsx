@@ -1,7 +1,8 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Box, Typography, Paper, Chip, Button } from '@mui/material';
+import JSZip from 'jszip';
+import { Box, Typography, Paper, Chip, Button, IconButton } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import LiveIndicator from './LiveIndicator';
 import CollapsibleSection from './CollapsibleSection';
@@ -90,6 +91,28 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
     }
   };
 
+  const downloadStepBundle = async (step: TaskStep, scoring?: TaskStep) => {
+  if (taskId === undefined) return;
+  setDownloading((d) => ({ ...d, [step.id]: true }));
+  try {
+    const zip = new JSZip();
+    if (step.logs) zip.file('logs.txt', step.logs);
+    if (step.results) zip.file('results.csv', step.results);
+    if (scoring?.logs) zip.file('scoring_logs.txt', scoring.logs);
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `task${taskId}_step${step.order}_${step.kind}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    // The step already has its loaded data client-side, so a failure here is local/browser-side.
+  } finally {
+    setDownloading((d) => ({ ...d, [step.id]: false }));
+  }
+};
+
   const benchmarkAt = new Map((benchmarkProgress ?? []).map((p) => [p.step_id, p.name]));
   /** The benchmark a run step ran, or undefined for every other kind. */
   const benchmarkOf = (s: TaskStep) => (s.kind === 'run_benchmark' ? benchmarkAt.get(s.order) : undefined);
@@ -149,6 +172,12 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
               <Typography sx={{ fontWeight: 600, minWidth: 24, color: 'text.secondary' }}>{index + 1}.</Typography>
               <Typography sx={{ fontWeight: 600, flexGrow: 1 }} component="div">{stepName(s)}</Typography>
               {active && !paused && <LiveIndicator label={null} />}
+              {(s.has_logs || !!s.results || !!scoring?.has_logs) && taskId !== undefined && (
+                <IconButton size="small" title="Download this step's logs, results & scoring"
+                  disabled={!!downloading[s.id]} onClick={() => downloadStepBundle(s, scoring)}>
+                  <DownloadIcon fontSize="small" />
+                </IconButton>
+              )}
               <Chip size="small" label={chip.label} color={chip.color} variant={chip.variant} />
               {s.can_abort_benchmark && taskId !== undefined && (
                 <Button color="error" size="small" variant="outlined" onClick={abortBenchmark}>

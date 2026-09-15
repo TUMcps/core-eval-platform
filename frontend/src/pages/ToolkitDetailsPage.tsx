@@ -16,7 +16,7 @@ import DeleteSubmissionDialog from '../components/DeleteSubmissionDialog';
 import TaskPipeline from '../components/TaskPipeline';
 import TaskTimer from '../components/TaskTimer';
 import { useAuth } from '../context/AuthContext';
-import { tasksApi, toolsApi, resultsApi } from '../api';
+import { tasksApi, toolsApi, resultsApi, downloadTaskResults } from '../api';
 import type { Task, Tool, Result } from '../api';
 import { statusChip } from '../constants/status';
 import { isPauseKind } from '../constants/steps';
@@ -130,6 +130,7 @@ export default function ToolkitDetailsPage() {
   const active = task.steps.find((s) => s.status === 'active');
   const isPaused = !!active && isPauseKind(active.kind);
   const isRemoteDocker = task.execution_backend === 'remote_docker';
+  const canDownloadResults = task.done || ['done', 'success', 'succeeded', 'failed', 'timed_out', 'error', 'aborted'].includes((task as any).status || (task as any).outcome);
   const extra = (tool?.extra ?? {}) as Record<string, any>;
   const benchmarkNames = task.benchmark_progress.map((p) => p.name);
   const scriptDir = tool?.script_dir === '.' ? 'Repository root' : (tool?.script_dir || '—');
@@ -150,6 +151,13 @@ export default function ToolkitDetailsPage() {
 
   const doAbort = async () => { if (window.confirm('Abort this submission?')) setTask(await tasksApi.abort(task.id)); };
   const doResume = async () => { setTask(await tasksApi.resume(task.id)); };
+  const doDownloadResults = async () => {
+    try {
+      await downloadTaskResults(task.id);
+    } catch (err) {
+      console.error('Download results failed', err);
+    }
+  };
   const doDelete = async () => {
     setDeleting(true);
     try { await tasksApi.delete(task.id); navigate('/toolkit'); }
@@ -187,6 +195,7 @@ export default function ToolkitDetailsPage() {
           <Stack direction="row" spacing={1.5}>
             {isPaused && <Button variant="contained" onClick={doResume}>Continue</Button>}
             <Button variant="outlined" startIcon={<ContentCopyIcon />} onClick={repopulate}>Populate new submission form</Button>
+            {canDownloadResults && <Button variant="outlined" onClick={doDownloadResults}>Download Results</Button>}
             {!task.done ? (
               <Button variant="outlined" color="error" onClick={doAbort}>Abort submission</Button>
             ) : (

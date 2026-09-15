@@ -141,7 +141,7 @@ RESULTS_DEPLOY_KEY = config("RESULTS_DEPLOY_KEY", default="")
 # the Vite host) plus public dev tunnels (Cloudflare/ngrok) for remote demos.
 CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS",
-    default="http://localhost:5173,http://127.0.0.1:5173,"
+    default="http://localhost:5174,http://localhost:5173,http://127.0.0.1:5173,"
             "https://*.trycloudflare.com,https://*.ngrok-free.app,https://*.ngrok.io",
     cast=Csv(),
 )
