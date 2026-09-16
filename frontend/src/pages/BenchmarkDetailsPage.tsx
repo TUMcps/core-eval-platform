@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, Button, Chip, Stack, Alert } from '@mui/material';
 import Skeleton from '@mui/material/Skeleton';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DownloadIcon from '@mui/icons-material/Download';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
 import PageTitle from '../components/PageTitle';
@@ -168,8 +169,8 @@ export default function BenchmarkDetailsPage() {
           </Box>
           <Stack direction="row" spacing={1.5}>
             {isPaused && <Button variant="contained" onClick={doResume}>Continue</Button>}
-            <Button variant="outlined" startIcon={<ContentCopyIcon />} onClick={repopulate}>Populate new submission form</Button>
-            {canDownloadResults && <Button variant="outlined" onClick={doDownloadResults}>Download Results</Button>}
+            <Button variant="outlined" startIcon={<ContentCopyIcon />} onClick={repopulate}>New submission</Button>
+            {canDownloadResults && <Button variant="outlined" startIcon={<DownloadIcon />} onClick={doDownloadResults}>Download results</Button>}
             {!task.done ? (
               <Button variant="outlined" color="error" onClick={doAbort}>Abort submission</Button>
             ) : (
