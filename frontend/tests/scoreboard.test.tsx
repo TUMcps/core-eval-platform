@@ -26,7 +26,7 @@ describe('ScoreboardPage', () => {
 
     expect(await screen.findByText('SmokeTool')).toBeInTheDocument();
     expect(screen.getByText('MainTool')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'test' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'regular' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Test' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Regular' })).toBeInTheDocument();
   });
 });

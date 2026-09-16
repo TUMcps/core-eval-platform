@@ -3,6 +3,10 @@ export interface GroupedBenchmark<T> {
   benchmarks: T[];
 }
 
+/** Human-readable label for a canonical benchmark-group key. */
+export const formatBenchmarkGroup = (group: string) =>
+  group ? `${group[0].toUpperCase()}${group.slice(1)}` : group;
+
 /** Partition benchmarks in the competition's configured order. */
 export function groupBenchmarks<T extends { name: string; group?: string }>(
   benchmarks: T[],

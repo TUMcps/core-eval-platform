@@ -12,6 +12,7 @@ import { tasksApi } from '../api';
 import type { Task, TaskStep, BenchmarkProgress, Result } from '../api';
 import { statusChip } from '../constants/status';
 import { KIND_LABEL, STEP_STATUS, isPauseKind } from '../constants/steps';
+import { formatBenchmarkGroup } from '../utils/benchmarkGroups';
 import { logTail } from '../utils/logTail';
 
 const isAtBottom = (el: HTMLDivElement | null) =>
@@ -171,7 +172,7 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
           {startsGroup && (
             <Divider textAlign="left" sx={{ mt: 3, mb: 2 }}>
               <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 700 }}>
-                {benchmark.group}
+                {formatBenchmarkGroup(benchmark.group)}
               </Typography>
             </Divider>
           )}

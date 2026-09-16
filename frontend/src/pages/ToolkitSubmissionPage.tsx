@@ -13,7 +13,7 @@ import PageHeader from '../components/PageHeader';
 import PageTitle from '../components/PageTitle';
 import PageSection from '../components/PageSection';
 import { useAuth } from '../context/AuthContext';
-import { groupBenchmarks, showGroupLabels } from '../utils/benchmarkGroups';
+import { formatBenchmarkGroup, groupBenchmarks, showGroupLabels } from '../utils/benchmarkGroups';
 
 interface ToolkitSubmissionForm {
   name: string;
@@ -262,7 +262,7 @@ export default function ToolkitSubmissionPage() {
                   <Box key={group.label} sx={{ mt: showGroupLabels(data?.benchmark_groups ?? []) ? 1.5 : 0 }}>
                     {showGroupLabels(data?.benchmark_groups ?? []) && (
                       <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'bold' }}>
-                        {group.label}
+                        {formatBenchmarkGroup(group.label)}
                       </Typography>
                     )}
                     <FormGroup sx={{ pl: showGroupLabels(data?.benchmark_groups ?? []) ? 1.5 : 0 }}>

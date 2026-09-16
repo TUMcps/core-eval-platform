@@ -150,8 +150,8 @@ describe('ToolkitSubmissionPage', () => {
 
     await screen.findByText('Test B');
     expect(screen.queryByText('Alpha category')).not.toBeInTheDocument();
-    const headings = screen.getAllByText(/^(test|regular|extended)$/).map((node) => node.textContent);
-    expect(headings).toEqual(['test', 'regular', 'extended']);
+    const headings = screen.getAllByText(/^(Test|Regular|Extended)$/).map((node) => node.textContent);
+    expect(headings).toEqual(['Test', 'Regular', 'Extended']);
   });
 
   it('includes enabled admin-only options in the payload', async () => {

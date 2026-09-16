@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState, useRef } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, Button, Chip, Stack, Alert } from '@mui/material';
 import Skeleton from '@mui/material/Skeleton';
@@ -21,6 +21,7 @@ import type { Task, Benchmark } from '../api';
 import { statusChip } from '../constants/status';
 import { isPauseKind } from '../constants/steps';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { formatBenchmarkGroup } from '../utils/benchmarkGroups';
 
 const REFRESH_MS = 10000;
 
@@ -128,8 +129,14 @@ export default function BenchmarkDetailsPage() {
   const active = task.steps.find((s) => s.status === 'active');
   const isPaused = !!active && isPauseKind(active.kind);
   const isRemoteDocker = task.execution_backend === 'remote_docker';
-  const canDownloadResults = task.done || ['done', 'success', 'succeeded', 'failed', 'timed_out', 'error', 'aborted'].includes((task as any).status || (task as any).outcome);
-  const extra = ((benchmark?.extra ?? (task as any).payload ?? {}) as Record<string, any>);
+  const canDownloadResults = task.done || ['done', 'success', 'succeeded', 'failed', 'timed_out', 'error', 'aborted'].includes(task.status || task.outcome);
+  const extra = benchmark?.extra ?? {};
+  const fields = Object.entries(extra).reduce<Record<string, string>>((values, [key, value]) => {
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      values[key] = String(value);
+    }
+    return values;
+  }, {});
   const repository = task.repository || '';
   const hash = task.hash || '';
   const categoryId = (task.category ?? benchmark?.category ?? '') as string;
@@ -153,7 +160,7 @@ export default function BenchmarkDetailsPage() {
   // Re-open the submission form with this submission's inputs prefilled. (The ARCH form
   // ignores `name`; the VNN form ignores `category`.)
   const repopulate = () => navigate('/benchmark/submit', {
-    state: { prefillData: { name: task.name, group: benchmark?.group, repository, hash, category: categoryId, fields: extra } },
+    state: { prefillData: { name: task.name, group: benchmark?.group, repository, hash, category: categoryId, fields } },
   });
 
   return (
@@ -185,8 +192,8 @@ export default function BenchmarkDetailsPage() {
           {isCategoryLoad && <DetailRow label="Category"><code>{task.name}</code></DetailRow>}
           <DetailRow label="Repository"><code>{repository || '—'}</code></DetailRow>
           <DetailRow label="Hash"><code>{hash || '—'}</code></DetailRow>
-          {!isCategoryLoad && benchmark?.group !== 'default' && <DetailRow label="Group"><code>{benchmark?.group || '—'}</code></DetailRow>}
-          {!isCategoryLoad && <DetailRow label="VNNLIB version"><code>{extra.vnnlib_version || '—'}</code></DetailRow>}
+          {!isCategoryLoad && benchmark?.group !== 'default' && <DetailRow label="Group"><code>{formatBenchmarkGroup(benchmark?.group || '') || '—'}</code></DetailRow>}
+          {!isCategoryLoad && <DetailRow label="VNNLIB version"><code>{fields.vnnlib_version || '—'}</code></DetailRow>}
           <DetailRow label="Owner">
             {user?.is_admin ? (
               <OwnerReassign taskId={task.id} currentName={task.user_name} currentEmail={task.user_email} onChanged={load} />

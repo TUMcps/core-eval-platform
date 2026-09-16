@@ -2,6 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { formatDateTime } from '../src/utils/datetime';
 import { logTail } from '../src/utils/logTail';
 import { ownerParts, ownerText } from '../src/utils/owner';
+import { formatBenchmarkGroup } from '../src/utils/benchmarkGroups';
+
+describe('benchmark group formatting', () => {
+  it('capitalizes only the first letter of the stored group key', () => {
+    expect(formatBenchmarkGroup('test')).toBe('Test');
+    expect(formatBenchmarkGroup('sets-batched')).toBe('Sets-batched');
+    expect(formatBenchmarkGroup('')).toBe('');
+  });
+});
 
 describe('owner formatting', () => {
   it('formats a distinct name and email', () => {

@@ -112,7 +112,7 @@ describe('BenchmarkSubmissionPage', () => {
     }));
     renderPage({ name: 'Grouped benchmark', repository: 'https://example.com/grouped.git', group: 'regular' });
 
-    expect(await screen.findByRole('combobox', { name: /Benchmark group/i })).toHaveTextContent('regular');
+    expect(await screen.findByRole('combobox', { name: /Benchmark group/i })).toHaveTextContent('Regular');
     submitForm();
 
     await waitFor(() => expect(benchmarksApi.submit).toHaveBeenCalledOnce());

@@ -14,6 +14,7 @@ import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
 import PageTitle from '../components/PageTitle';
 import PageSection from '../components/PageSection';
+import { formatBenchmarkGroup } from '../utils/benchmarkGroups';
 
 // Turn a field name (e.g. vnnlib_version) into a readable label.
 const labelFor = (name: string) => name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -225,7 +226,7 @@ export default function BenchmarkSubmissionPage() {
             <TextField fullWidth select label="Benchmark group" value={group}
               onChange={(e) => setGroup(e.target.value)} required sx={{ mb: 3 }}>
               {data.benchmark_groups.map((option) => (
-                <MenuItem key={option} value={option}>{option}</MenuItem>
+                <MenuItem key={option} value={option}>{formatBenchmarkGroup(option)}</MenuItem>
               ))}
             </TextField>
           )}

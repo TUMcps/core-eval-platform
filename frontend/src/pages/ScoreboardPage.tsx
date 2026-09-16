@@ -17,6 +17,7 @@ import PageSection from '../components/PageSection';
 import PageTitle from '../components/PageTitle';
 import { tracksApi } from '../api';
 import type { Scoreboard, Track } from '../api';
+import { formatBenchmarkGroup } from '../utils/benchmarkGroups';
 
 export default function ScoreboardPage() {
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -62,7 +63,7 @@ export default function ScoreboardPage() {
           <Typography color="text.secondary">No evaluation tracks have been configured.</Typography>
         ) : groups.map((group) => (
           <Box key={group.name} sx={{ mb: 4 }}>
-            {showHeadings && <Typography variant="h5" fontWeight="bold" sx={{ mb: 1.5 }}>{group.name}</Typography>}
+            {showHeadings && <Typography variant="h5" fontWeight="bold" sx={{ mb: 1.5 }}>{formatBenchmarkGroup(group.name)}</Typography>}
             <TableContainer component={Paper} elevation={2}>
               <Table>
                 <TableHead><TableRow>{group.columns.map((column) => (
