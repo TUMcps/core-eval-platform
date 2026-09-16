@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState, useRef } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, Button, Chip, Stack, Alert } from '@mui/material';
 import Skeleton from '@mui/material/Skeleton';
@@ -133,7 +133,7 @@ export default function ToolkitDetailsPage() {
   const active = task.steps.find((s) => s.status === 'active');
   const isPaused = !!active && isPauseKind(active.kind);
   const isRemoteDocker = task.execution_backend === 'remote_docker';
-  const canDownloadResults = task.done || ['done', 'success', 'succeeded', 'failed', 'timed_out', 'error', 'aborted'].includes((task as any).status || (task as any).outcome);
+  const canDownloadResults = task.done || ['done', 'success', 'succeeded', 'failed', 'timed_out', 'error', 'aborted'].includes(task.status || task.outcome);
   const extra = (tool?.extra ?? {}) as Record<string, string | number | boolean | string[] | null | undefined>;
   const benchmarkNames = task.benchmark_progress;
   const scriptDir = tool?.script_dir === '.' ? 'Repository root' : (tool?.script_dir || '—');

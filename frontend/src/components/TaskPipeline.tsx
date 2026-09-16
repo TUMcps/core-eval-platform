@@ -37,7 +37,7 @@ function pairedStatus(run: TaskStep, scoring?: TaskStep): string {
 
 interface Props {
   steps: TaskStep[];
-  /** Names each run_benchmark step, keyed by step order. */
+  /** Benchmark metadata for each run_benchmark step, keyed by step order. */
   benchmarkProgress?: BenchmarkProgress[];
   /** The task's parsed results; each lands under the benchmark step that produced it. */
   results?: Result[];
@@ -114,7 +114,7 @@ export default function TaskPipeline({ steps, benchmarkProgress, results = [], t
   }
 };
 
-  const benchmarkAt = new Map((benchmarkProgress ?? []).map((p) => [p.step_id, p.name]));
+  const benchmarkAt = new Map((benchmarkProgress ?? []).map((progress) => [progress.step_id, progress]));
   /** The benchmark a run step ran, or undefined for every other kind. */
   const benchmarkOf = (s: TaskStep) => (s.kind === 'run_benchmark' ? benchmarkAt.get(s.order) : undefined);
 
