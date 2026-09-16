@@ -149,6 +149,7 @@ describe('ToolkitSubmissionPage', () => {
     renderPage();
 
     await screen.findByText('Test B');
+    expect(screen.queryByText('Alpha category')).not.toBeInTheDocument();
     const headings = screen.getAllByText(/^(test|regular|extended)$/).map((node) => node.textContent);
     expect(headings).toEqual(['test', 'regular', 'extended']);
   });

@@ -250,13 +250,14 @@ export default function ToolkitSubmissionPage() {
           )}
 
           <Box sx={{ mt: 3, mb: 2 }}>
-            {/* ARCH: only the selected category's benchmarks; VNN: all, grouped by category. */}
+            {/* ARCH: only the selected category's benchmarks; VNN: all benchmarks.
+                VNN's implicit `default` category is an implementation detail, so the
+                competition-defined group headings are the only labels shown. */}
             {(usesCategories
               ? Object.entries(data?.benchmark_categories ?? {}).filter(([key]) => key === selectedCategory)
               : Object.entries(data?.benchmark_categories ?? {})
             ).map(([key, cat]) => (
               <Box key={key} sx={{ mt: 2 }}>
-                {!usesCategories && <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>{cat.label}</Typography>}
                 {grouped(cat.benchmarks).map((group) => (
                   <Box key={group.label} sx={{ mt: showGroupLabels(data?.benchmark_groups ?? []) ? 1.5 : 0 }}>
                     {showGroupLabels(data?.benchmark_groups ?? []) && (
