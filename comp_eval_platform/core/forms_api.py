@@ -5,6 +5,7 @@ immediately run it, returning the new task id the UI redirects to. Form options
 (execution backend, instance types, images, benchmark categories) are served here
 so the form is a single source of truth with the backend.
 """
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -30,10 +31,18 @@ def toolkit_form_data(request):
     from .models import Benchmark, RuntimeSettings
 
     s = RuntimeSettings.get()
+    comp = get_competition()
+    groups = comp.benchmark_groups()
     categories: dict = {}
-    for b in Benchmark.objects.filter(published=True).select_related("category").order_by("category__name", "name"):
+    benchmarks = comp.order_benchmarks(
+        Benchmark.objects.filter(published=True).select_related("category"),
+        category_first=True,
+    )
+    for b in benchmarks:
         categories.setdefault(b.category.name, {"label": b.category.name, "benchmarks": []})
-        categories[b.category.name]["benchmarks"].append({"id": str(b.id), "name": b.name})
+        categories[b.category.name]["benchmarks"].append({
+            "id": str(b.id), "name": b.name, "group": b.group,
+        })
     is_admin = getattr(request.user, "is_admin", False)
     return Response({
         "can_submit": s.users_can_submit_tools or is_admin,
@@ -41,7 +50,8 @@ def toolkit_form_data(request):
         "execution_backend": s.execution_backend, # Exposed for frontend warning banners regarding remote_docker submissions
         # Categories are user-chosen for variants that use them (ARCH); the form then
         # filters benchmarks to one category and drops the VNN-only VNNLIB version.
-        "uses_categories": get_competition().uses_categories,
+        "uses_categories": comp.uses_categories,
+        "benchmark_groups": groups,
         "instance_types": [
             {"value": "t2.large", "label": "t2.large", "hardware": "CPU", "guidance": "general purpose"},
             {"value": "m5.16xlarge", "label": "m5.16xlarge", "hardware": "CPU", "guidance": "large CPU"},
@@ -80,6 +90,7 @@ def benchmark_form_data(request):
         # Categories are only user-chosen for variants that use them (ARCH); VNN
         # files every benchmark under a single implicit 'default' category.
         "uses_categories": comp.uses_categories,
+        "benchmark_groups": comp.benchmark_groups(),
         "categories": [{"id": str(c.id), "name": c.name} for c in Category.objects.order_by("name")],
         "benchmark_fields": benchmark_fields,
     })
@@ -141,6 +152,14 @@ def benchmark_submit(request):
     else:
         category, _ = Category.objects.get_or_create(name="default")
 
+    requested_group = d.get("group")
+    if not requested_group and len(comp.benchmark_groups()) == 1:
+        requested_group = comp.benchmark_groups()[0]
+    try:
+        group = comp.validate_benchmark_group(requested_group or "")
+    except DjangoValidationError as exc:
+        return Response({"errors": {"group": exc.messages}}, status=400)
+
     extra = {k: d.get(k) for k in _BENCHMARK_EXTRA_KEYS if k in d}
     # Re-submitting a benchmark by name overwrites it (latest config wins); the
     # submission is still its own Task, so the history stays. Only the owner or an
@@ -150,10 +169,13 @@ def benchmark_submit(request):
             and not getattr(request.user, "is_admin", False)):
         return Response({"errors": {"name": ["already taken by another user in this category"]}}, status=400)
     if bench is None:
-        bench = Benchmark.objects.create(owner=request.user, category=category, name=name, extra=extra)
+        bench = Benchmark.objects.create(
+            owner=request.user, category=category, name=name, group=group, extra=extra,
+        )
     else:
         bench.extra = extra
-        fields = ["extra"]
+        bench.group = group
+        fields = ["extra", "group"]
         if bench.owner_id is None:
             bench.owner = request.user
             fields.append("owner")

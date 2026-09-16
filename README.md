@@ -33,8 +33,16 @@ protected-route access, and toolkit and benchmark submission workflows:
 ```bash
 cd frontend
 npm ci
-npm test
+npm run check
 ```
+
+Use `npm run lint` to check code without changing it, or `npm run lint:fix` to apply
+ESLint's safe automatic fixes. `npm run check` matches the frontend CI sequence: lint, test,
+and production build.
+
+`npm ci` also installs a pre-commit hook. It runs ESLint with safe fixes on staged TypeScript
+files and blocks the commit if violations remain. GitHub Actions still checks the complete
+frontend after every push and pull request update.
 
 Backend tests can be run with:
 

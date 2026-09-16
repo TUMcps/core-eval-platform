@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Autocomplete, TextField, Button, Box, CircularProgress, Typography } from '@mui/material';
-import { usersApi, tasksApi } from '../api';
+import { usersApi, tasksApi, apiErrorMessage } from '../api';
 import type { User } from '../api';
 import OwnerLabel from './OwnerLabel';
 
@@ -37,7 +37,7 @@ export default function OwnerReassign({ taskId, currentName, currentEmail, onCha
     if (!selected) return;
     setSaving(true); setError(null);
     try { await tasksApi.changeOwner(taskId, selected.id); setSelected(null); onChanged(); }
-    catch (e: any) { setError(e?.response?.data?.error || 'Reassignment failed'); }
+    catch (error: unknown) { setError(apiErrorMessage(error, 'Reassignment failed', 'error')); }
     finally { setSaving(false); }
   };
 

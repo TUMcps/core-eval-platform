@@ -7,9 +7,13 @@ const toolkitApi = vi.hoisted(() => ({
   getFormData: vi.fn(),
   submit: vi.fn(),
 }));
+const apiErrorData = vi.hoisted(() => (error: unknown): unknown => {
+  if (!error || typeof error !== 'object' || !('response' in error)) return undefined;
+  return (error as { response?: { data?: unknown } }).response?.data;
+});
 const useAuth = vi.hoisted(() => vi.fn());
 
-vi.mock('../src/api', () => ({ toolkitApi }));
+vi.mock('../src/api', () => ({ toolkitApi, apiErrorData }));
 vi.mock('../src/context/AuthContext', () => ({ useAuth }));
 
 import ToolkitSubmissionPage from '../src/pages/ToolkitSubmissionPage';
@@ -25,15 +29,16 @@ const formData = (overrides: Partial<ToolkitFormData> = {}): ToolkitFormData => 
     alpha: {
       label: 'Alpha category',
       benchmarks: [
-        { id: 'benchmark-b', name: 'Beta benchmark' },
-        { id: 'benchmark-a', name: 'Alpha benchmark' },
+        { id: 'benchmark-b', name: 'Beta benchmark', group: 'default' },
+        { id: 'benchmark-a', name: 'Alpha benchmark', group: 'default' },
       ],
     },
     beta: {
       label: 'Beta category',
-      benchmarks: [{ id: 'benchmark-c', name: 'Gamma benchmark' }],
+      benchmarks: [{ id: 'benchmark-c', name: 'Gamma benchmark', group: 'default' }],
     },
   },
+  benchmark_groups: ['default'],
   default_eni: 'eni-default',
   uses_categories: false,
   ...overrides,
@@ -124,6 +129,29 @@ describe('ToolkitSubmissionPage', () => {
       benchmarks: ['benchmark-c'],
     });
     expect(payload).not.toHaveProperty('vnnlib_version');
+  });
+
+  it('renders benchmarks under configured groups in configured order', async () => {
+    toolkitApi.getFormData.mockResolvedValue(formData({
+      benchmark_groups: ['test', 'regular', 'extended'],
+      benchmark_categories: {
+        alpha: {
+          label: 'Alpha category',
+          benchmarks: [
+            { id: 'extended', name: 'Extended B', group: 'extended' },
+            { id: 'regular', name: 'Regular B', group: 'regular' },
+            { id: 'test', name: 'Test B', group: 'test' },
+          ],
+        },
+      },
+    }));
+
+    renderPage();
+
+    await screen.findByText('Test B');
+    expect(screen.queryByText('Alpha category')).not.toBeInTheDocument();
+    const headings = screen.getAllByText(/^(Test|Regular|Extended)$/).map((node) => node.textContent);
+    expect(headings).toEqual(['Test', 'Regular', 'Extended']);
   });
 
   it('includes enabled admin-only options in the payload', async () => {

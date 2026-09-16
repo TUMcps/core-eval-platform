@@ -4,7 +4,7 @@ import { ThemeProvider, CssBaseline, Box } from '@mui/material';
 import { buildTheme } from './theme';
 import { competitionApi, type Branding } from './api';
 import { bootBranding } from './branding';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider } from './context/AuthProvider';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -21,6 +21,7 @@ import BenchmarkSubmissionsPage from './pages/BenchmarkSubmissionsPage';
 import BenchmarkSubmissionPage from './pages/BenchmarkSubmissionPage';
 import BenchmarkDetailsPage from './pages/BenchmarkDetailsPage';
 import BenchmarkInfoPage from './pages/BenchmarkInfoPage';
+import ScoreboardPage from './pages/ScoreboardPage';
 import AccountPage from './pages/AccountPage';
 import AdminPage from './pages/AdminPage';
 import AdminSettingsPage from './pages/AdminSettingsPage';
@@ -73,6 +74,7 @@ export default function App() {
                 <Route path="/benchmark/info" element={p(<BenchmarkInfoPage />)} />
                 <Route path="/benchmark/submit" element={p(<BenchmarkSubmissionPage />)} />
                 <Route path="/benchmark/submission/:id" element={p(<BenchmarkDetailsPage />)} />
+                <Route path="/scoreboard" element={p(<ScoreboardPage />)} />
 
                 <Route path="/account" element={p(<AccountPage />)} />
                 <Route path="/admin" element={p(<AdminPage />, true)} />

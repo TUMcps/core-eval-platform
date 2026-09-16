@@ -6,20 +6,48 @@ import {
   Checkbox, Alert, Divider, FormGroup, Accordion, AccordionDetails, AccordionSummary,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { toolkitApi } from '../api';
+import { apiErrorData, toolkitApi } from '../api';
 import type { ToolkitFormData } from '../api';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
 import PageTitle from '../components/PageTitle';
 import PageSection from '../components/PageSection';
 import { useAuth } from '../context/AuthContext';
+import { formatBenchmarkGroup, groupBenchmarks, showGroupLabels } from '../utils/benchmarkGroups';
+
+interface ToolkitSubmissionForm {
+  name: string;
+  repository: string;
+  hash: string;
+  ami: string;
+  aws_instance_type: string;
+  eni: string;
+  use_own_eni: boolean;
+  scripts_dir: string;
+  manual_installation_step: boolean;
+  run_installation_script_as_root: boolean;
+  run_post_installation_script_as_root: boolean;
+  run_toolkit_as_root: boolean;
+  post_install_tool: string;
+  vnnlib_version: string;
+  run_networks: string;
+  pause_after_postinstallation: boolean;
+  restart_after_postinstallation: boolean;
+  reverse_order: boolean;
+  split: number;
+  export_results: boolean;
+  force_pause: boolean;
+  force_no_pause: boolean;
+  local_execution: boolean;
+  benchmarks: string[];
+}
 
 export default function ToolkitSubmissionPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   // The details page's "Populate new submission form" button routes here with prefill.
-  const prefill = (useLocation().state as { prefillData?: any } | null)?.prefillData;
-  const [form, setForm] = useState<any>({
+  const prefill = (useLocation().state as { prefillData?: Partial<ToolkitSubmissionForm> } | null)?.prefillData;
+  const [form, setForm] = useState<ToolkitSubmissionForm>({
     name: '', repository: '', hash: '', ami: '', aws_instance_type: 't2.large', eni: '', use_own_eni: false,
     scripts_dir: '', manual_installation_step: false, run_installation_script_as_root: false,
     run_post_installation_script_as_root: false, run_toolkit_as_root: false, post_install_tool: '',
@@ -30,7 +58,7 @@ export default function ToolkitSubmissionPage() {
     // A tool submitted outside this form may carry no benchmark list; the checkboxes need an array.
     benchmarks: Array.isArray(prefill?.benchmarks) ? prefill.benchmarks : [],
   });
-  const set = (patch: any) => setForm((f: any) => ({ ...f, ...patch }));
+  const set = (patch: Partial<ToolkitSubmissionForm>) => setForm((current) => ({ ...current, ...patch }));
   const [message, setMessage] = useState('');
   const [data, setData] = useState<ToolkitFormData | null>(null);
   const [useRepoRoot, setUseRepoRoot] = useState(!prefill?.scripts_dir);
@@ -64,6 +92,9 @@ export default function ToolkitSubmissionPage() {
 
   const toggleBenchmark = (id: string) => set({ benchmarks: form.benchmarks.includes(id) ? form.benchmarks.filter((b: string) => b !== id) : [...form.benchmarks, id] });
 
+  const grouped = (benchmarks: { id: string; name: string; group: string }[]) =>
+    groupBenchmarks(benchmarks, data?.benchmark_groups ?? []);
+
   // Switching category drops any selected benchmarks that aren't in the new one, so a
   // tool never carries benchmarks from two categories.
   const changeCategory = (cat: string) => {
@@ -77,7 +108,7 @@ export default function ToolkitSubmissionPage() {
     if (!canSubmit) return setMessage('Submission is currently closed');
     if (!schedulerEnabled) return setMessage('Submissions are paused: the scheduler is currently disabled.');
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         name: form.name, repository: form.repository, hash: form.hash, ami: form.ami,
         aws_instance_type: form.aws_instance_type, scripts_dir: useRepoRoot ? '.' : form.scripts_dir.trim(),
         manual_installation_step: form.manual_installation_step,
@@ -102,10 +133,13 @@ export default function ToolkitSubmissionPage() {
       }
       const result = await toolkitApi.submit(payload);
       navigate(`/toolkit/submission/${result.redirect_to}`);
-    } catch (error: any) {
-      const errors = error.response?.data?.errors;
+    } catch (error: unknown) {
+      const data = apiErrorData(error);
+      const response = data && typeof data === 'object' ? data as Record<string, unknown> : undefined;
+      const errors = response?.errors;
       const details = errors ? Object.entries(errors).map(([f, e]) => `${f}: ${Array.isArray(e) ? e.join(', ') : String(e)}`).join(' ') : '';
-      setMessage(details || error.response?.data?.error || 'Submission failed');
+      const message = typeof response?.error === 'string' ? response.error : undefined;
+      setMessage(details || message || 'Submission failed');
     }
   };
 
@@ -216,18 +250,28 @@ export default function ToolkitSubmissionPage() {
           )}
 
           <Box sx={{ mt: 3, mb: 2 }}>
-            {/* ARCH: only the selected category's benchmarks; VNN: all, grouped by category. */}
+            {/* ARCH: only the selected category's benchmarks; VNN: all benchmarks.
+                VNN's implicit `default` category is an implementation detail, so the
+                competition-defined group headings are the only labels shown. */}
             {(usesCategories
               ? Object.entries(data?.benchmark_categories ?? {}).filter(([key]) => key === selectedCategory)
               : Object.entries(data?.benchmark_categories ?? {})
             ).map(([key, cat]) => (
               <Box key={key} sx={{ mt: 2 }}>
-                {!usesCategories && <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>{cat.label}</Typography>}
-                <FormGroup>
-                  {[...cat.benchmarks].sort((a, b) => a.name.localeCompare(b.name)).map((b) => (
-                    <FormControlLabel key={b.id} control={<Checkbox checked={form.benchmarks.includes(b.id)} onChange={() => toggleBenchmark(b.id)} />} label={b.name} />
-                  ))}
-                </FormGroup>
+                {grouped(cat.benchmarks).map((group) => (
+                  <Box key={group.label} sx={{ mt: showGroupLabels(data?.benchmark_groups ?? []) ? 1.5 : 0 }}>
+                    {showGroupLabels(data?.benchmark_groups ?? []) && (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'bold' }}>
+                        {formatBenchmarkGroup(group.label)}
+                      </Typography>
+                    )}
+                    <FormGroup sx={{ pl: showGroupLabels(data?.benchmark_groups ?? []) ? 1.5 : 0 }}>
+                      {group.benchmarks.map((b) => (
+                        <FormControlLabel key={b.id} control={<Checkbox checked={form.benchmarks.includes(b.id)} onChange={() => toggleBenchmark(b.id)} />} label={b.name} />
+                      ))}
+                    </FormGroup>
+                  </Box>
+                ))}
               </Box>
             ))}
             {Object.keys(data?.benchmark_categories ?? {}).length === 0 && (

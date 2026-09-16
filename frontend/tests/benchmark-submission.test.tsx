@@ -7,8 +7,12 @@ const benchmarksApi = vi.hoisted(() => ({
   getFormData: vi.fn(),
   submit: vi.fn(),
 }));
+const apiErrorData = vi.hoisted(() => (error: unknown): unknown => {
+  if (!error || typeof error !== 'object' || !('response' in error)) return undefined;
+  return (error as { response?: { data?: unknown } }).response?.data;
+});
 
-vi.mock('../src/api', () => ({ benchmarksApi }));
+vi.mock('../src/api', () => ({ benchmarksApi, apiErrorData }));
 
 import BenchmarkSubmissionPage from '../src/pages/BenchmarkSubmissionPage';
 
@@ -17,6 +21,7 @@ const formData = (overrides: Partial<BenchmarkFormData> = {}): BenchmarkFormData
   can_submit: true,
   execution_backend: 'local_docker',
   uses_categories: false,
+  benchmark_groups: ['default'],
   categories: [
     { id: 'acasxu', name: 'ACAS Xu' },
     { id: 'cifar', name: 'CIFAR' },
@@ -74,6 +79,7 @@ describe('BenchmarkSubmissionPage', () => {
       vnnlib_version: '2.0',
       seed: '42',
       name: 'New benchmark',
+      group: 'default',
     }));
     expect(await screen.findByText('Destination: /benchmark/submission/456')).toBeInTheDocument();
   });
@@ -98,6 +104,19 @@ describe('BenchmarkSubmissionPage', () => {
       seed: '7',
       category: 'cifar',
     }));
+  });
+
+  it('requires and submits a configured benchmark group', async () => {
+    benchmarksApi.getFormData.mockResolvedValue(formData({
+      benchmark_groups: ['test', 'regular', 'extended'],
+    }));
+    renderPage({ name: 'Grouped benchmark', repository: 'https://example.com/grouped.git', group: 'regular' });
+
+    expect(await screen.findByRole('combobox', { name: /Benchmark group/i })).toHaveTextContent('Regular');
+    submitForm();
+
+    await waitFor(() => expect(benchmarksApi.submit).toHaveBeenCalledOnce());
+    expect(benchmarksApi.submit.mock.calls[0][0]).toMatchObject({ group: 'regular' });
   });
 
   it('imports benchmark metadata from data.json', async () => {

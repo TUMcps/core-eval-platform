@@ -60,7 +60,6 @@ class Tool(models.Model):
     def __str__(self):
         return f"{self.name} [{self.category.name}]"
 
-
 class Benchmark(models.Model):
     """A submitted benchmark: names a set of Instances the tool runs against."""
 
@@ -70,6 +69,9 @@ class Benchmark(models.Model):
     )
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="benchmarks")
     name = models.CharField(max_length=255)
+    #: Logical partition within the category. The active competition defines and
+    #: orders the allowed names (for example test / regular / extended).
+    group = models.CharField(max_length=64, default="default")
     #: Source of the benchmark's instances. ARCH loads many benchmarks from one
     #: central repo@hash (fanned out from instances.csv); all share these.
     repository = models.CharField(max_length=512, blank=True)
@@ -85,10 +87,18 @@ class Benchmark(models.Model):
         db_table = "core_benchmark"
         constraints = [
             models.UniqueConstraint(fields=["category", "name"], name="uniq_benchmark_per_category"),
+            models.CheckConstraint(check=~models.Q(group=""), name="benchmark_group_nonempty"),
         ]
+        indexes = [models.Index(fields=["category", "group", "name"], name="benchmark_cat_group_name_idx")]
 
     def __str__(self):
         return f"{self.name} [{self.category.name}]"
+
+    def clean(self):
+        super().clean()
+        from comp_eval_platform.competitions import get_competition
+
+        self.group = get_competition().validate_benchmark_group(self.group)
 
 
 class Instance(models.Model):

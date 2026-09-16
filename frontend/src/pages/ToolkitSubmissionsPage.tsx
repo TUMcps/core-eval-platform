@@ -132,7 +132,10 @@ export default function ToolkitSubmissionsPage() {
       setLoading(false);
     }
   }, []);
-  useEffect(() => { loadTasks(); }, [loadTasks]);
+  useEffect(() => {
+    const timer = setTimeout(() => { void loadTasks(); }, 0);
+    return () => clearTimeout(timer);
+  }, [loadTasks]);
 
   const anyRunning = tasks.some((t) => !t.done);
   useEffect(() => {
@@ -142,7 +145,6 @@ export default function ToolkitSubmissionsPage() {
   }, [anyRunning, loadTasks]);
 
   const filtered = searchTerm ? tasks.filter((t) => t.name?.toLowerCase().includes(searchTerm.toLowerCase())) : tasks;
-  useEffect(() => { setPage(0); }, [searchTerm]);
   const paged = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   if (loading) return <ToolkitSubmissionsSkeleton showUserColumn={!!user?.is_admin} showCategoryColumn={usesCategories} />;
@@ -165,7 +167,7 @@ export default function ToolkitSubmissionsPage() {
         <Typography variant="h4" fontWeight="bold" gutterBottom>Your Submitted Toolkits</Typography>
 
         {user?.is_admin && (
-          <TextField placeholder="Search for names..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} size="small"
+          <TextField placeholder="Search for names..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }} size="small"
             sx={{ mb: 3, maxWidth: '400px', '& .MuiOutlinedInput-root': { borderRadius: '20px' } }} />
         )}
 
@@ -205,8 +207,11 @@ export default function ToolkitSubmissionsPage() {
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
                           {task.benchmark_progress.map((b, i) => (
                             <Fragment key={`${b.name}-${i}`}>
-                              <Chip label={b.name} title={b.state} color={benchmarkStateColor(b.state)} size="small" clickable
-                                {...({ component: Link, to: `/toolkit/submission/${task.id}#step-${b.step_id}` } as any)} />
+                              {i > 0 && task.benchmark_progress[i - 1].group !== b.group && (
+                                <Typography component="span" color="text.secondary" sx={{ px: 0.5 }}>|</Typography>
+                              )}
+                              <Chip component={Link} to={`/toolkit/submission/${task.id}#step-${b.step_id}`}
+                                label={b.name} title={b.state} color={benchmarkStateColor(b.state)} size="small" clickable />
                             </Fragment>
                           ))}
                         </Box>

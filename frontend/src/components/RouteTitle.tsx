@@ -8,6 +8,7 @@ const EXACT_TITLES: Record<string, string> = {
   '/': '', '/login': 'Login', '/signup': 'Sign Up',
   '/toolkit': 'Toolkit Submissions', '/toolkit/info': 'Toolkit Info', '/toolkit/submit': 'Submit Toolkit',
   '/benchmark': 'Benchmark Submissions', '/benchmark/info': 'Benchmark Info', '/benchmark/submit': 'Submit Benchmark',
+  '/scoreboard': 'Scoreboard',
   '/account': 'Account', '/admin': 'Admin', '/admin/users': 'Manage Users', '/admin/settings': 'Settings',
 };
 

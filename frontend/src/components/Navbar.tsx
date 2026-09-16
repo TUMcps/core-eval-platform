@@ -63,6 +63,10 @@ export default function Navbar() {
               <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}><BarChartIcon fontSize="small" /></ListItemIcon>
               <ListItemText primary="Benchmark" />
             </MenuItem>
+            <MenuItem component={Link} to="/scoreboard" onClick={close}>
+              <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}><BarChartIcon fontSize="small" /></ListItemIcon>
+              <ListItemText primary="Scoreboard" />
+            </MenuItem>
             {user?.is_admin && (
               <MenuItem component={Link} to="/admin" onClick={close}>
                 <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}><AdminPanelSettingsIcon fontSize="small" /></ListItemIcon>

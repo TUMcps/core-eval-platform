@@ -15,8 +15,13 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [toast, setToast] = useState('');
 
-  const load = async () => setUsers(await usersApi.list());
-  useEffect(() => { load().catch(() => {}); }, []);
+  useEffect(() => {
+    let active = true;
+    usersApi.list()
+      .then((items) => { if (active) setUsers(items); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const patch = async (u: User, data: Partial<User>) => {
     const updated = await usersApi.update(u.id, data);

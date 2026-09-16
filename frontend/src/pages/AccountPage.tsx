@@ -12,6 +12,7 @@ import Stack from '@mui/material/Stack';
 import Snackbar from '@mui/material/Snackbar';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageTitle from '../components/PageTitle';
+import { apiErrorMessage } from '../api';
 
 export default function AccountPage() {
   const { user, updateProfile } = useAuth();
@@ -38,7 +39,7 @@ export default function AccountPage() {
   const save = async (patch: { name?: string; email?: string; worker_service_url?: string; worker_service_port?: number | null }, label: string) => {
     setSaving(true);
     try { await updateProfile(patch); setToast(label); }
-    catch (e: any) { setToast(e?.response?.data?.detail ?? 'Update failed'); }
+    catch (error: unknown) { setToast(apiErrorMessage(error, 'Update failed')); }
     finally { setSaving(false); }
   };
 

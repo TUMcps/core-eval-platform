@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { DragEvent, FormEvent } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { benchmarksApi } from '../api';
+import { apiErrorData, benchmarksApi } from '../api';
 import type { BenchmarkFormData } from '../api';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -14,6 +14,7 @@ import PageBreadcrumbs from '../components/PageBreadcrumbs';
 import PageHeader from '../components/PageHeader';
 import PageTitle from '../components/PageTitle';
 import PageSection from '../components/PageSection';
+import { formatBenchmarkGroup } from '../utils/benchmarkGroups';
 
 // Turn a field name (e.g. vnnlib_version) into a readable label.
 const labelFor = (name: string) => name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -22,6 +23,15 @@ type ImportNotice = {
   severity: 'success' | 'error';
   text: string;
 };
+
+interface BenchmarkPrefill {
+  name?: string;
+  group?: string;
+  category?: string;
+  repository?: string;
+  hash?: string;
+  fields?: Record<string, string>;
+}
 
 function parseDataJson(text: string) {
   let parsed: unknown;
@@ -56,8 +66,9 @@ export default function BenchmarkSubmissionPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // A details page's "Populate new submission form" button routes here with prefill.
-  const prefill = (useLocation().state as { prefillData?: any } | null)?.prefillData;
+  const prefill = (useLocation().state as { prefillData?: BenchmarkPrefill } | null)?.prefillData;
   const [name, setName] = useState(prefill?.name ?? '');
+  const [group, setGroup] = useState(prefill?.group ?? '');
   const [category, setCategory] = useState(prefill?.category ?? '');
   const [repository, setRepository] = useState(prefill?.repository ?? '');
   const [hash, setHash] = useState(prefill?.hash ?? '');
@@ -70,6 +81,7 @@ export default function BenchmarkSubmissionPage() {
   useEffect(() => {
     benchmarksApi.getFormData().then((d) => {
       setData(d);
+      setGroup((current) => current || d.benchmark_groups[0] || 'default');
       // Seed each variant benchmark field from the prefill, else its first option / empty.
       setFields(Object.fromEntries(d.benchmark_fields.map((f) => [f.name, prefill?.fields?.[f.name] ?? f.options?.[0] ?? ''])));
     }).catch(() => {});
@@ -96,8 +108,8 @@ export default function BenchmarkSubmissionPage() {
     }
     try {
       await importDataJson(file);
-    } catch (error: any) {
-      setImportNotice({ severity: 'error', text: error?.message || 'Could not import the file.' });
+    } catch (error: unknown) {
+      setImportNotice({ severity: 'error', text: error instanceof Error ? error.message : 'Could not import the file.' });
     }
   };
 
@@ -114,17 +126,19 @@ export default function BenchmarkSubmissionPage() {
     e.preventDefault();
     try {
       // Flat fields: the submit endpoint runs the benchmark task and returns its id.
-      const payload: any = { repository, hash, ...fields };
+      const payload: Record<string, unknown> = { repository, hash, ...fields };
       if (usesCategories) {
         // A category variant loads a whole category from one repo — no per-benchmark name.
         payload.category = category;
       } else {
         payload.name = name;
+        payload.group = group;
       }
       const { redirect_to } = await benchmarksApi.submit(payload);
       navigate(`/benchmark/submission/${redirect_to}`);
-    } catch (error: any) {
-      setMessage(typeof error.response?.data === 'string' ? error.response.data : JSON.stringify(error.response?.data ?? 'Submission failed'));
+    } catch (error: unknown) {
+      const data = apiErrorData(error);
+      setMessage(typeof data === 'string' ? data : JSON.stringify(data ?? 'Submission failed'));
     }
   };
 
@@ -206,6 +220,15 @@ export default function BenchmarkSubmissionPage() {
               no per-benchmark name; a name variant (VNN) names the single benchmark. */}
           {data && !usesCategories && (
             <TextField fullWidth label="Benchmark name" value={name} onChange={(e) => setName(e.target.value)} required sx={{ mb: 3 }} />
+          )}
+
+          {data && !usesCategories && data.benchmark_groups.length > 1 && (
+            <TextField fullWidth select label="Benchmark group" value={group}
+              onChange={(e) => setGroup(e.target.value)} required sx={{ mb: 3 }}>
+              {data.benchmark_groups.map((option) => (
+                <MenuItem key={option} value={option}>{formatBenchmarkGroup(option)}</MenuItem>
+              ))}
+            </TextField>
           )}
 
           {data && usesCategories && (

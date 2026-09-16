@@ -51,6 +51,46 @@ def test_benchmark_add_instances(api, category):
     assert len(add.json()) == 2
 
 
+def test_benchmark_group_is_validated_and_serialized(api, category, monkeypatch):
+    from comp_eval_platform.competitions import get_competition
+
+    comp = get_competition()
+    monkeypatch.setattr(type(comp), "benchmark_groups",
+                        lambda self: ("test", "regular", "extended"))
+
+    invalid = api.post("/api/benchmarks/", {
+        "category": str(category.id), "name": "bad", "group": "mystery",
+    }, format="json")
+    assert invalid.status_code == 400
+    assert "Unknown benchmark group" in str(invalid.json())
+
+    created = api.post("/api/benchmarks/", {
+        "category": str(category.id), "name": "good", "group": "regular",
+    }, format="json")
+    assert created.status_code == 201, created.content
+    assert created.json()["group"] == "regular"
+
+
+def test_toolkit_form_orders_benchmarks_by_configured_group(api, category, user, monkeypatch):
+    from comp_eval_platform.competitions import get_competition
+    from comp_eval_platform.core.models import Benchmark
+
+    comp = get_competition()
+    monkeypatch.setattr(type(comp), "benchmark_groups",
+                        lambda self: ("test", "regular", "extended"))
+    Benchmark.objects.create(owner=user, category=category, name="Zulu", group="regular", published=True)
+    Benchmark.objects.create(owner=user, category=category, name="Alpha", group="extended", published=True)
+    Benchmark.objects.create(owner=user, category=category, name="Smoke", group="test", published=True)
+
+    body = api.get("/api/toolkit/form_data/").json()
+    benchmarks = body["benchmark_categories"][category.name]["benchmarks"]
+
+    assert body["benchmark_groups"] == ["test", "regular", "extended"]
+    assert [(b["group"], b["name"]) for b in benchmarks] == [
+        ("test", "Smoke"), ("regular", "Zulu"), ("extended", "Alpha"),
+    ]
+
+
 def test_track_scoreboard(api):
     from comp_eval_platform.core.models import Track
 
@@ -58,6 +98,51 @@ def test_track_scoreboard(api):
     resp = api.get(f"/api/tracks/{track.id}/scoreboard/")
     assert resp.status_code == 200
     assert resp.json()["columns"] == ["tool", "solved"]
+    assert resp.json()["groups"] == [
+        {"name": "default", "columns": ["tool", "solved"], "rows": []},
+    ]
+
+
+def test_scoreboard_exposes_each_configured_group(api, monkeypatch):
+    from comp_eval_platform.competitions import get_competition
+    from comp_eval_platform.core.models import Track
+    from comp_eval_platform.results import Scoreboard
+
+    comp = get_competition()
+    monkeypatch.setattr(type(comp), "benchmark_groups", lambda self: ("test", "regular"))
+    monkeypatch.setattr(type(comp), "score_group", lambda self, track, group: Scoreboard(
+        columns=["tool", "solved"], rows=[{"tool": group, "solved": 1}],
+    ))
+    track = Track.objects.create(name="grouped")
+
+    groups = api.get(f"/api/tracks/{track.id}/scoreboard/").json()["groups"]
+
+    assert [group["name"] for group in groups] == ["test", "regular"]
+    assert [group["rows"][0]["tool"] for group in groups] == ["test", "regular"]
+
+
+def test_task_progress_carries_snapshot_group_and_legacy_fallback(api, category, user):
+    from comp_eval_platform.core.models import Benchmark, Task, TaskStep, Tool
+
+    benchmark = Benchmark.objects.create(
+        owner=user, category=category, name="catalog-name", group="regular",
+    )
+    tool = Tool.objects.create(owner=user, category=category, name="tool")
+    task = Task.objects.create(owner=user, tool=tool)
+    TaskStep.objects.create(task=task, kind="run_benchmark", order=0, payload={
+        "benchmark_id": str(benchmark.id),
+        "benchmark_name": "snapshot-name",
+        "benchmark_group": "test",
+    })
+    TaskStep.objects.create(task=task, kind="run_benchmark", order=1, payload={
+        "benchmark_id": str(benchmark.id),
+    })
+
+    progress = api.get(f"/api/tasks/{task.id}/").json()["benchmark_progress"]
+
+    assert [(item["name"], item["group"]) for item in progress] == [
+        ("snapshot-name", "test"), ("catalog-name", "regular"),
+    ]
 
 
 def _rows(resp):

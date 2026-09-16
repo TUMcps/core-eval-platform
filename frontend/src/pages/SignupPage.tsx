@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useAuth } from '../context/AuthContext';
+import { apiErrorMessage } from '../api';
 
 export default function SignupPage() {
   const { signup } = useAuth();
@@ -24,8 +25,8 @@ export default function SignupPage() {
       await signup(name, email, password);
       setMsg('Account created. The first account is an enabled admin; later accounts await admin approval.');
       setTimeout(() => navigate('/login'), 1800);
-    } catch (err: any) {
-      setError(err?.response?.data?.detail ?? 'Signup failed.');
+    } catch (error: unknown) {
+      setError(apiErrorMessage(error, 'Signup failed.'));
     } finally {
       setLoading(false);
     }

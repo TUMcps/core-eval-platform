@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useRef } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, Button, Chip, Stack, Alert } from '@mui/material';
 import Skeleton from '@mui/material/Skeleton';
@@ -16,7 +16,7 @@ import DeleteSubmissionDialog from '../components/DeleteSubmissionDialog';
 import TaskPipeline from '../components/TaskPipeline';
 import TaskTimer from '../components/TaskTimer';
 import { useAuth } from '../context/AuthContext';
-import { tasksApi, toolsApi, resultsApi, downloadTaskResults } from '../api';
+import { apiErrorMessage, tasksApi, toolsApi, resultsApi, downloadTaskResults } from '../api';
 import type { Task, Tool, Result } from '../api';
 import { statusChip } from '../constants/status';
 import { isPauseKind } from '../constants/steps';
@@ -104,9 +104,7 @@ export default function ToolkitDetailsPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   usePageTitle(task ? `${task.name} (#${task.id})` : 'Toolkit');
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!id) return;
     try {
       const t = await tasksApi.get(id);
@@ -116,12 +114,17 @@ export default function ToolkitDetailsPage() {
       // Each finished benchmark adds its rows, so this grows as the run progresses.
       setResults(await resultsApi.forTask(id).catch(() => []));
     } catch { /* ignore */ } finally { setLoading(false); }
-  };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+  }, [id]);
   useEffect(() => {
-    if (task && !task.done) { timer.current = setInterval(load, REFRESH_MS); return () => { if (timer.current) clearInterval(timer.current); }; }
-    // eslint-disable-next-line
-  }, [task?.done, id]);
+    const timer = setTimeout(() => { void load(); }, 0);
+    return () => clearTimeout(timer);
+  }, [load]);
+  const done = task?.done ?? true;
+  useEffect(() => {
+    if (done) return;
+    const timer = setInterval(() => { void load(); }, REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [done, load]);
 
   if (loading) return <ToolkitDetailsSkeleton />;
   if (!task) return <PageSection><Typography>Task not found.</Typography></PageSection>;
@@ -130,9 +133,9 @@ export default function ToolkitDetailsPage() {
   const active = task.steps.find((s) => s.status === 'active');
   const isPaused = !!active && isPauseKind(active.kind);
   const isRemoteDocker = task.execution_backend === 'remote_docker';
-  const canDownloadResults = task.done || ['done', 'success', 'succeeded', 'failed', 'timed_out', 'error', 'aborted'].includes((task as any).status || (task as any).outcome);
-  const extra = (tool?.extra ?? {}) as Record<string, any>;
-  const benchmarkNames = task.benchmark_progress.map((p) => p.name);
+  const canDownloadResults = task.done || ['done', 'success', 'succeeded', 'failed', 'timed_out', 'error', 'aborted'].includes(task.status || task.outcome);
+  const extra = (tool?.extra ?? {}) as Record<string, string | number | boolean | string[] | null | undefined>;
+  const benchmarkNames = task.benchmark_progress;
   const scriptDir = tool?.script_dir === '.' ? 'Repository root' : (tool?.script_dir || '—');
 
   // Imported tasks carry the old system's key names for the same options; take whichever is set.
@@ -161,7 +164,7 @@ export default function ToolkitDetailsPage() {
   const doDelete = async () => {
     setDeleting(true);
     try { await tasksApi.delete(task.id); navigate('/toolkit'); }
-    catch (err: any) { setDeleting(false); setDeleteOpen(false); setError(err?.response?.data?.error ?? 'Delete failed'); }
+    catch (error: unknown) { setDeleting(false); setDeleteOpen(false); setError(apiErrorMessage(error, 'Delete failed', 'error')); }
   };
   // Re-open the submission form with this toolkit's inputs prefilled. `extra` holds the
   // submitted option set; the columns after it win, so a resolved hash replaces the
@@ -215,7 +218,14 @@ export default function ToolkitDetailsPage() {
           </DetailRow>
           <DetailRow label="VNNLIB version"><code>{extra.vnnlib_version || '—'}</code></DetailRow>
           <DetailRow label="Evaluation mode"><code>{extra.run_networks || '—'}</code></DetailRow>
-          <DetailRow label="Benchmarks">{benchmarkNames.join(', ') || '—'}</DetailRow>
+          <DetailRow label="Benchmarks">
+            {benchmarkNames.length ? benchmarkNames.map((benchmark, index) => (
+              <span key={`${benchmark.name}-${index}`}>
+                {index > 0 && benchmarkNames[index - 1].group !== benchmark.group ? ' | ' : index > 0 ? ', ' : ''}
+                {benchmark.name}
+              </span>
+            )) : '—'}
+          </DetailRow>
           {known(rootFlags) && (
             <DetailRow label="Run as root">
               install: <code>{yn(rootFlags[0])}</code>, post-install: <code>{yn(rootFlags[1])}</code>,{' '}

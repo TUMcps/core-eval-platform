@@ -108,9 +108,12 @@ class BenchmarkViewSet(viewsets.ModelViewSet):
         # single implicit 'default' category. Inject it before validation so the
         # category/name uniqueness check still runs.
         data = request.data
+        comp = get_competition()
         if not data.get("category") and not get_competition().uses_categories:
             category, _ = Category.objects.get_or_create(name="default")
             data = {**data, "category": str(category.id)}
+        if not data.get("group") and len(comp.benchmark_groups()) == 1:
+            data = {**data, "group": comp.benchmark_groups()[0]}
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -125,12 +128,15 @@ class BenchmarkViewSet(viewsets.ModelViewSet):
         ``{category, repository, hash}``; fans instances.csv into Benchmarks."""
         data = request.data
         try:
-            benchmarks = get_competition().load_benchmarks(
+            comp = get_competition()
+            benchmarks = comp.load_benchmarks(
                 category_name=data.get("category"),
                 repository=data.get("repository", ""),
                 ref=data.get("hash", ""),
                 owner=request.user,
             )
+            for benchmark in benchmarks:
+                comp.validate_benchmark_group(benchmark.group)
         except NotImplementedError:
             raise DRFValidationError("This competition does not support bulk benchmark loading.")
         except DjangoValidationError as exc:
@@ -159,8 +165,16 @@ class TrackViewSet(viewsets.ModelViewSet):
     def scoreboard(self, request, pk=None):
         """The competition's scoreboard for this track."""
         track = self.get_object()
-        board = get_competition().score(track)
-        return Response({"columns": board.columns, "rows": board.rows})
+        comp = get_competition()
+        board = comp.score(track)
+        grouped = []
+        for group in comp.benchmark_groups():
+            group_board = comp.score_group(track, group)
+            grouped.append({
+                "name": group, "columns": group_board.columns, "rows": group_board.rows,
+            })
+        # Keep columns/rows for existing clients while exposing the grouped shape.
+        return Response({"columns": board.columns, "rows": board.rows, "groups": grouped})
 
 
 class TaskPagination(PageNumberPagination):

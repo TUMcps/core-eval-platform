@@ -181,7 +181,7 @@ return createTheme({
     },
     MuiChip: {
       styleOverrides: {
-        root: ({ ownerState }: any) => {
+        root: ({ ownerState }) => {
           const soft = softChipColors[ownerState.color as string] ?? softChipColors.default;
           // Outlined chips (e.g. the "Paused" status) are styled as an "inactive"
           // version of their filled counterpart: the same pale fill + accent text as
