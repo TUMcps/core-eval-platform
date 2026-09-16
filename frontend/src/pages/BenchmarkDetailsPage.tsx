@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Button, Chip, Stack, Alert } from '@mui/material';
+import { Box, Typography, Button, Chip, Stack, Alert, MenuItem, TextField } from '@mui/material';
 import Skeleton from '@mui/material/Skeleton';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PageBreadcrumbs from '../components/PageBreadcrumbs';
@@ -101,6 +101,8 @@ export default function BenchmarkDetailsPage() {
   const [error, setError] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [benchmarkGroups, setBenchmarkGroups] = useState<string[]>([]);
+  const [groupSaving, setGroupSaving] = useState(false);
   usePageTitle(task ? `${task.name} (#${task.id})` : 'Benchmark');
   const load = useCallback(async () => {
     if (!id) return;
@@ -115,6 +117,14 @@ export default function BenchmarkDetailsPage() {
     const timer = setTimeout(() => { void load(); }, 0);
     return () => clearTimeout(timer);
   }, [load]);
+  useEffect(() => {
+    if (!user?.is_admin) return;
+    let active = true;
+    benchmarksApi.getFormData()
+      .then((data) => { if (active) setBenchmarkGroups(data.benchmark_groups); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [user?.is_admin]);
   const done = task?.done ?? true;
   useEffect(() => {
     if (done) return;
@@ -140,6 +150,9 @@ export default function BenchmarkDetailsPage() {
   const repository = task.repository || '';
   const hash = task.hash || '';
   const categoryId = (task.category ?? benchmark?.category ?? '') as string;
+  const availableBenchmarkGroups = benchmark && !benchmarkGroups.includes(benchmark.group)
+    ? [...benchmarkGroups, benchmark.group]
+    : benchmarkGroups;
   // A per-category load (ARCH) is a category task, not one Benchmark.
   const isCategoryLoad = !task.benchmark && !!task.category;
 
@@ -157,10 +170,18 @@ export default function BenchmarkDetailsPage() {
     try { await tasksApi.delete(task.id); navigate('/benchmark'); }
     catch (error: unknown) { setDeleting(false); setDeleteOpen(false); setError(apiErrorMessage(error, 'Delete failed', 'error')); }
   };
+  const changeGroup = async (group: string) => {
+    if (!benchmark) return;
+    setGroupSaving(true);
+    setError('');
+    try { setBenchmark(await benchmarksApi.setGroup(benchmark.id, group)); }
+    catch (error: unknown) { setError(apiErrorMessage(error, 'Could not change benchmark group', 'error')); }
+    finally { setGroupSaving(false); }
+  };
   // Re-open the submission form with this submission's inputs prefilled. (The ARCH form
   // ignores `name`; the VNN form ignores `category`.)
   const repopulate = () => navigate('/benchmark/submit', {
-    state: { prefillData: { name: task.name, group: benchmark?.group, repository, hash, category: categoryId, fields } },
+    state: { prefillData: { name: task.name, repository, hash, category: categoryId, fields } },
   });
 
   return (
@@ -192,7 +213,17 @@ export default function BenchmarkDetailsPage() {
           {isCategoryLoad && <DetailRow label="Category"><code>{task.name}</code></DetailRow>}
           <DetailRow label="Repository"><code>{repository || '—'}</code></DetailRow>
           <DetailRow label="Hash"><code>{hash || '—'}</code></DetailRow>
-          {!isCategoryLoad && benchmark?.group !== 'default' && <DetailRow label="Group"><code>{formatBenchmarkGroup(benchmark?.group || '') || '—'}</code></DetailRow>}
+          {!isCategoryLoad && benchmark && <DetailRow label="Group">
+            {user?.is_admin ? (
+              <TextField select size="small" value={benchmark.group} disabled={groupSaving}
+                onChange={(event) => { void changeGroup(event.target.value); }}
+                inputProps={{ 'aria-label': 'Benchmark group' }} sx={{ minWidth: 180 }}>
+                {availableBenchmarkGroups.map((group) => (
+                  <MenuItem key={group} value={group}>{formatBenchmarkGroup(group)}</MenuItem>
+                ))}
+              </TextField>
+            ) : <code>{formatBenchmarkGroup(benchmark.group) || '—'}</code>}
+          </DetailRow>}
           {!isCategoryLoad && <DetailRow label="VNNLIB version"><code>{fields.vnnlib_version || '—'}</code></DetailRow>}
           <DetailRow label="Owner">
             {user?.is_admin ? (

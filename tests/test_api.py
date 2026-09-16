@@ -51,24 +51,92 @@ def test_benchmark_add_instances(api, category):
     assert len(add.json()) == 2
 
 
-def test_benchmark_group_is_validated_and_serialized(api, category, monkeypatch):
+def test_new_benchmark_is_always_assigned_to_default_group(api, category, monkeypatch):
     from comp_eval_platform.competitions import get_competition
 
     comp = get_competition()
     monkeypatch.setattr(type(comp), "benchmark_groups",
-                        lambda self: ("test", "regular", "extended"))
-
-    invalid = api.post("/api/benchmarks/", {
-        "category": str(category.id), "name": "bad", "group": "mystery",
-    }, format="json")
-    assert invalid.status_code == 400
-    assert "Unknown benchmark group" in str(invalid.json())
+                        lambda self: ("default", "test", "regular", "extended"))
 
     created = api.post("/api/benchmarks/", {
         "category": str(category.id), "name": "good", "group": "regular",
     }, format="json")
     assert created.status_code == 201, created.content
-    assert created.json()["group"] == "regular"
+    assert created.json()["group"] == "default"
+
+    updated = api.patch(
+        f"/api/benchmarks/{created.json()['id']}/", {"group": "regular"}, format="json",
+    )
+    assert updated.status_code == 200, updated.content
+    assert updated.json()["group"] == "default"
+
+
+def test_only_admin_can_assign_a_valid_benchmark_group(api, category, monkeypatch):
+    from rest_framework.test import APIClient
+
+    from comp_eval_platform.competitions import get_competition
+    from comp_eval_platform.core.models import Benchmark, Role, User
+
+    comp = get_competition()
+    monkeypatch.setattr(type(comp), "benchmark_groups",
+                        lambda self: ("default", "test", "regular", "extended"))
+    benchmark = Benchmark.objects.create(category=category, name="grouped")
+
+    forbidden = api.post(
+        f"/api/benchmarks/{benchmark.id}/set_group/", {"group": "regular"}, format="json",
+    )
+    assert forbidden.status_code == 403
+
+    admin = User.objects.create_user(
+        email="group-admin@x.test", password="pw", enabled=True, role=Role.ADMIN,
+    )
+    admin_api = APIClient()
+    admin_api.force_authenticate(admin)
+
+    invalid = admin_api.post(
+        f"/api/benchmarks/{benchmark.id}/set_group/", {"group": "mystery"}, format="json",
+    )
+    assert invalid.status_code == 400
+    assert "Unknown benchmark group" in str(invalid.json())
+
+    changed = admin_api.post(
+        f"/api/benchmarks/{benchmark.id}/set_group/", {"group": "regular"}, format="json",
+    )
+    assert changed.status_code == 200, changed.content
+    assert changed.json()["group"] == "regular"
+
+
+def test_benchmark_submission_starts_in_default_and_preserves_admin_assignment(
+        api, monkeypatch):
+    from comp_eval_platform.competitions import get_competition
+    from comp_eval_platform.core.models import Benchmark, RuntimeSettings
+
+    comp = get_competition()
+    monkeypatch.setattr(type(comp), "uses_categories", False)
+    monkeypatch.setattr(type(comp), "benchmark_groups",
+                        lambda self: ("default", "test", "regular", "extended"))
+    settings = RuntimeSettings.get()
+    settings.scheduler_enabled = True
+    settings.users_can_submit_benchmarks = True
+    settings.save(update_fields=["scheduler_enabled", "users_can_submit_benchmarks"])
+
+    submitted = api.post("/api/benchmark/submit/", {
+        "name": "submitted", "repository": "https://example.test/benchmark.git",
+        "group": "regular",
+    }, format="json")
+    assert submitted.status_code == 201, submitted.content
+    benchmark = Benchmark.objects.get(name="submitted")
+    assert benchmark.group == "default"
+
+    benchmark.group = "regular"
+    benchmark.save(update_fields=["group"])
+    resubmitted = api.post("/api/benchmark/submit/", {
+        "name": "submitted", "repository": "https://example.test/updated.git",
+        "group": "extended",
+    }, format="json")
+    assert resubmitted.status_code == 201, resubmitted.content
+    benchmark.refresh_from_db()
+    assert benchmark.group == "regular"
 
 
 def test_toolkit_form_orders_benchmarks_by_configured_group(api, category, user, monkeypatch):
@@ -121,7 +189,7 @@ def test_scoreboard_exposes_each_configured_group(api, monkeypatch):
     assert [group["rows"][0]["tool"] for group in groups] == ["test", "regular"]
 
 
-def test_task_progress_carries_snapshot_group_and_legacy_fallback(api, category, user):
+def test_task_progress_uses_current_catalog_group_and_snapshot_fallback(api, category, user):
     from comp_eval_platform.core.models import Benchmark, Task, TaskStep, Tool
 
     benchmark = Benchmark.objects.create(
@@ -137,11 +205,16 @@ def test_task_progress_carries_snapshot_group_and_legacy_fallback(api, category,
     TaskStep.objects.create(task=task, kind="run_benchmark", order=1, payload={
         "benchmark_id": str(benchmark.id),
     })
+    TaskStep.objects.create(task=task, kind="run_benchmark", order=2, payload={
+        "benchmark_id": "999999", "benchmark_name": "removed",
+        "benchmark_group": "extended",
+    })
 
     progress = api.get(f"/api/tasks/{task.id}/").json()["benchmark_progress"]
 
     assert [(item["name"], item["group"]) for item in progress] == [
-        ("snapshot-name", "test"), ("catalog-name", "regular"),
+        ("snapshot-name", "regular"), ("catalog-name", "regular"),
+        ("removed", "extended"),
     ]
 
 

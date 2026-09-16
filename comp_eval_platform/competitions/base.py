@@ -71,9 +71,9 @@ class Competition(ABC):
     def benchmark_groups(self) -> tuple[str, ...]:
         """Ordered benchmark groups within each category.
 
-        A single ``default`` group keeps simple competitions flat in the UI while
-        still giving every benchmark a real, queryable group in the catalog.
-        Variants with multiple logical partitions override this order.
+        ``default`` is the initial staging group assigned to every new benchmark.
+        A single ``default`` group keeps simple competitions flat in the UI; variants
+        with additional logical partitions override this order and include it.
         """
         return ("default",)
 

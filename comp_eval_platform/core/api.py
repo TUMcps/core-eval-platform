@@ -52,6 +52,12 @@ class IsOrganizer(permissions.BasePermission):
         return bool(u and u.is_authenticated and getattr(u, "is_organizer", False))
 
 
+class IsAdmin(permissions.BasePermission):
+    def has_permission(self, request, view):
+        u = request.user
+        return bool(u and u.is_authenticated and getattr(u, "is_admin", False))
+
+
 def _zip_dir(directory: str) -> bytes:
     """Zip a directory's files, flattened to paths relative to it. Held in memory: an
     exported run is a results.csv plus a few gzipped counterexamples."""
@@ -109,18 +115,35 @@ class BenchmarkViewSet(viewsets.ModelViewSet):
         # category/name uniqueness check still runs.
         data = request.data
         comp = get_competition()
-        if not data.get("category") and not get_competition().uses_categories:
+        if not data.get("category") and not comp.uses_categories:
             category, _ = Category.objects.get_or_create(name="default")
             data = {**data, "category": str(category.id)}
-        if not data.get("group") and len(comp.benchmark_groups()) == 1:
-            data = {**data, "group": comp.benchmark_groups()[0]}
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         return Response(serializer.data, status=201)
 
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        try:
+            group = get_competition().validate_benchmark_group("default")
+        except DjangoValidationError as exc:
+            raise DRFValidationError({"group": exc.messages})
+        serializer.save(owner=self.request.user, group=group)
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAdmin])
+    def set_group(self, request, pk=None):
+        """Assign a benchmark to a competition-defined group (admin only)."""
+        requested_group = request.data.get("group")
+        if not isinstance(requested_group, str):
+            raise DRFValidationError({"group": ["A group name is required."]})
+        try:
+            group = get_competition().validate_benchmark_group(requested_group)
+        except DjangoValidationError as exc:
+            raise DRFValidationError({"group": exc.messages})
+        benchmark = self.get_object()
+        benchmark.group = group
+        benchmark.save(update_fields=["group"])
+        return Response(self.get_serializer(benchmark).data)
 
     @action(detail=False, methods=["post"])
     def load(self, request):
@@ -482,12 +505,6 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all().order_by("name")
     serializer_class = CategorySerializer
     permission_classes = [IsOrganizer]
-
-
-class IsAdmin(permissions.BasePermission):
-    def has_permission(self, request, view):
-        u = request.user
-        return bool(u and u.is_authenticated and getattr(u, "is_admin", False))
 
 
 class UserViewSet(viewsets.ModelViewSet):
