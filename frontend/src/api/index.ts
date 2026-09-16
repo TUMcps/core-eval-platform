@@ -193,6 +193,8 @@ export const benchmarksApi = {
   get: (id: ID) => apiClient.get<Benchmark>(`/api/benchmarks/${id}/`).then((r) => r.data),
   create: (data: Partial<Benchmark>) => apiClient.post<Benchmark>('/api/benchmarks/', data).then((r) => r.data),
   submit: (data: Record<string, unknown>) => apiClient.post<{ redirect_to: string }>('/api/benchmark/submit/', data).then((r) => r.data),
+  setGroup: (id: ID, group: string) =>
+    apiClient.post<Benchmark>(`/api/benchmarks/${id}/set_group/`, { group }).then((r) => r.data),
   getFormData: () => apiClient.get<BenchmarkFormData>('/api/benchmark/form_data/').then((r) => r.data),
   addInstances: (id: ID, names: string[]) =>
     apiClient.post(`/api/benchmarks/${id}/add_instances/`, names.map((name, order) => ({ name, order }))).then((r) => r.data),

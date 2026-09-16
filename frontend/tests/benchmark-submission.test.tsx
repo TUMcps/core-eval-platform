@@ -79,7 +79,6 @@ describe('BenchmarkSubmissionPage', () => {
       vnnlib_version: '2.0',
       seed: '42',
       name: 'New benchmark',
-      group: 'default',
     }));
     expect(await screen.findByText('Destination: /benchmark/submission/456')).toBeInTheDocument();
   });
@@ -106,17 +105,18 @@ describe('BenchmarkSubmissionPage', () => {
     }));
   });
 
-  it('requires and submits a configured benchmark group', async () => {
+  it('does not let submitters choose a configured benchmark group', async () => {
     benchmarksApi.getFormData.mockResolvedValue(formData({
-      benchmark_groups: ['test', 'regular', 'extended'],
+      benchmark_groups: ['default', 'test', 'regular', 'extended'],
     }));
-    renderPage({ name: 'Grouped benchmark', repository: 'https://example.com/grouped.git', group: 'regular' });
+    renderPage({ name: 'Grouped benchmark', repository: 'https://example.com/grouped.git' });
 
-    expect(await screen.findByRole('combobox', { name: /Benchmark group/i })).toHaveTextContent('Regular');
+    await screen.findByRole('textbox', { name: /Benchmark name/i });
+    expect(screen.queryByRole('combobox', { name: /Benchmark group/i })).not.toBeInTheDocument();
     submitForm();
 
     await waitFor(() => expect(benchmarksApi.submit).toHaveBeenCalledOnce());
-    expect(benchmarksApi.submit.mock.calls[0][0]).toMatchObject({ group: 'regular' });
+    expect(benchmarksApi.submit.mock.calls[0][0]).not.toHaveProperty('group');
   });
 
   it('imports benchmark metadata from data.json', async () => {

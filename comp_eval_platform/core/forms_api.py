@@ -152,11 +152,8 @@ def benchmark_submit(request):
     else:
         category, _ = Category.objects.get_or_create(name="default")
 
-    requested_group = d.get("group")
-    if not requested_group and len(comp.benchmark_groups()) == 1:
-        requested_group = comp.benchmark_groups()[0]
     try:
-        group = comp.validate_benchmark_group(requested_group or "")
+        initial_group = comp.validate_benchmark_group("default")
     except DjangoValidationError as exc:
         return Response({"errors": {"group": exc.messages}}, status=400)
 
@@ -170,12 +167,11 @@ def benchmark_submit(request):
         return Response({"errors": {"name": ["already taken by another user in this category"]}}, status=400)
     if bench is None:
         bench = Benchmark.objects.create(
-            owner=request.user, category=category, name=name, group=group, extra=extra,
+            owner=request.user, category=category, name=name, group=initial_group, extra=extra,
         )
     else:
         bench.extra = extra
-        bench.group = group
-        fields = ["extra", "group"]
+        fields = ["extra"]
         if bench.owner_id is None:
             bench.owner = request.user
             fields.append("owner")
