@@ -199,6 +199,64 @@ def test_start_builds_graph_from_competition():
     assert task.outcome == Outcome.SUCCEEDED
 
 
+def _new_task():
+    from comp_eval_platform.core.models import Category, Task, Tool, User
+
+    u = User.objects.create_user(email=f"{uuid.uuid4().hex[:8]}@x.test", password="pw", enabled=True)
+    cat = Category.objects.create(name=f"c{uuid.uuid4().hex[:6]}")
+    tool = Tool.objects.create(owner=u, category=cat, name="t")
+    return Task.objects.create(owner=u, tool=tool)
+
+
+def test_start_without_waiting_leaves_the_first_step_to_the_scheduler(monkeypatch):
+    """A submit request returns before the first step runs; the queued job runs it."""
+    from comp_eval_platform.core import scheduler
+    from comp_eval_platform.core.models.execution import Outcome
+
+    queued = []
+    monkeypatch.setattr(scheduler, "run_soon", lambda func, *args: queued.append((func, args)) or True)
+    task = _new_task()
+
+    task.start(wait=False)
+
+    task.refresh_from_db()
+    assert task.outcome == Outcome.RUNNING and task.current_step is None
+    assert all(s.status == "pending" for s in task.step_set.all())
+
+    func, args = queued.pop()
+    func(*args)
+    task.refresh_from_db()
+    assert task.outcome == Outcome.SUCCEEDED
+
+
+def test_start_without_a_scheduler_runs_the_first_step_itself():
+    from comp_eval_platform.core.models.execution import Outcome
+
+    task = _new_task()  # no scheduler runs under tests
+    task.start(wait=False)
+
+    task.refresh_from_db()
+    assert task.outcome == Outcome.SUCCEEDED
+
+
+def test_queued_start_skips_a_task_aborted_meanwhile(monkeypatch):
+    from comp_eval_platform.core import scheduler
+    from comp_eval_platform.core.models import Task
+    from comp_eval_platform.core.models.execution import Outcome
+
+    queued = []
+    monkeypatch.setattr(scheduler, "run_soon", lambda func, *args: queued.append((func, args)) or True)
+    task = _new_task()
+    task.start(wait=False)
+    Task.objects.filter(pk=task.pk).update(outcome=Outcome.ABORTED)
+
+    func, args = queued.pop()
+    func(*args)
+    task.refresh_from_db()
+    assert task.current_step is None
+    assert all(s.status == "pending" for s in task.step_set.all())
+
+
 def test_payload_merges_against_the_row_not_a_stale_copy():
     """A step's payload is written from two threads — the scheduler tails run progress
     while the node's completion callback freezes the summary — so each write must keep
