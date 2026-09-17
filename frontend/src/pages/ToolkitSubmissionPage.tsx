@@ -84,7 +84,10 @@ export default function ToolkitSubmissionPage() {
       setData(d);
       set({
         ami: form.ami || d.ami_options[0]?.value || '',
-        run_networks: prefill?.run_networks || d.run_networks_options[0]?.value || 'all',
+        // A resubmitted mode may no longer be offered (the full evaluation can be closed).
+        run_networks: d.run_networks_options.some((o) => o.value === prefill?.run_networks)
+          ? prefill!.run_networks
+          : d.run_networks_options[0]?.value || 'all',
       });
       if (d.uses_categories) {
         const keys = Object.keys(d.benchmark_categories);

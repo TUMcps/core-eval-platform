@@ -41,6 +41,7 @@ const GROUPS: { title: string; subheader: string; fields: Field[] }[] = [
     fields: [
       { key: 'users_can_submit_tools', kind: 'bool', label: 'Users can submit tools', help: 'Admins always can.' },
       { key: 'users_can_submit_benchmarks', kind: 'bool', label: 'Users can submit benchmarks', help: 'Admins always can.' },
+      { key: 'allow_full_evaluation', kind: 'bool', label: 'Users can run the full evaluation', help: 'When off, users can only pick the test modes (first instance, 10 random); admins always can.' },
     ],
   },
   {

@@ -29,7 +29,7 @@ class RuntimeSettings(models.Model):
     benchmark_timeout = models.PositiveIntegerField(default=6)
     #: Master switch for the backstops above; when False they are shown but not enforced.
     enforce_timeouts = models.BooleanField(default=True)
-    #: Imported from VNN; nothing reads it.
+    #: Whether non-admins may submit the full (final) evaluation run mode.
     allow_full_evaluation = models.BooleanField(default=True)
 
     class Meta:
