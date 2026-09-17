@@ -88,7 +88,6 @@ export default function BenchmarkSubmissionPage() {
 
   const schedulerEnabled = data?.scheduler_enabled ?? true;
   const usesCategories = data?.uses_categories ?? true;
-  const isRemoteDocker = data?.execution_backend === 'remote_docker';
 
   const importDataJson = async (file: File) => {
     const parsed = parseDataJson(await file.text());
@@ -156,7 +155,6 @@ export default function BenchmarkSubmissionPage() {
       <PageSection maxWidth="md">
         {message && <Alert severity="error" sx={{ mb: 3 }}>{message}</Alert>}
         {!schedulerEnabled && <Alert severity="warning" sx={{ mb: 3 }}>Submissions are paused because the scheduler is currently disabled.</Alert>}
-      {isRemoteDocker && <Alert severity="warning" sx={{ mb: 3 }}>This deployment uses remote_docker for submissions. The task may spend longer in worker assignment while the worker service provisions and boots your container.</Alert>}
         <Box component="form" onSubmit={handleSubmit}>
           <Box
             role="button"
