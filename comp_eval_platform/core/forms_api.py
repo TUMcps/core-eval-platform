@@ -10,7 +10,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .evaluation_modes import EVALUATION_MODE_OPTIONS
+from .evaluation_modes import EVALUATION_MODE_OPTIONS, EvaluationMode
 
 # Config-option keys carried on a toolkit submission (stored in Tool.extra and read
 # by the competition's build_steps / step handlers).
@@ -79,7 +79,11 @@ def toolkit_form_data(request):
             {"value": "ubuntu:22.04", "label": "Ubuntu 22.04 (Docker)"},
             {"value": "ami-0892d3c7ee96c0bf7", "label": "Ubuntu 22.04 base AMI"},
         ],
-        "run_networks_options": list(EVALUATION_MODE_OPTIONS),
+        # The final evaluation may be closed to non-admins, e.g. while tools are tested.
+        "run_networks_options": [
+            o for o in EVALUATION_MODE_OPTIONS
+            if is_admin or s.allow_full_evaluation or o["value"] != EvaluationMode.ALL.value
+        ],
         "benchmark_categories": categories,
         "default_eni": getattr(request.user, "aws_eni", "") or "",
     })
@@ -211,6 +215,10 @@ def toolkit_submit(request):
         return Response({"error": "Submissions are paused: the scheduler is disabled."}, status=400)
 
     d = request.data
+    if (d.get("run_networks", EvaluationMode.ALL.value) == EvaluationMode.ALL.value
+            and not (s.allow_full_evaluation or getattr(request.user, "is_admin", False))):
+        return Response({"error": "The full evaluation is currently disabled; "
+                                  "pick one of the test modes."}, status=403)
     if not d.get("name") or not d.get("repository"):
         return Response({"errors": {"name/repository": ["required"]}}, status=400)
 

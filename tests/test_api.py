@@ -407,3 +407,46 @@ def test_login_is_limited_to_admins_unless_allowed(allowed):
 
     assert login("admin@x.test") == 200
     assert login("user@x.test") == (200 if allowed else 403)
+
+
+@pytest.mark.parametrize("allowed", [False, True])
+def test_full_evaluation_is_closed_to_users_unless_allowed(api, allowed):
+    """With allow_full_evaluation off, a user neither sees nor can submit the "all" mode."""
+    from comp_eval_platform.core.models import RuntimeSettings, Tool
+
+    settings = RuntimeSettings.get()
+    settings.users_can_submit_tools = True
+    settings.scheduler_enabled = True
+    settings.allow_full_evaluation = allowed
+    settings.save()
+
+    modes = [m["value"] for m in api.get("/api/toolkit/form_data/").json()["run_networks_options"]]
+    assert ("all" in modes) is allowed
+
+    def submit(mode):
+        return api.post("/api/toolkit/submit/", {
+            "name": f"t-{mode}", "repository": "https://example/repo", "ami": "img",
+            "run_networks": mode,
+        }, format="json").status_code
+
+    assert submit("all") == (201 if allowed else 403)
+    assert submit("first") == 201
+    assert Tool.objects.filter(name="t-all").exists() is allowed
+
+
+def test_admins_can_always_run_the_full_evaluation(api, user):
+    from comp_eval_platform.core.models import Role, RuntimeSettings
+
+    user.role = Role.ADMIN
+    user.save()
+    settings = RuntimeSettings.get()
+    settings.scheduler_enabled = True
+    settings.allow_full_evaluation = False
+    settings.save()
+
+    modes = [m["value"] for m in api.get("/api/toolkit/form_data/").json()["run_networks_options"]]
+    assert "all" in modes
+    resp = api.post("/api/toolkit/submit/", {
+        "name": "t", "repository": "https://example/repo", "ami": "img", "run_networks": "all",
+    }, format="json")
+    assert resp.status_code == 201, resp.content
