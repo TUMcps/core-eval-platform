@@ -9,7 +9,7 @@ from urllib.request import Request, urlopen
 from django.conf import settings
 from django.utils import timezone
 # Updated import: Inheriting from BaseDockerBackend
-from .base import BaseDockerBackend, ProvisionError
+from .base import BaseDockerBackend, ProvisionError, ProvisionPending
 from .shell import service_id
 
 
@@ -46,7 +46,13 @@ def _json_request(base_url: str, path: str, payload: dict | None = None, *, time
     try:
         with urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read().decode("utf-8") or "{}")
-    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+    except HTTPError as exc:
+        try:
+            detail = json.loads(exc.read().decode("utf-8") or "{}").get("detail")
+        except (ValueError, OSError):
+            detail = None
+        raise ProvisionError(f"remote worker service {url} failed: {detail or exc}") from exc
+    except (URLError, TimeoutError, json.JSONDecodeError) as exc:
         raise ProvisionError(f"remote worker service {url} failed: {exc}") from exc
 
 
@@ -91,6 +97,8 @@ class RemoteDockerBackend(BaseDockerBackend):
         base_url = self.worker_service_url_for_user(owner)
         # Using the inherited _public_key() method from BaseDockerBackend instead of local instantiation workaround
         response = _json_request(base_url, "/provision", {"service_id": service_id(), "node_type": node_type, "image": image, "authorized_key": self._public_key(), "eni": eni})
+        if response.get("pending"):
+            raise ProvisionPending(response["pending"])
         Node.objects.create(id=response["id"], created_at=self._parse_timestamp(response.get("created_at")) or timezone.now(), node_type=response.get("node_type") or node_type or "local", image=response.get("image") or image, worker_service_url=base_url, state=response.get("state") or "running", reachability=response.get("reachability") or "none", ip=response.get("ip") or None)
 
     def sync_instances(self) -> None:

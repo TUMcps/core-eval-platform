@@ -66,6 +66,8 @@ export default function BenchmarkSubmissionPage() {
   // A details page's "Populate new submission form" button routes here with prefill.
   const prefill = (useLocation().state as { prefillData?: BenchmarkPrefill } | null)?.prefillData;
   const [name, setName] = useState(prefill?.name ?? '');
+  // The submit request can take a while: it already tries to start a worker.
+  const [submitting, setSubmitting] = useState(false);
   const [category, setCategory] = useState(prefill?.category ?? '');
   const [repository, setRepository] = useState(prefill?.repository ?? '');
   const [hash, setHash] = useState(prefill?.hash ?? '');
@@ -120,6 +122,7 @@ export default function BenchmarkSubmissionPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       // Flat fields: the submit endpoint runs the benchmark task and returns its id.
       const payload: Record<string, unknown> = { repository, hash, ...fields };
@@ -134,6 +137,8 @@ export default function BenchmarkSubmissionPage() {
     } catch (error: unknown) {
       const data = apiErrorData(error);
       setMessage(typeof data === 'string' ? data : JSON.stringify(data ?? 'Submission failed'));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -245,7 +250,7 @@ export default function BenchmarkSubmissionPage() {
             )
           ))}
 
-          <Button fullWidth type="submit" variant="contained" size="large">Submit benchmark</Button>
+          <Button fullWidth type="submit" variant="contained" size="large" disabled={submitting}>{submitting ? 'Submitting…' : 'Submit benchmark'}</Button>
         </Box>
       </PageSection>
     </>

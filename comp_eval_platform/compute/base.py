@@ -23,6 +23,11 @@ class ProvisionError(Exception):
     """Starting a worker failed; the message is shown to the submitter."""
 
 
+class ProvisionPending(Exception):
+    """The worker cannot start yet (e.g. its image is still downloading); provision again
+    later. The message is shown to the submitter."""
+
+
 class ComputeBackend(ABC):
     name: str
 
@@ -35,7 +40,8 @@ class ComputeBackend(ABC):
         """Start a new worker of the given type/image. ``image`` is an AMI id (aws) or
         a Docker image ref (local_docker), already passed through ``resolve_image``.
         Raises ProvisionError (with the backend's own error) if the worker cannot start
-        — a submission that cannot run must fail loudly rather than wait forever."""
+        — a submission that cannot run must fail loudly rather than wait forever — and
+        ProvisionPending if it cannot start yet."""
 
     @abstractmethod
     def terminate(self, node: "Node") -> None:
