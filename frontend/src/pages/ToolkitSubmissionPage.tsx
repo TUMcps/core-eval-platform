@@ -71,6 +71,8 @@ export default function ToolkitSubmissionPage() {
   });
   const set = (patch: Partial<ToolkitSubmissionForm>) => setForm((current) => ({ ...current, ...patch }));
   const [message, setMessage] = useState('');
+  // The submit request can take a while: it already tries to start a worker.
+  const [submitting, setSubmitting] = useState(false);
   const [data, setData] = useState<ToolkitFormData | null>(null);
   const [useRepoRoot, setUseRepoRoot] = useState(!prefill?.scripts_dir);
   // Category variants (ARCH): a tool enters one category; the benchmark list below is
@@ -118,6 +120,7 @@ export default function ToolkitSubmissionPage() {
     e.preventDefault();
     if (!canSubmit) return setMessage('Submission is currently closed');
     if (!schedulerEnabled) return setMessage('Submissions are paused: the scheduler is currently disabled.');
+    setSubmitting(true);
     try {
       const payload: Record<string, unknown> = {
         name: form.name, repository: form.repository, hash: form.hash, ami: form.ami,
@@ -152,6 +155,8 @@ export default function ToolkitSubmissionPage() {
       const details = errors ? Object.entries(errors).map(([f, e]) => `${f}: ${Array.isArray(e) ? e.join(', ') : String(e)}`).join(' ') : '';
       const message = typeof response?.error === 'string' ? response.error : undefined;
       setMessage(details || message || 'Submission failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -309,7 +314,7 @@ export default function ToolkitSubmissionPage() {
             </>
           )}
 
-          <Button type="submit" variant="contained" color="primary" size="large" fullWidth sx={{ mt: 3 }} disabled={!canSubmit || !schedulerEnabled}>Submit toolkit</Button>
+          <Button type="submit" variant="contained" color="primary" size="large" fullWidth sx={{ mt: 3 }} disabled={!canSubmit || !schedulerEnabled || submitting}>{submitting ? 'Submitting…' : 'Submit toolkit'}</Button>
         </Box>
       </PageSection>
     </>

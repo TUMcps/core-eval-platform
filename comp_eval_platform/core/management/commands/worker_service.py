@@ -7,6 +7,7 @@ from urllib.parse import parse_qs, urlparse
 from django.core.management.base import BaseCommand
 
 from comp_eval_platform.compute import remote_docker_service as service
+from comp_eval_platform.compute.base import ProvisionPending
 
 
 def _json_default(value):
@@ -78,13 +79,21 @@ class _Handler(BaseHTTPRequestHandler):
             # Handle the '/provision' endpoint to start a new worker container
             # using the parameters provided in the request body (service ID, node type, image, key, and eni),
             # then serialize and return the resulting container details as a dictionary.
-            result = service.provision(
-                service_id=data.get("service_id", ""),
-                node_type=data.get("node_type", "local"),
-                image=data.get("image", ""),
-                authorized_key=data.get("authorized_key", ""),
-                eni=data.get("eni")
-            )
+            try:
+                result = service.provision(
+                    service_id=data.get("service_id", ""),
+                    node_type=data.get("node_type", "local"),
+                    image=data.get("image", ""),
+                    authorized_key=data.get("authorized_key", ""),
+                    eni=data.get("eni")
+                )
+            except ProvisionPending as exc:
+                self._send(202, {"pending": str(exc)})
+                return
+            except Exception as exc:
+                # The caller shows this to the submitter; without it they only see a dropped connection.
+                self._send(500, {"detail": str(exc)})
+                return
             self._send(200, result.to_dict())
             return
             

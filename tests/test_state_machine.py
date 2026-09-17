@@ -162,6 +162,27 @@ def test_assign_fails_the_task_when_the_image_is_invalid_for_the_backend():
     assert shutdown.status == "done"
 
 
+def test_assign_waits_while_the_worker_image_is_downloading(monkeypatch):
+    """A worker whose image is still downloading is not a failure: the step stays
+    active, says why, and the scheduler provisions again on a later tick."""
+    from comp_eval_platform.compute.base import ProvisionPending
+    from comp_eval_platform.compute.local_docker import LocalDockerBackend
+    from comp_eval_platform.core.models.execution import Outcome
+
+    def pending(self, *args, **kwargs):
+        raise ProvisionPending("downloading image big:latest")
+
+    monkeypatch.setattr(LocalDockerBackend, "provision", pending)
+    task, (assign, _ok) = _mk_task(["assign", "t_ok"])
+
+    task.current_step.handler.execute()
+
+    task.refresh_from_db(), assign.refresh_from_db()
+    assert task.outcome == Outcome.RUNNING
+    assert assign.status == "active"
+    assert "downloading image big:latest" in assign.logs
+
+
 def test_start_builds_graph_from_competition():
     from comp_eval_platform.core.models import Category, Task, Tool, User
     from comp_eval_platform.core.models.execution import Outcome

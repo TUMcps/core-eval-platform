@@ -207,7 +207,7 @@ class AssignHandler(StepHandler):
 
     def _try_assign(self):
         from comp_eval_platform.compute import get_backend
-        from comp_eval_platform.compute.base import ImageError, ProvisionError
+        from comp_eval_platform.compute.base import ImageError, ProvisionError, ProvisionPending
         from comp_eval_platform.core.models import Node
 
         try:
@@ -240,6 +240,9 @@ class AssignHandler(StepHandler):
             # Pass the task owner to the provision method so the backend knows 
             # which user's remote worker service should create and host the new node.
             backend.provision(self._node_type(), image, self._eni(), owner=self.task.owner)
+        except ProvisionPending as exc:
+            # Not a failure: the scheduler tries again on its next tick.
+            self.step.set_log(f"[INFO] {exc}")
         except ProvisionError as exc:
             self._fail(str(exc))
 

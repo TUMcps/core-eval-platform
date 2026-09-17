@@ -17,6 +17,7 @@ from django.utils import timezone
 
 # Updated imports: Inheriting from the shared BaseDockerBackend instead of raw ComputeBackend
 from .base import BaseDockerBackend, ProvisionError
+from .images import ensure_image
 from .shell import service_id
 
 SERVICE_LABEL = "CompEvalServiceId"
@@ -65,6 +66,7 @@ class LocalDockerBackend(BaseDockerBackend):
     # -- lifecycle --------------------------------------------------------
     def provision(self, node_type: str, image: str, eni=None, owner=None) -> None:
         try:
+            ensure_image(image)
             name = f"{_env('COMP_DOCKER_NAME_PREFIX', 'eval')}-{uuid.uuid4().hex[:12]}"
             run_args = [
                 "run", "-d", "--name", name,
@@ -91,7 +93,7 @@ class LocalDockerBackend(BaseDockerBackend):
                 id=container_id, created_at=timezone.now(), node_type=node_type or "local",
                 image=image, state="running", reachability="none", ip=ip or None,
             )
-        except (ProvisionError, DockerError, subprocess.SubprocessError) as exc:
+        except (ProvisionError, DockerError, subprocess.SubprocessError, RuntimeError) as exc:
             # Catching ProvisionError alongside Docker/Subprocess errors for robust failure handling
             raise ProvisionError(f"could not start a container from image {image!r}: {exc}") from exc
 

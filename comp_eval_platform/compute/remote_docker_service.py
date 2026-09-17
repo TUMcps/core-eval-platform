@@ -8,6 +8,8 @@ import uuid
 from datetime import datetime
 from datetime import timezone as dt_timezone
 
+from .images import ensure_image
+
 # Constants used for container management and identification
 SERVICE_LABEL = "CompEvalServiceId"
 READY_MARKER = "/tmp/comp_ready"
@@ -115,7 +117,9 @@ def provision(*, service_id: str, node_type: str, image: str, authorized_key: st
     Create, start, and bootstrap a new Docker container to serve as a worker node.
     
     Returns a dictionary containing the new container's metadata (id, ip, state, etc.).
+    Raises ProvisionPending while the image is still downloading.
     """
+    ensure_image(image)
     # Generate a unique name for the container
     name = f"{_env('COMP_DOCKER_NAME_PREFIX', 'eval')}-{uuid.uuid4().hex[:12]}"
     
