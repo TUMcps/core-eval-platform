@@ -133,7 +133,6 @@ export default function ToolkitDetailsPage() {
   const overall = statusChip(task.status || (task.done ? 'Done' : 'Running'));
   const active = task.steps.find((s) => s.status === 'active');
   const isPaused = !!active && isPauseKind(active.kind);
-  const isRemoteDocker = task.execution_backend === 'remote_docker';
   const canDownloadResults = task.done || ['done', 'success', 'succeeded', 'failed', 'timed_out', 'error', 'aborted'].includes(task.status || task.outcome);
   const extra = (tool?.extra ?? {}) as Record<string, string | number | boolean | string[] | null | undefined>;
   const benchmarkNames = task.benchmark_progress;
@@ -261,7 +260,6 @@ export default function ToolkitDetailsPage() {
 
       <PageSection>
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
-      {isRemoteDocker && !task.done && active?.kind === 'assign' && <Alert severity="warning" sx={{ mb: 3 }}>This submission is running on remote_docker. If it appears to stall while assigning a worker, the worker service may still be provisioning or syncing the container.</Alert>}
 
         <Typography variant="h5" fontWeight="bold" gutterBottom>Pipeline</Typography>
         <TaskPipeline steps={task.steps} benchmarkProgress={task.benchmark_progress}
