@@ -154,8 +154,7 @@ def benchmark_submit(request):
             owner=request.user, category=category,
             extra={"repository": d.get("repository", ""), "hash": (d.get("hash") or "").strip()},
         )
-        task.start()
-        task.refresh_from_db()
+        task.start(wait=False)
         return Response({"redirect_to": str(task.id)}, status=201)
 
     name = (d.get("name") or "").strip()
@@ -196,8 +195,7 @@ def benchmark_submit(request):
         bench.save(update_fields=fields)
 
     task = Task.objects.create(owner=request.user, benchmark=bench)
-    task.start()
-    task.refresh_from_db()
+    task.start(wait=False)
     return Response({"redirect_to": str(task.id)}, status=201)
 
 
@@ -238,6 +236,5 @@ def toolkit_submit(request):
         base_image=d.get("ami", ""), script_dir=d.get("scripts_dir", "") or "", extra=extra,
     )
     task = Task.objects.create(owner=request.user, tool=tool)
-    task.start()
-    task.refresh_from_db()
+    task.start(wait=False)
     return Response({"redirect_to": str(task.id)}, status=201)

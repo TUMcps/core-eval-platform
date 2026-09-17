@@ -98,14 +98,24 @@ class Task(models.Model):
         return s.submission_timeout + n_benchmarks * s.benchmark_timeout
 
     # --- Lifecycle -------------------------------------------------------
-    def start(self):
-        """Build the step graph from the active competition and execute the first step."""
+    def start(self, *, wait: bool = True):
+        """Build the step graph from the active competition and execute the first step.
+
+        With ``wait=False`` the first step runs on the scheduler's worker instead, right
+        after any tick in progress, so a submit request returns at once; until then the
+        task is running without a current step, which the scheduler skips."""
         from comp_eval_platform.competitions import get_competition
+        from comp_eval_platform.core.scheduler import run_soon
 
         get_competition().build_steps(self)  # creates ordered TaskStep rows
-        first = self.steps.first()
         self.outcome = Outcome.RUNNING
-        self._set_current_step(first)
+        self.save()
+        if wait or not run_soon(_begin_task, self.pk):
+            self._begin()
+
+    def _begin(self):
+        """Activate and execute the first step."""
+        self._set_current_step(self.steps.first())
         self.save()
         if self.current_step is not None:
             try:
@@ -235,6 +245,14 @@ class Task(models.Model):
     @classmethod
     def get_in_progress(cls):
         return list(cls.objects.exclude(outcome__in=TERMINAL_OUTCOMES).exclude(outcome=Outcome.PENDING))
+
+
+def _begin_task(task_id):
+    """Scheduler job for ``Task.start(wait=False)``."""
+    task = Task.objects.filter(pk=task_id).first()
+    # An abort before the job ran leaves nothing to begin.
+    if task is not None and task.current_step is None and not task.done:
+        task._begin()
 
 
 class TaskStep(models.Model):
