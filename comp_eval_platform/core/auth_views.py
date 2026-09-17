@@ -2,7 +2,7 @@
 
 Session cookies + CSRF (not JWT), matching the VNN frontend's axios client. The
 first account created becomes an enabled admin; later ones are disabled until an
-admin enables them.
+admin enables them, unless the ``auto_enable_users`` setting enables them on signup.
 """
 from dataclasses import asdict
 
@@ -39,10 +39,13 @@ def signup(request):
         return Response({"detail": "email and password are required"}, status=400)
     if User.objects.filter(email=email).exists():
         return Response({"detail": "an account with this email already exists"}, status=400)
+    from .models import RuntimeSettings
+
     first = not User.objects.exists()
     user = User.objects.create_user(
         email=email, password=password, name=name,
-        role=Role.ADMIN if first else Role.USER, enabled=first,
+        role=Role.ADMIN if first else Role.USER,
+        enabled=first or RuntimeSettings.get().auto_enable_users,
     )
     return Response(_user_data(user), status=201)
 
@@ -125,8 +128,8 @@ def update_profile(request):
 
 
 _SETTINGS_FIELDS = [
-    "scheduler_enabled", "execution_backend", "terminate_at_end", "terminate_on_failure",
-    "allow_non_admin_login", "users_can_submit_benchmarks", "users_can_submit_tools",
+    "scheduler_enabled", "execution_backend", "max_parallel_nodes", "terminate_at_end", "terminate_on_failure",
+    "allow_non_admin_login", "auto_enable_users", "users_can_submit_benchmarks", "users_can_submit_tools",
     "submission_timeout", "benchmark_timeout", "enforce_timeouts", "allow_full_evaluation",
 ]
 

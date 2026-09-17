@@ -2,8 +2,8 @@
 
 Singleton row (pk=1). These are admin-toggleable at runtime, unlike the static
 Django settings ``ACTIVE_COMPETITION`` (a deployment runs one variant) and
-``MAX_PARALLEL_NODES``. ``execution_backend`` stays here so an admin can flip
-aws↔local_docker without a redeploy; it is env-seeded on first init.
+the Django engine settings. ``execution_backend`` and ``max_parallel_nodes`` stay here
+so an admin can change them without a redeploy; both are env-seeded on first init.
 """
 from django.db import models
 
@@ -13,9 +13,13 @@ class RuntimeSettings(models.Model):
     scheduler_enabled = models.BooleanField(default=False)
     #: Compute axis: "aws" | "local_docker". Read by compute.get_backend().
     execution_backend = models.CharField(max_length=32, default="local_docker")
+    #: How many workers run submissions at once; each runs its benchmarks sequentially.
+    max_parallel_nodes = models.PositiveIntegerField(default=1)
     terminate_at_end = models.BooleanField(default=True)
     terminate_on_failure = models.BooleanField(default=True)
     allow_non_admin_login = models.BooleanField(default=True)
+    #: New signups may log in right away instead of waiting for an admin to enable them.
+    auto_enable_users = models.BooleanField(default=False)
     users_can_submit_benchmarks = models.BooleanField(default=False)
     users_can_submit_tools = models.BooleanField(default=False)
     #: Wall-clock backstops, in hours.
@@ -36,5 +40,8 @@ class RuntimeSettings(models.Model):
     @classmethod
     def get(cls) -> "RuntimeSettings":
         """The singleton row, created with defaults on first access."""
-        obj, _ = cls.objects.get_or_create(pk=1)
+        from django.conf import settings
+
+        obj, _ = cls.objects.get_or_create(
+            pk=1, defaults={"max_parallel_nodes": getattr(settings, "MAX_PARALLEL_NODES", 1)})
         return obj

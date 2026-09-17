@@ -11,7 +11,7 @@ import PageSection from '../components/PageSection';
 
 const BOOLS = [
   'scheduler_enabled', 'terminate_at_end', 'terminate_on_failure', 'allow_non_admin_login',
-  'users_can_submit_benchmarks', 'users_can_submit_tools', 'enforce_timeouts', 'allow_full_evaluation',
+  'auto_enable_users', 'users_can_submit_benchmarks', 'users_can_submit_tools', 'enforce_timeouts', 'allow_full_evaluation',
 ];
 const INTS = ['submission_timeout', 'benchmark_timeout'];
 
@@ -41,6 +41,7 @@ export default function AdminSettingsPage() {
                     <MenuItem value="remote_docker">remote_docker</MenuItem>
                     <MenuItem value="aws">aws</MenuItem>
                   </TextField>
+                  <TextField type="number" label="Parallel workers" helperText="How many submissions run at once" value={s.max_parallel_nodes ?? 1} onChange={(e) => set('max_parallel_nodes', Number(e.target.value))} inputProps={{ min: 1 }} />
                   <Divider>Timeouts (hours)</Divider>
                   <Stack direction="row" spacing={2}>
                     {INTS.map((k) => <TextField key={k} type="number" label={k} value={s[k] ?? 0} onChange={(e) => set(k, Number(e.target.value))} fullWidth />)}

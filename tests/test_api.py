@@ -368,3 +368,22 @@ def test_result_without_an_instance_still_serializes(api, category, user):
 
     assert rows[0]["instance_name"] is None
     assert rows[0]["result"] == "unsat"
+
+
+@pytest.mark.parametrize("auto_enable", [False, True])
+def test_signup_enables_users_only_when_configured(auto_enable):
+    """After the first (admin) account, a signup waits for an admin unless
+    auto_enable_users is set."""
+    from rest_framework.test import APIClient
+
+    from comp_eval_platform.core.models import RuntimeSettings, User
+
+    User.objects.create_user(email="admin@x.test", password="pw", enabled=True)
+    settings = RuntimeSettings.get()
+    settings.auto_enable_users = auto_enable
+    settings.save()
+
+    resp = APIClient().post("/api/auth/signup/", {"email": "new@x.test", "password": "pw"},
+                            format="json")
+    assert resp.status_code == 201, resp.content
+    assert User.objects.get(email="new@x.test").enabled is auto_enable

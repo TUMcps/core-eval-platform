@@ -208,7 +208,7 @@ class AssignHandler(StepHandler):
     def _try_assign(self):
         from comp_eval_platform.compute import get_backend
         from comp_eval_platform.compute.base import ImageError, ProvisionError, ProvisionPending
-        from comp_eval_platform.core.models import Node
+        from comp_eval_platform.core.models import Node, RuntimeSettings
 
         try:
             image = self._image()
@@ -229,12 +229,8 @@ class AssignHandler(StepHandler):
             self.task.step_succeeded(check_status=False)
             return
         # No free worker: provision one, but honor the parallelism cap. Each worker
-        # runs its benchmarks sequentially; MAX_PARALLEL_NODES bounds how many run
-        # at once (VNN on shared AWS nodes, ARCH on Glados containers).
-        from django.conf import settings
-
-        max_nodes = getattr(settings, "MAX_PARALLEL_NODES", 1)
-        if Node.objects.count() >= max_nodes:
+        # runs its benchmarks sequentially; the cap bounds how many run at once.
+        if Node.objects.count() >= RuntimeSettings.get().max_parallel_nodes:
             return  # wait for a node to free up; the scheduler retries next tick
         try:
             # Pass the task owner to the provision method so the backend knows 

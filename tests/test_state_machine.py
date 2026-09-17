@@ -183,6 +183,28 @@ def test_assign_waits_while_the_worker_image_is_downloading(monkeypatch):
     assert "downloading image big:latest" in assign.logs
 
 
+@pytest.mark.parametrize("cap, provisions", [(1, 0), (2, 1)])
+def test_assign_provisions_only_below_the_parallel_worker_cap(monkeypatch, cap, provisions):
+    """Every worker is busy: a new one starts only while fewer than the admin's
+    max_parallel_nodes exist."""
+    from comp_eval_platform.compute.local_docker import LocalDockerBackend
+    from comp_eval_platform.core.models import Node, RuntimeSettings
+
+    calls = []
+    monkeypatch.setattr(LocalDockerBackend, "provision", lambda self, *a, **kw: calls.append(a))
+    settings = RuntimeSettings.get()
+    settings.max_parallel_nodes = cap
+    settings.save()
+    busy, _ = _mk_task(["assign", "t_ok"])
+    Node.objects.create(id="c1", node_type="local", image="ubuntu:22.04", task=busy,
+                        state="running", reachability="ok", ip="10.0.0.2")
+    task, _ = _mk_task(["assign", "t_ok"])
+
+    task.current_step.handler.execute()
+
+    assert len(calls) == provisions
+
+
 def test_start_builds_graph_from_competition():
     from comp_eval_platform.core.models import Category, Task, Tool, User
     from comp_eval_platform.core.models.execution import Outcome
