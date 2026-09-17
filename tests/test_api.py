@@ -387,3 +387,23 @@ def test_signup_enables_users_only_when_configured(auto_enable):
                             format="json")
     assert resp.status_code == 201, resp.content
     assert User.objects.get(email="new@x.test").enabled is auto_enable
+
+
+@pytest.mark.parametrize("allowed", [False, True])
+def test_login_is_limited_to_admins_unless_allowed(allowed):
+    from rest_framework.test import APIClient
+
+    from comp_eval_platform.core.models import Role, RuntimeSettings, User
+
+    User.objects.create_user(email="admin@x.test", password="pw", enabled=True, role=Role.ADMIN)
+    User.objects.create_user(email="user@x.test", password="pw", enabled=True)
+    settings = RuntimeSettings.get()
+    settings.allow_non_admin_login = allowed
+    settings.save()
+
+    def login(email):
+        return APIClient().post("/api/auth/login/", {"email": email, "password": "pw"},
+                                format="json").status_code
+
+    assert login("admin@x.test") == 200
+    assert login("user@x.test") == (200 if allowed else 403)

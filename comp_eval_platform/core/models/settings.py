@@ -15,8 +15,10 @@ class RuntimeSettings(models.Model):
     execution_backend = models.CharField(max_length=32, default="local_docker")
     #: How many workers run submissions at once; each runs its benchmarks sequentially.
     max_parallel_nodes = models.PositiveIntegerField(default=1)
+    #: Imported from VNN; nothing reads them.
     terminate_at_end = models.BooleanField(default=True)
     terminate_on_failure = models.BooleanField(default=True)
+    #: When False, only admins may log in.
     allow_non_admin_login = models.BooleanField(default=True)
     #: New signups may log in right away instead of waiting for an admin to enable them.
     auto_enable_users = models.BooleanField(default=False)
@@ -27,7 +29,7 @@ class RuntimeSettings(models.Model):
     benchmark_timeout = models.PositiveIntegerField(default=6)
     #: Master switch for the backstops above; when False they are shown but not enforced.
     enforce_timeouts = models.BooleanField(default=True)
-    #: Whether the full (final) evaluation run mode may be selected by non-admins.
+    #: Imported from VNN; nothing reads it.
     allow_full_evaluation = models.BooleanField(default=True)
 
     class Meta:

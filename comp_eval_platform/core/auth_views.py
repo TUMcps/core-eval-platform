@@ -60,6 +60,10 @@ def login_view(request):
         return Response({"detail": "invalid email or password"}, status=400)
     if not user.enabled:
         return Response({"detail": "account is awaiting admin approval"}, status=403)
+    from .models import RuntimeSettings
+
+    if not (user.is_admin or RuntimeSettings.get().allow_non_admin_login):
+        return Response({"detail": "logins are currently limited to admins"}, status=403)
     login(request, user)
     return Response(_user_data(user))
 
@@ -127,10 +131,13 @@ def update_profile(request):
     return Response(_user_data(request.user))
 
 
+#: What the admin Settings page edits. terminate_at_end, terminate_on_failure and
+#: allow_full_evaluation are kept for the VNN import but have no effect, so they are not
+#: offered.
 _SETTINGS_FIELDS = [
-    "scheduler_enabled", "execution_backend", "max_parallel_nodes", "terminate_at_end", "terminate_on_failure",
-    "allow_non_admin_login", "auto_enable_users", "users_can_submit_benchmarks", "users_can_submit_tools",
-    "submission_timeout", "benchmark_timeout", "enforce_timeouts", "allow_full_evaluation",
+    "scheduler_enabled", "execution_backend", "max_parallel_nodes",
+    "allow_non_admin_login", "auto_enable_users", "users_can_submit_tools",
+    "users_can_submit_benchmarks", "enforce_timeouts", "submission_timeout", "benchmark_timeout",
 ]
 
 
