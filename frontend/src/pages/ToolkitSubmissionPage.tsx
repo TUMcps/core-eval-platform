@@ -40,13 +40,23 @@ interface ToolkitSubmissionForm {
   force_no_pause: boolean;
   local_execution: boolean;
   benchmarks: string[];
+  env: string;
+}
+
+// A prefill comes from a stored tool, whose env is the dict kept in Tool.extra.
+type ToolkitPrefill = Partial<Omit<ToolkitSubmissionForm, 'env'>> & { env?: string | Record<string, string> };
+
+/** The stored env dict as the form's KEY=VALUE lines. */
+function formatEnv(env: ToolkitPrefill['env']): string {
+  if (typeof env === 'string') return env;
+  return env ? Object.entries(env).map(([k, v]) => `${k}=${v}`).join('\n') : '';
 }
 
 export default function ToolkitSubmissionPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   // The details page's "Populate new submission form" button routes here with prefill.
-  const prefill = (useLocation().state as { prefillData?: Partial<ToolkitSubmissionForm> } | null)?.prefillData;
+  const prefill = (useLocation().state as { prefillData?: ToolkitPrefill } | null)?.prefillData;
   const [form, setForm] = useState<ToolkitSubmissionForm>({
     name: '', repository: '', hash: '', ami: '', aws_instance_type: 't2.large', eni: '', use_own_eni: false,
     scripts_dir: '', manual_installation_step: false, run_installation_script_as_root: false,
@@ -57,6 +67,7 @@ export default function ToolkitSubmissionPage() {
     ...prefill,
     // A tool submitted outside this form may carry no benchmark list; the checkboxes need an array.
     benchmarks: Array.isArray(prefill?.benchmarks) ? prefill.benchmarks : [],
+    env: formatEnv(prefill?.env),
   });
   const set = (patch: Partial<ToolkitSubmissionForm>) => setForm((current) => ({ ...current, ...patch }));
   const [message, setMessage] = useState('');
@@ -121,6 +132,7 @@ export default function ToolkitSubmissionPage() {
       if (!usesCategories) payload.vnnlib_version = form.vnnlib_version;
       if (!form.use_own_eni && form.eni) payload.eni = form.eni;
       if (form.post_install_tool) payload.post_install_tool = form.post_install_tool;
+      if (form.env.trim()) payload.env = form.env;
       if (form.pause_after_postinstallation) payload.pause_after_postinstallation = true;
       if (form.restart_after_postinstallation) payload.restart_after_postinstallation = true;
       if (user?.is_admin) {
@@ -197,6 +209,10 @@ export default function ToolkitSubmissionPage() {
                 <FormControlLabel control={<Checkbox checked={form.restart_after_postinstallation} onChange={(e) => set({ restart_after_postinstallation: e.target.checked })} />} label="Restart the instance after the post-installation script is run (e.g. to reload GPU drivers)." />
                 <FormControlLabel control={<Checkbox checked={form.run_toolkit_as_root} onChange={(e) => set({ run_toolkit_as_root: e.target.checked })} />} label="Run toolkit benchmark execution as root." />
                 {help('Unusual — enable only when benchmark execution cannot run correctly as the default user.')}
+                <TextField fullWidth label="Environment variables" margin="normal" multiline rows={3}
+                  value={form.env} onChange={(e) => set({ env: e.target.value })}
+                  placeholder="KEY=VALUE"
+                  helperText="One KEY=VALUE per line, exported before the toolkit's scripts run. Use this to enter the same toolkit twice in different configurations — each submission keeps its own results." />
               </FormGroup>
             </AccordionDetails>
           </Accordion>

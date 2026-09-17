@@ -86,6 +86,25 @@ class StepHandler:
     def retry_until_success(self) -> bool:
         return False
 
+    def merge_payload(self, **fields):
+        """Merge ``fields`` into the step's payload, against the row as it is now.
+
+        The payload is written from two threads — the scheduler tails a run's progress
+        while the node's completion callback freezes the run's summary — so merging
+        into a copy read earlier silently drops whichever write lost the race.
+        """
+        from django.db import transaction
+
+        from comp_eval_platform.core.models import TaskStep
+
+        with transaction.atomic():
+            step = TaskStep.objects.select_for_update().get(pk=self.step.pk)
+            payload = {**(step.payload or {}), **fields}
+            step.payload = payload
+            step.save(update_fields=["payload"])
+        self.step.payload = payload
+        return payload
+
     def collect_results(self, remote_path: str):
         """Pull a run's results.csv off the node into a temp dir for ``parse_results``.
         Read now because the node is torn down before the task ends. Stores the file
@@ -102,8 +121,7 @@ class StepHandler:
         csv_text = node_exec(ip, f"cat {remote_path} 2>/dev/null")
         if not csv_text.strip():
             return None
-        self.step.payload = {**(self.step.payload or {}), "results_csv": csv_text}
-        self.step.save(update_fields=["payload"])
+        self.merge_payload(results_csv=csv_text)
         directory = tempfile.mkdtemp(prefix=f"results_{self.task.id}_")
         with open(os.path.join(directory, "results.csv"), "w") as fh:
             fh.write(csv_text)
@@ -128,9 +146,8 @@ class StepHandler:
         if not rows:
             return
         total = Instance.objects.filter(benchmark=benchmark).count() or len(rows)
-        self.step.payload = {**(self.step.payload or {}), "results_csv": csv_text,
-                             "progress": {"processed": len(rows), "total": total}}
-        self.step.save(update_fields=["payload"])
+        self.merge_payload(results_csv=csv_text,
+                           progress={"processed": len(rows), "total": total})
 
     def on_marked_done(self):
         """Freeze derived state now the step is done (e.g. score result severity)."""

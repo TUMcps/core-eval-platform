@@ -33,8 +33,9 @@ export function ResultsOverview({ summary, results }: { summary: StepSummary | n
     return (
       <Alert severity="info" sx={{ mb: 2 }}>
         {VERDICTS.filter((v) => counts[v]).map((v) => `${VERDICT_LABEL[v]}: ${counts[v]}`).join(', ') || 'no results'}
-        {' — '}counted from results.csv; the scorer produced no summary, so counterexample
-        validity is unknown. See the scoring log.
+        {' — '}counted from results.csv; this step produced no summary of its own.
+        {/* Only a claimed violation has a witness to be unsure about. */}
+        {counts.violated ? ' Counterexample validity is unknown; see the scoring log.' : ''}
       </Alert>
     );
   }

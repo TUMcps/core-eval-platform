@@ -176,3 +176,21 @@ def test_start_builds_graph_from_competition():
     task.refresh_from_db()
     assert task.step_set.count() == 3
     assert task.outcome == Outcome.SUCCEEDED
+
+
+def test_payload_merges_against_the_row_not_a_stale_copy():
+    """A step's payload is written from two threads — the scheduler tails run progress
+    while the node's completion callback freezes the summary — so each write must keep
+    what the other wrote."""
+    from comp_eval_platform.core.models import TaskStep
+    from comp_eval_platform.core.models.execution import SHUTDOWN_KIND
+
+    _, (step, _shutdown) = _mk_task(["t_ok", SHUTDOWN_KIND])
+    stale = step.handler  # holds the payload as it was before the write below
+    TaskStep.objects.filter(pk=step.pk).update(payload={"summary": {"instances": 3}})
+
+    stale.merge_payload(progress={"processed": 1, "total": 3})
+
+    step.refresh_from_db()
+    assert step.payload["summary"] == {"instances": 3}
+    assert step.payload["progress"] == {"processed": 1, "total": 3}

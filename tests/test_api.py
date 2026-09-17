@@ -21,6 +21,25 @@ def test_create_and_run_tool(api, category):
     assert len(body["steps"]) == 3
 
 
+def test_toolkit_submission_records_its_environment(api, category):
+    """The form sends KEY=VALUE lines; the tool keeps them as a dict for the step
+    handlers, so one toolkit can be entered twice in different configurations."""
+    from comp_eval_platform.core.models import RuntimeSettings, Tool
+
+    settings = RuntimeSettings.get()
+    settings.users_can_submit_tools = True
+    settings.scheduler_enabled = True
+    settings.save()
+
+    resp = api.post("/api/toolkit/submit/", {
+        "name": "mytool", "repository": "https://example/repo", "ami": "img",
+        "env": "# the fast one\nTOOL_MODE=fast\n\nOMP_NUM_THREADS=1\nnonsense\n",
+    }, format="json")
+    assert resp.status_code == 201, resp.content
+    tool = Tool.objects.get(name="mytool")
+    assert tool.extra["env"] == {"TOOL_MODE": "fast", "OMP_NUM_THREADS": "1"}
+
+
 def test_toolkit_form_exposes_the_random10_mode(api):
     resp = api.get("/api/toolkit/form_data/")
     assert resp.status_code == 200, resp.content

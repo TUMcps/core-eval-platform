@@ -59,11 +59,17 @@ export default function HomePage() {
                       <Button component={Link} to="/signup" variant="contained" size="large">Sign up</Button>
                     </>
                   )}
-                  {links.map((l) => (
-                    <Button key={l.url} component="a" href={l.url} target="_blank" rel="noopener noreferrer" variant="outlined" size="large">
-                      {l.label}
-                    </Button>
-                  ))}
+                  {links.map((l) => {
+                    // Relative URLs are this deployment's own pages, so they open in place.
+                    const external = !l.url.startsWith('/');
+                    return (
+                      <Button key={l.url} component="a" href={l.url} size="large"
+                        variant={l.primary ? 'contained' : 'outlined'}
+                        {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
+                        {l.label}
+                      </Button>
+                    );
+                  })}
                 </Box>
 
                 {contacts.length > 0 && (
