@@ -23,8 +23,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ACTIVE_COMPETITION = config("ACTIVE_COMPETITION", default="")
 #: What a worker is, on the (orthogonal) compute axis.
 EXECUTION_BACKEND = config("EXECUTION_BACKEND", default="local_docker")  # aws | local_docker | remote_docker
-#: How many workers the scheduler keeps busy in parallel. Each worker still runs
-#: its benchmarks sequentially.
+#: Initial value of the ``max_parallel_nodes`` runtime setting, which admins change in
+#: the UI: how many workers run submissions in parallel.
 MAX_PARALLEL_NODES = config("MAX_PARALLEL_NODES", default=1, cast=int)
 #: Re-executions a retrying step gets before the task fails (installs are flaky over
 #: the network); also bounds the execute/step_failed retry loop.

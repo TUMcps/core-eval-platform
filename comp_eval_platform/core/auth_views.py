@@ -2,7 +2,7 @@
 
 Session cookies + CSRF (not JWT), matching the VNN frontend's axios client. The
 first account created becomes an enabled admin; later ones are disabled until an
-admin enables them.
+admin enables them, unless the ``auto_enable_users`` setting enables them on signup.
 """
 from dataclasses import asdict
 
@@ -39,10 +39,13 @@ def signup(request):
         return Response({"detail": "email and password are required"}, status=400)
     if User.objects.filter(email=email).exists():
         return Response({"detail": "an account with this email already exists"}, status=400)
+    from .models import RuntimeSettings
+
     first = not User.objects.exists()
     user = User.objects.create_user(
         email=email, password=password, name=name,
-        role=Role.ADMIN if first else Role.USER, enabled=first,
+        role=Role.ADMIN if first else Role.USER,
+        enabled=first or RuntimeSettings.get().auto_enable_users,
     )
     return Response(_user_data(user), status=201)
 
@@ -57,6 +60,10 @@ def login_view(request):
         return Response({"detail": "invalid email or password"}, status=400)
     if not user.enabled:
         return Response({"detail": "account is awaiting admin approval"}, status=403)
+    from .models import RuntimeSettings
+
+    if not (user.is_admin or RuntimeSettings.get().allow_non_admin_login):
+        return Response({"detail": "logins are currently limited to admins"}, status=403)
     login(request, user)
     return Response(_user_data(user))
 
@@ -124,10 +131,13 @@ def update_profile(request):
     return Response(_user_data(request.user))
 
 
+#: What the admin Settings page edits. terminate_at_end, terminate_on_failure and
+#: allow_full_evaluation are kept for the VNN import but have no effect, so they are not
+#: offered.
 _SETTINGS_FIELDS = [
-    "scheduler_enabled", "execution_backend", "terminate_at_end", "terminate_on_failure",
-    "allow_non_admin_login", "users_can_submit_benchmarks", "users_can_submit_tools",
-    "submission_timeout", "benchmark_timeout", "enforce_timeouts", "allow_full_evaluation",
+    "scheduler_enabled", "execution_backend", "max_parallel_nodes",
+    "allow_non_admin_login", "auto_enable_users", "users_can_submit_tools",
+    "users_can_submit_benchmarks", "enforce_timeouts", "submission_timeout", "benchmark_timeout",
 ]
 
 

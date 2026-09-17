@@ -18,7 +18,8 @@ export default function AdminUsersPage() {
   useEffect(() => {
     let active = true;
     usersApi.list()
-      .then((items) => { if (active) setUsers(items); })
+      // Accounts awaiting approval first: they are what an admin comes here for.
+      .then((items) => { if (active) setUsers([...items].sort((a, b) => Number(a.enabled) - Number(b.enabled))); })
       .catch(() => {});
     return () => { active = false; };
   }, []);
