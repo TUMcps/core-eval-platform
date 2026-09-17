@@ -40,13 +40,23 @@ interface ToolkitSubmissionForm {
   force_no_pause: boolean;
   local_execution: boolean;
   benchmarks: string[];
+  env: string;
+}
+
+// A prefill comes from a stored tool, whose env is the dict kept in Tool.extra.
+type ToolkitPrefill = Partial<Omit<ToolkitSubmissionForm, 'env'>> & { env?: string | Record<string, string> };
+
+/** The stored env dict as the form's KEY=VALUE lines. */
+function formatEnv(env: ToolkitPrefill['env']): string {
+  if (typeof env === 'string') return env;
+  return env ? Object.entries(env).map(([k, v]) => `${k}=${v}`).join('\n') : '';
 }
 
 export default function ToolkitSubmissionPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   // The details page's "Populate new submission form" button routes here with prefill.
-  const prefill = (useLocation().state as { prefillData?: Partial<ToolkitSubmissionForm> } | null)?.prefillData;
+  const prefill = (useLocation().state as { prefillData?: ToolkitPrefill } | null)?.prefillData;
   const [form, setForm] = useState<ToolkitSubmissionForm>({
     name: '', repository: '', hash: '', ami: '', aws_instance_type: 't2.large', eni: '', use_own_eni: false,
     scripts_dir: '', manual_installation_step: false, run_installation_script_as_root: false,
@@ -57,10 +67,7 @@ export default function ToolkitSubmissionPage() {
     ...prefill,
     // A tool submitted outside this form may carry no benchmark list; the checkboxes need an array.
     benchmarks: Array.isArray(prefill?.benchmarks) ? prefill.benchmarks : [],
-    // Stored as a dict, edited as KEY=VALUE lines.
-    env: prefill?.env && typeof prefill.env === 'object'
-      ? Object.entries(prefill.env).map(([k, v]) => `${k}=${v}`).join('\n')
-      : (prefill?.env ?? ''),
+    env: formatEnv(prefill?.env),
   });
   const set = (patch: Partial<ToolkitSubmissionForm>) => setForm((current) => ({ ...current, ...patch }));
   const [message, setMessage] = useState('');
