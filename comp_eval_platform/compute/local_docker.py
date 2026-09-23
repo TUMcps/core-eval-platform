@@ -16,13 +16,12 @@ from typing import List, Optional
 from django.utils import timezone
 
 # Updated imports: Inheriting from the shared BaseDockerBackend instead of raw ComputeBackend
-from .base import BaseDockerBackend, ProvisionError
+from .base import BaseDockerBackend, ProvisionError, gpu_run_args
 from .images import ensure_image
 from .shell import service_id
 
 SERVICE_LABEL = "CompEvalServiceId"
 READY_MARKER = "/tmp/comp_ready"
-_GPU_TYPES = {"p3.2xlarge", "g5.8xlarge"}
 #: How long a container may exist untracked before it counts as leaked rather than
 #: as one a concurrent provision() has not finished recording.
 _REAP_GRACE_SECONDS = 300
@@ -75,9 +74,7 @@ class LocalDockerBackend(BaseDockerBackend):
                 "--network", self.network,
                 "--entrypoint", "sleep",
             ]
-            gpu_env = _env("COMP_DOCKER_GPU", "").lower() in ("1", "true", "all", "yes")
-            if gpu_env or node_type in _GPU_TYPES:
-                run_args += ["--gpus", "all"]
+            run_args += gpu_run_args(node_type)
             run_args += [image, "infinity"]
             container_id = _docker(run_args, timeout=120).strip()
 
