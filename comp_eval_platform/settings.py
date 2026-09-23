@@ -8,7 +8,7 @@ A variant deployment ships its own project settings that does::
     INSTALLED_APPS += ["vnn_comp"]
 
 and overrides whatever else it needs. The three engine knobs below are the axes
-that make the platform modular; see docs/unified-platform.md.
+that make the platform modular; see docs/architecture.md.
 """
 from pathlib import Path
 

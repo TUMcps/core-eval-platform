@@ -57,6 +57,7 @@ The GitHub Actions workflow in `.github/workflows/ci.yml` runs for pushes to eve
 requests, and manual dispatches. It runs the core Python tests and tests and builds the shared
 frontend.
 
-## Design
+## Documentation
 
-Full architecture and rationale in [`docs/unified-platform.md`](docs/unified-platform.md).
+Current architecture and operations documentation starts at
+[`docs/index.md`](docs/index.md).
