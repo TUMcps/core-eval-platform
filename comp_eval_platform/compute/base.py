@@ -28,6 +28,23 @@ class ProvisionPending(Exception):
     later. The message is shown to the submitter."""
 
 
+_GPU_TYPES = {"p3.2xlarge", "g5.8xlarge"}
+
+
+def gpu_run_args(node_type: str) -> list[str]:
+    """``docker run`` flags that pass GPUs into a job container, if it gets any.
+
+    ``COMP_DOCKER_GPU`` switches GPUs on for every container; ``COMP_DOCKER_GPU_DEVICES``
+    picks which host GPUs they get (``nvidia-smi`` indices, e.g. ``1`` or ``0,1``).
+    """
+    enabled = os.getenv("COMP_DOCKER_GPU", "").lower() in ("1", "true", "all", "yes")
+    if not (enabled or node_type in _GPU_TYPES):
+        return []
+    devices = os.getenv("COMP_DOCKER_GPU_DEVICES", "").strip() or "all"
+    # A comma-separated list must reach the NVIDIA runtime quoted, or --gpus splits on it.
+    return ["--gpus", "all" if devices == "all" else f'"device={devices}"']
+
+
 class ComputeBackend(ABC):
     name: str
 

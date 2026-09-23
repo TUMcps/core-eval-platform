@@ -8,12 +8,12 @@ import uuid
 from datetime import datetime
 from datetime import timezone as dt_timezone
 
+from .base import gpu_run_args
 from .images import ensure_image
 
 # Constants used for container management and identification
 SERVICE_LABEL = "CompEvalServiceId"
 READY_MARKER = "/tmp/comp_ready"
-_GPU_TYPES = {"p3.2xlarge", "g5.8xlarge"}
 _REAP_GRACE_SECONDS = 300
 
 
@@ -134,11 +134,7 @@ def provision(*, service_id: str, node_type: str, image: str, authorized_key: st
         "--entrypoint", "sleep",
     ]
     
-    # Attach GPU resources if required by environment or node type
-    gpu_env = _env("COMP_DOCKER_GPU", "").lower() in ("1", "true", "all", "yes")
-    if gpu_env or node_type in _GPU_TYPES:
-        run_args += ["--gpus", "all"]
-        
+    run_args += gpu_run_args(node_type)
     run_args += [image, "infinity"]
     
     # Start the container
