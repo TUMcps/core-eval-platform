@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -23,25 +23,14 @@ export default function SecretDatasetAdminSection({ defaultCategory = 'AFF', def
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
-    try {
-      setDatasets(await secretDatasetsApi.list());
-    } catch (loadError: unknown) {
-      setError(apiErrorMessage(loadError, 'Could not load secret datasets', 'detail'));
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    let alive = true;
+    secretDatasetsApi.list()
+      .then((items) => { if (alive) setDatasets(items); })
+      .catch((loadError: unknown) => { if (alive) setError(apiErrorMessage(loadError, 'Could not load secret datasets', 'detail')); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
   }, []);
-
-  useEffect(() => { void load(); }, [load]);
-
-  useEffect(() => {
-    setCategory(defaultCategory);
-  }, [defaultCategory]);
-
-  useEffect(() => {
-    setSeason(defaultSeason);
-  }, [defaultSeason]);
 
   const upload = async () => {
     if (!archive) {
@@ -53,7 +42,7 @@ export default function SecretDatasetAdminSection({ defaultCategory = 'AFF', def
     try {
       await secretDatasetsApi.upload({ category: category.trim(), season: season.trim(), archive });
       setArchive(null);
-      await load();
+      setDatasets(await secretDatasetsApi.list());
     } catch (uploadError: unknown) {
       setError(apiErrorMessage(uploadError, 'Could not upload secret dataset', 'detail'));
     } finally {
@@ -67,7 +56,7 @@ export default function SecretDatasetAdminSection({ defaultCategory = 'AFF', def
     setError('');
     try {
       await secretDatasetsApi.delete(dataset.id);
-      await load();
+      setDatasets(await secretDatasetsApi.list());
     } catch (deleteError: unknown) {
       setError(apiErrorMessage(deleteError, 'Could not delete secret dataset', 'detail'));
     } finally {

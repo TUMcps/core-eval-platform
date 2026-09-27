@@ -243,7 +243,11 @@ export default function BenchmarkDetailsPage() {
 
       <PageSection>
         {user?.is_admin && bootCompetition?.name === 'arch' && (
-          <SecretDatasetAdminSection defaultCategory={task.category_name || 'AFF'} defaultSeason={String(new Date().getFullYear())} />
+          <SecretDatasetAdminSection
+            key={`${task.id}-${task.category_name || 'AFF'}`}
+            defaultCategory={task.category_name || 'AFF'}
+            defaultSeason={String(new Date().getFullYear())}
+          />
         )}
 
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
