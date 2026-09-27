@@ -11,11 +11,13 @@ import PageSection from '../components/PageSection';
 import LiveIndicator from '../components/LiveIndicator';
 import OwnerLabel from '../components/OwnerLabel';
 import OwnerReassign from '../components/OwnerReassign';
+import SecretDatasetAdminSection from '../components/SecretDatasetAdminSection';
 import DetailRow from '../components/DetailRow';
 import SubmissionDetails from '../components/SubmissionDetails';
 import DeleteSubmissionDialog from '../components/DeleteSubmissionDialog';
 import TaskPipeline from '../components/TaskPipeline';
 import TaskTimer from '../components/TaskTimer';
+import { bootCompetition } from '../branding';
 import { useAuth } from '../context/AuthContext';
 import { apiErrorMessage, tasksApi, benchmarksApi, downloadTaskResults } from '../api';
 import type { Task, Benchmark } from '../api';
@@ -240,6 +242,10 @@ export default function BenchmarkDetailsPage() {
         onCancel={() => setDeleteOpen(false)} onConfirm={doDelete} />
 
       <PageSection>
+        {user?.is_admin && bootCompetition?.name === 'arch' && (
+          <SecretDatasetAdminSection defaultCategory={task.category_name || 'AFF'} defaultSeason={String(new Date().getFullYear())} />
+        )}
+
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
         <Typography variant="h5" fontWeight="bold" gutterBottom>Pipeline</Typography>
         <TaskPipeline steps={task.steps} benchmarkProgress={task.benchmark_progress} taskId={task.id} />
