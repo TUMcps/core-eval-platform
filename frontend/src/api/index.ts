@@ -117,6 +117,15 @@ export interface GuideSection { heading: string; blocks: GuideBlock[]; }
 /** A how-to page's copy, written by the active competition (see results.py Guide). */
 export interface Guide { intro: string; pipeline: GuideStep[]; sections: GuideSection[]; }
 
+export interface SecretDataset {
+  id: number;
+  category: string;
+  season: string;
+  archive: string;
+  uploaded_at: string;
+  uploaded_by: string | null;
+}
+
 export interface CompetitionInfo { name: string; display_name: string; presentation: { result_columns: string[]; submission_fields: FieldSpec[]; score_columns: string[]; branding: Branding; landing: Landing; guides?: Record<string, Guide>; } | null; }
 export interface ScoreboardGroup { name: string; columns: string[]; rows: Record<string, unknown>[]; }
 export interface Scoreboard { columns: string[]; rows: Record<string, unknown>[]; groups: ScoreboardGroup[]; }
@@ -198,6 +207,20 @@ export const benchmarksApi = {
   getFormData: () => apiClient.get<BenchmarkFormData>('/api/benchmark/form_data/').then((r) => r.data),
   addInstances: (id: ID, names: string[]) =>
     apiClient.post(`/api/benchmarks/${id}/add_instances/`, names.map((name, order) => ({ name, order }))).then((r) => r.data),
+};
+
+export const secretDatasetsApi = {
+  list: () => apiClient.get<SecretDataset[]>('/api/arch/secret-data/').then((r) => r.data),
+  upload: (data: { category: string; season: string; archive: File }) => {
+    const formData = new FormData();
+    formData.append('category', data.category);
+    formData.append('season', data.season);
+    formData.append('archive', data.archive);
+    return apiClient.post<SecretDataset>('/api/arch/secret-data/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data);
+  },
+  delete: (id: ID) => apiClient.delete(`/api/arch/secret-data/${id}/`).then((r) => r.data),
 };
 
 export const usersApi = {
