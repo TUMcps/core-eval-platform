@@ -70,8 +70,9 @@ export default function SecretDatasetAdminSection({ defaultCategory = 'AFF', def
         <Box>
           <Typography variant="h6" fontWeight="bold">Secret benchmark data</Typography>
           <Typography variant="body2" color="text.secondary">
-            AFF archives are extracted directly into the tool checkout root. The zip must contain
-            files at its own root, with no wrapping folder.
+            AFF archives are automatically extracted into a <code>secret-data/</code> folder inside the tool
+            checkout. The zip itself must contain the files directly at its own root. Do not
+            include a <code>secret-data/</code> wrapping folder, it will be created automatically.
           </Typography>
         </Box>
 
